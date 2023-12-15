@@ -1,0 +1,1731 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RDR1Shaders>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_nodistortion_bump_spec_ao_shared</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="aocCoGA_0x73E4F90C" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PyqcxEA_0xDF747716" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ThqxHEA_0x03F3FF81" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shared</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ao_cloth</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.03, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="2.075, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="3.224, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="2.8, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="3.82, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="40, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="14, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_character_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="aWSJNBA_0xE1322212" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_skin</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.03, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="2.7, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.25, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="1.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="22.9, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="39, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="54, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="blursize" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiswieght" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiscolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="dermiswieght" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="dermiscolor" length="16" value="0.8705, 0.7725, 0.7647, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_hair</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="2.412, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="1.28, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="40, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="aWSJNBA_0xE1322212" length="16" value="4, 4, -3, -3" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_shadowonly</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="CBuffer" name="QCsrHNA_0x68E1965B" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_poster</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="gcameradistanceatmaxdisplacement" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="gmaxdisplacement" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_foliage</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_treerock_prototype</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="hKBJgIA_0x9EDA259F" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_2sided</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.068, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="1.6, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="2.872, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="0.65, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="15.2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="10, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="42, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="96, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint_nodistortion</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="85, 0, 0, 0" />
+      <Item type="CBuffer" name="GSOHoEA_0xB0347737" length="16" value="0.1, 0, 0, 0" />
+      <Item type="CBuffer" name="tJtHqEA_0x0476369D" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_reflection_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="clothdiffusecontribution" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="clothsheen" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="clothintensity" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="clothfalloff" length="16" value="5, 0, 0, 0" />
+      <Item type="CBuffer" name="aocCoGA_0x73E4F90C" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="PyqcxEA_0xDF747716" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ThqxHEA_0x03F3FF81" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_grass</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="diffusesampler" />
+      <Item type="CBuffer" name="IyIKIDA_0x1C09F3BF" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="lElePLA_0xACAE8C63" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="mSOpDHA_0x10E09657" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="rQGsQMA_0x040B6607" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ZrTVzMA_0x9CCE84AA" length="16" value="10, 1, 0, 0" />
+      <Item type="CBuffer" name="dgQJvGA_0x8284B805" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_cloth</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="fresnelterm" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenbias" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="ZzGuzNA_0x20E08001" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="HtJcfCA_0x86E87AE0" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="JMipCVA_0xD71FB6F1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="qgCowWA_0xBE172D21" length="16" value="-1, 0, 0, 0" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="fresnelterm" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenbias" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_cutscene</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="normalmapsampler1" />
+      <Item type="Texture" name="normalmapsampler2" />
+      <Item type="Texture" name="animatednormalmapmask0sampler" />
+      <Item type="Texture" name="animatednormalmapmask1sampler" />
+      <Item type="Texture" name="animatednormalmapmask2sampler" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.03, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="2.7, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="2.163, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="22.9, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="39, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="54, 0, 0, 0" />
+      <Item type="CBuffer" name="uCwTjCA_0x510D92A7" length="16" value="2, 2, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimatednormalmapparams" length="192" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="blursize" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiswieght" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiscolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="dermiswieght" length="16" value="1.2, 0, 0, 0" />
+      <Item type="CBuffer" name="dermiscolor" length="16" value="0.8705, 0.7725, 0.7647, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_cutscene</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item type="Texture" name="normalmapsampler1" />
+      <Item type="Texture" name="normalmapsampler2" />
+      <Item type="Texture" name="animatednormalmapmask0sampler" />
+      <Item type="Texture" name="animatednormalmapmask1sampler" />
+      <Item type="Texture" name="animatednormalmapmask2sampler" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="2.412, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="1.848, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="1.28, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="40, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="6.475, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="uCwTjCA_0x510D92A7" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="aWSJNBA_0xE1322212" length="16" value="4, 4, -3, -3" />
+      <Item type="CBuffer" name="animatednormalmapmod2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimatednormalmapparams" length="192" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="2.872, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="0.65, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="15.2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="7.2, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="aWSJNBA_0xE1322212" length="16" value="4, 4, -3, -3" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_weapon</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_glow</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="rqfilHA_0x7CBE9C47" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="kLQtOGA_0x09C8E492" length="16" value="10, 0, 0, 0" />
+      <Item type="CBuffer" name="vwCgxLA_0x03CC5BA2" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="nrIVOFA_0x179D4F32" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gambientglowscale" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="nUeQLIA_0xB01B3453" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="NzGjdZA_0xDB0A678C" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PPnRQJA_0xFC032D8F" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint_shared</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="GSOHoEA_0xB0347737" length="16" value="0.1, 0, 0, 0" />
+      <Item type="CBuffer" name="tJtHqEA_0x0476369D" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_horsehair</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="normalmapsampler1" />
+      <Item type="Texture" name="animatednormalmapmask0sampler" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="aThUTkA_0x1B71F3E7" />
+      <Item type="Texture" name="hKBJgIA_0x9EDA259F" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="nYAPzJA_0xDE5484EF" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="FBePQKA_0xB08FD2DE" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.7, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="12.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="0.325, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimatednormalmapparams" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_fur</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="noisesampler" />
+      <Item type="CBuffer" name="GsCvpAA_0x89C0641E" length="16" value="0.002, 0, 0, 0" />
+      <Item type="CBuffer" name="YKXhdmA_0x2A262925" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="yNrURnA_0xCBA5C00D" length="16" value="10, 0, 0, 0" />
+      <Item type="CBuffer" name="bHEQpCA_0x7C301799" length="16" value="6, 0, 0, 0" />
+      <Item type="CBuffer" name="KsuNMAA_0xA84B77B9" length="16" value="0.8, 0, 0, 0" />
+      <Item type="CBuffer" name="wGTyuIA_0x95DD8C45" length="16" value="0.011, 0, 0, 0" />
+      <Item type="CBuffer" name="xZgooOA_0xA9C1D517" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="OuGewBA_0xD0D6A340" length="16" value="60, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_debris</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_cati</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_smooth_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_binoculars_barrel</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_binoculars_lens</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glow</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="XHEmbVA_0x5461C483" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_diffuse</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_cloth</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.068, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="0.475, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="2.8, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.6, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.25, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="10, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="54, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="34, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="aocCoGA_0x73E4F90C" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PyqcxEA_0xDF747716" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ThqxHEA_0x03F3FF81" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_beacon</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_cpv</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc_decal</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler3" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_character_glow_skin</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="XHEmbVA_0x5461C483" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.03, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="2.7, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.25, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="1.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="22.9, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="39, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="54, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="blursize" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiswieght" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiscolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="dermiswieght" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="dermiscolor" length="16" value="0.8705, 0.7725, 0.7647, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_character_glow</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="XHEmbVA_0x5461C483" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="rimglowscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="3.66, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="1.85, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="2.175, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="300, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="130, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_fast</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="densitysampler" />
+      <Item type="Texture" name="normalsampler" />
+      <Item type="Texture" name="mrEcEOA_0x09B15A95" />
+      <Item type="Texture" name="pQLaCKA_0x744217E9" />
+      <Item type="CBuffer" name="grescaleuv3" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv2" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv1" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="guvoffset3" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="gwraplighting_msaaref" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gscalediffusefillambient" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gpiercinglightpower_strength_normalstrength_thickness" length="16" value="1, 1, 1, 1" />
+      <Item type="CBuffer" name="gscatterg_gsquared_phasemult_scale" length="16" value="-0.75, 0.5625, 2.1, 1" />
+      <Item type="CBuffer" name="gdensityshiftscale" length="16" value="0, 1, 0, 0" />
+      <Item type="CBuffer" name="gbouncecolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gambientcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gcloudcolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsuncolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsundirection" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="westcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="eastcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="skycolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_animsoft</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="densitysampler" />
+      <Item type="Texture" name="normalsampler" />
+      <Item type="Texture" name="detaildensitysampler" />
+      <Item type="Texture" name="detailnormalsampler" />
+      <Item type="Texture" name="detaildensity2sampler" />
+      <Item type="Texture" name="detailnormal2sampler" />
+      <Item type="Texture" name="mrEcEOA_0x09B15A95" />
+      <Item type="Texture" name="pQLaCKA_0x744217E9" />
+      <Item type="CBuffer" name="gsoftparticlerange" length="16" value="175, 0, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv3" length="16" value="3, 0.5, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv2" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv1" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="guvoffset3" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimblendweights" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimsculpt" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimcombine" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gnearfarqmult" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gwraplighting_msaaref" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gscalediffusefillambient" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gpiercinglightpower_strength_normalstrength_thickness" length="16" value="1, 1, 1, 1" />
+      <Item type="CBuffer" name="gscatterg_gsquared_phasemult_scale" length="16" value="-0.75, 0.5625, 2.1, 1" />
+      <Item type="CBuffer" name="gdensityshiftscale" length="16" value="0, 1, 0, 0" />
+      <Item type="CBuffer" name="gbouncecolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gambientcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gcloudcolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsuncolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsundirection" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="westcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="eastcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="skycolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_fog</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="densitysampler" />
+      <Item type="Texture" name="normalsampler" />
+      <Item type="CBuffer" name="gsoftparticlerange" length="16" value="175, 0, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv3" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv2" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv1" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="guvoffset3" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="gnearfarqmult" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gwraplighting_msaaref" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gscalediffusefillambient" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gpiercinglightpower_strength_normalstrength_thickness" length="16" value="1, 1, 1, 1" />
+      <Item type="CBuffer" name="gdensityshiftscale" length="16" value="0, 1, 0, 0" />
+      <Item type="CBuffer" name="gbouncecolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gambientcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gcloudcolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsuncolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsundirection" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="westcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="eastcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="skycolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_nodirt</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_3_nospec_normal_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="Texture" name="texturesampler3" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="ZzGuzNA_0x20E08001" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="HtJcfCA_0x86E87AE0" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="JMipCVA_0xD71FB6F1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="qgCowWA_0xBE172D21" length="16" value="-1, 0, 0, 0" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="fresnelterm" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenbias" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_nooff</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item type="Texture" name="normalmapsampler1" />
+      <Item type="Texture" name="normalmapsampler2" />
+      <Item type="Texture" name="animatednormalmapmask0sampler" />
+      <Item type="Texture" name="animatednormalmapmask1sampler" />
+      <Item type="Texture" name="animatednormalmapmask2sampler" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="2.412, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="1.848, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="1.28, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="40, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="6.475, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="uCwTjCA_0x510D92A7" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="aWSJNBA_0xE1322212" length="16" value="4, 4, -3, -3" />
+      <Item type="CBuffer" name="animatednormalmapmod2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimatednormalmapparams" length="192" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_hair_a</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="aThUTkA_0x1B71F3E7" />
+      <Item type="Texture" name="hKBJgIA_0x9EDA259F" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="CVrspJA_0x2D759131" length="16" value="2.5, 0, 0, 0" />
+      <Item type="CBuffer" name="HYoqHOA_0xC526F8E1" length="16" value="0.8, 0, 0, 0" />
+      <Item type="CBuffer" name="nYAPzJA_0xDE5484EF" length="16" value="0.088, 0, 0, 0" />
+      <Item type="CBuffer" name="FBePQKA_0xB08FD2DE" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="8.95, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="7, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_foliage_no_fade</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ao_dirt_cloth</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_pond_water</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item type="Texture" name="diffusesampler" />
+      <Item type="Texture" name="pWOZGCA_0x00A67ACD" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="hsxcaQA_0xBCE09B82" length="16" value="0.106, 0.905, 0, 0" />
+      <Item type="CBuffer" name="OXqbyEA_0x33EEA5FE" length="16" value="0.884, 0.051, 0.15, 0.441" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_nooff</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="OnDuMIA_0xAE42AE3A" />
+      <Item type="Texture" name="normalmapsampler1" />
+      <Item type="Texture" name="normalmapsampler2" />
+      <Item type="Texture" name="animatednormalmapmask0sampler" />
+      <Item type="Texture" name="animatednormalmapmask1sampler" />
+      <Item type="Texture" name="animatednormalmapmask2sampler" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="rimamount" length="16" value="0.03, 0, 0, 0" />
+      <Item type="CBuffer" name="rimpower" length="16" value="2.7, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmax" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelmin" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfresnelexp" length="16" value="2.163, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor2" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor2" length="16" value="22.9, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="20, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="39, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="54, 0, 0, 0" />
+      <Item type="CBuffer" name="uCwTjCA_0x510D92A7" length="16" value="2, 2, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod2" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="animatednormalmapmod1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimatednormalmapparams" length="192" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="znwNWDA_0xA7B06B29" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="blursize" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiswieght" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="epidermiscolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="dermiswieght" length="16" value="1.2, 0, 0, 0" />
+      <Item type="CBuffer" name="dermiscolor" length="16" value="0.8705, 0.7725, 0.7647, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_scope_lens</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="SnavhAA_0x5AEE99D9" length="16" value="0.2125, 0.7154, 0.0721, 0" />
+      <Item type="CBuffer" name="contrast" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="colorcorrect" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="HGLVtJA_0xB944E84F" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="WcFIIDA_0xB98E13F7" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_scope_barrel</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="CBuffer" name="SnavhAA_0x5AEE99D9" length="16" value="0.2125, 0.7154, 0.0721, 0" />
+      <Item type="CBuffer" name="contrast" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="colorcorrect" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="HGLVtJA_0xB944E84F" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="WcFIIDA_0xB98E13F7" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ySzaxDA_0xFB778E1D" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="czPefAA_0x4005F9BA" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="JhQdNPA_0xAA29C09D" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ozcexDA_0x46379176" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="bSlFsBA_0x9EF8AA3B" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="lCOeRaA_0x585335AD" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="uWilrFA_0x91AE0FA6" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="NlcdPnA_0x1287AA17" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="GSOHoEA_0xB0347737" length="16" value="0.1, 0, 0, 0" />
+      <Item type="CBuffer" name="tJtHqEA_0x0476369D" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_shareduv_hair</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="aThUTkA_0x1B71F3E7" />
+      <Item type="Texture" name="hKBJgIA_0x9EDA259F" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailmapsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="nYAPzJA_0xDE5484EF" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="FBePQKA_0xB08FD2DE" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="specdiffuseamount" length="16" value="0.703, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="8.25, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscalev" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscaleu" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="0.325, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_anim</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="densitysampler" />
+      <Item type="Texture" name="normalsampler" />
+      <Item type="Texture" name="detaildensitysampler" />
+      <Item type="Texture" name="detailnormalsampler" />
+      <Item type="Texture" name="detaildensity2sampler" />
+      <Item type="Texture" name="detailnormal2sampler" />
+      <Item type="Texture" name="mrEcEOA_0x09B15A95" />
+      <Item type="Texture" name="pQLaCKA_0x744217E9" />
+      <Item type="CBuffer" name="grescaleuv3" length="16" value="4, 0.5, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv2" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="grescaleuv1" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="guvoffset3" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="guvoffset" length="48" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimblendweights" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimsculpt" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ganimcombine" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gwraplighting_msaaref" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gscalediffusefillambient" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gpiercinglightpower_strength_normalstrength_thickness" length="16" value="1, 1, 1, 1" />
+      <Item type="CBuffer" name="gscatterg_gsquared_phasemult_scale" length="16" value="-0.75, 0.5625, 2.1, 1" />
+      <Item type="CBuffer" name="gdensityshiftscale" length="16" value="0, 1, 0, 0" />
+      <Item type="CBuffer" name="gbouncecolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gambientcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="gcloudcolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsuncolor" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="gsundirection" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="westcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="eastcolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="skycolor" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_traintrack</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="UZnjnOA_0xB5C6B283" />
+      <Item type="Texture" name="EZiqsIA_0x13376D63" />
+      <Item type="Texture" name="XeTOyqA_0x3412AF91" />
+      <Item type="Texture" name="OkmVVHA_0x3D734252" />
+      <Item type="Texture" name="PCHiNPA_0x4FB1E6CF" />
+      <Item type="Texture" name="xuYIAHA_0xEAE71D3B" />
+      <Item type="Texture" name="hIhFkPA_0xFF4494B8" />
+      <Item type="Texture" name="SnZvnTA_0x2B0FEC4E" />
+      <Item type="Texture" name="bdVTuBA_0x1CAB4F85" />
+      <Item type="Texture" name="jcLGEFA_0xC668A301" />
+      <Item type="Texture" name="cThrXEA_0xB82F068E" />
+      <Item type="Texture" name="ERBYFBA_0xE4685EFC" />
+      <Item type="Texture" name="bgkeKZA_0x0ED966D5" />
+      <Item type="Texture" name="JUrKwZA_0xA0918A47" />
+      <Item type="CBuffer" name="jPWsbAA_0x814D756A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="WkgqWAA_0x22C705B4" length="16" value="0.85, 0, 0, 0" />
+      <Item type="CBuffer" name="KmPKiCA_0xB39EDC6F" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="JdWXRCA_0x17E82E4A" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ytZfTAA_0x9852C907" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="HUFzGQA_0x50805134" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="IDPloFA_0xA606940E" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="CtzzvBA_0x12DD7858" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="ZmPclCA_0x642C41A9" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="NZDOvgA_0x0998918D" length="16" value="0.05, 0.05, 0.05, 0" />
+      <Item type="CBuffer" name="zFxumHA_0x29034672" length="16" value="0.05, 0.05, 0.05, 0" />
+      <Item type="CBuffer" name="ouHSkAA_0xFB952501" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PFLloFA_0xC9DE4194" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="QMZjRTA_0xBDDEBE2D" length="16" value="0, -1.804687, 0, 0" />
+      <Item type="CBuffer" name="AWAFaCA_0x62503593" length="16" value="3.640625, 3.640625, 0, 0" />
+      <Item type="CBuffer" name="WGSVaOA_0xAC181AA0" length="16" value="0, -1.804687, 0, 0" />
+      <Item type="CBuffer" name="vtQRQGA_0x9FBAB08B" length="16" value="3.640625, 3.640625, 0, 0" />
+      <Item type="CBuffer" name="IuFCVOA_0x4385A0D2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="XsUbrOA_0x66C79BD6" length="16" value="192, 192, 0, 0" />
+      <Item type="CBuffer" name="pylQbiA_0xF1F64340" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="lqIkLBA_0x5099D018" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain_blend</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="UZnjnOA_0xB5C6B283" />
+      <Item type="Texture" name="EZiqsIA_0x13376D63" />
+      <Item type="Texture" name="XeTOyqA_0x3412AF91" />
+      <Item type="Texture" name="OkmVVHA_0x3D734252" />
+      <Item type="Texture" name="PCHiNPA_0x4FB1E6CF" />
+      <Item type="Texture" name="xuYIAHA_0xEAE71D3B" />
+      <Item type="Texture" name="hIhFkPA_0xFF4494B8" />
+      <Item type="Texture" name="SnZvnTA_0x2B0FEC4E" />
+      <Item type="Texture" name="bdVTuBA_0x1CAB4F85" />
+      <Item type="Texture" name="jcLGEFA_0xC668A301" />
+      <Item type="Texture" name="cThrXEA_0xB82F068E" />
+      <Item type="Texture" name="ERBYFBA_0xE4685EFC" />
+      <Item type="Texture" name="bgkeKZA_0x0ED966D5" />
+      <Item type="Texture" name="JUrKwZA_0xA0918A47" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="jPWsbAA_0x814D756A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="WkgqWAA_0x22C705B4" length="16" value="0.85, 0, 0, 0" />
+      <Item type="CBuffer" name="KmPKiCA_0xB39EDC6F" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="JdWXRCA_0x17E82E4A" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ytZfTAA_0x9852C907" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="HUFzGQA_0x50805134" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="IDPloFA_0xA606940E" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="CtzzvBA_0x12DD7858" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="ZmPclCA_0x642C41A9" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="NZDOvgA_0x0998918D" length="16" value="0.05, 0.05, 0.05, 0" />
+      <Item type="CBuffer" name="zFxumHA_0x29034672" length="16" value="0.05, 0.05, 0.05, 0" />
+      <Item type="CBuffer" name="ouHSkAA_0xFB952501" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PFLloFA_0xC9DE4194" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="QMZjRTA_0xBDDEBE2D" length="16" value="0, -1.804687, 0, 0" />
+      <Item type="CBuffer" name="AWAFaCA_0x62503593" length="16" value="3.640625, 3.640625, 0, 0" />
+      <Item type="CBuffer" name="WGSVaOA_0xAC181AA0" length="16" value="0, -1.804687, 0, 0" />
+      <Item type="CBuffer" name="vtQRQGA_0x9FBAB08B" length="16" value="3.640625, 3.640625, 0, 0" />
+      <Item type="CBuffer" name="IuFCVOA_0x4385A0D2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="XsUbrOA_0x66C79BD6" length="16" value="192, 192, 0, 0" />
+      <Item type="CBuffer" name="pylQbiA_0xF1F64340" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="lqIkLBA_0x5099D018" length="16" value="1, 1, 1, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="bumpselfshadowamount" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_ao</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="bgkeKZA_0x0ED966D5" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ouHSkAA_0xFB952501" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PFLloFA_0xC9DE4194" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.05, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="mQngHJA_0x99276EAE" length="16" value="0, -1.804687, 0, 0" />
+      <Item type="CBuffer" name="bUXACCA_0x606B83EE" length="16" value="3.640625, 3.640625, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="bumpselfshadowamount" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_river_water</Name>
+    <DrawBucket>4</DrawBucket>
+    <Params>
+      <Item type="Texture" name="flowsampler" />
+      <Item type="Texture" name="xppNwQA_0x8F4A2632" />
+      <Item type="Texture" name="YKpBFGA_0x31D7079A" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="sTFaCKA_0xDA6AF83F" length="16" value="50, 50, 0, 0" />
+      <Item type="CBuffer" name="KzWDRDA_0xBF48D40B" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="wzyXItA_0xD2F5EB77" length="16" value="0.002, 0.002, 0, 0" />
+      <Item type="CBuffer" name="HBNWZjA_0xDB92326A" length="16" value="0.002, 0, 0, 0" />
+      <Item type="CBuffer" name="KkuReIA_0xEC771D54" length="16" value="0.008, 0.008, 0, 0" />
+      <Item type="CBuffer" name="AKqMKDA_0xF68D4F7C" length="16" value="0.008, 0, 0, 0" />
+      <Item type="CBuffer" name="wEcFdLA_0x3C290D25" length="16" value="0.003, 0.003, 0, 0" />
+      <Item type="CBuffer" name="gZkcvWA_0x21F4CA8E" length="16" value="0.003, 0, 0, 0" />
+      <Item type="CBuffer" name="GqnKdIA_0xD014D246" length="16" value="-1, 1.1, 0, 0" />
+      <Item type="CBuffer" name="lvVCDuA_0xBB5B451B" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="DmMPOBA_0x8EE9855E" length="16" value="2.1, 0, 0, 0" />
+      <Item type="CBuffer" name="UWKDQAA_0xFFD0B1C1" length="16" value="-1, 1, 0, 0" />
+      <Item type="CBuffer" name="uSjhZUA_0xE8289EB9" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="dBJaoZA_0xDB8D1EA4" length="16" value="3, 0, 0, 0" />
+      <Item type="CBuffer" name="jELjlNA_0x66224BDC" length="16" value="0.02037, 0, 0, 0" />
+      <Item type="CBuffer" name="jIOvlBA_0x3F2AD466" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="xUsWPBA_0x9EDE0789" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="oUFCVAA_0x23F74D57" length="16" value="7, 3.5, 0, 0" />
+      <Item type="CBuffer" name="UAVHEHA_0x24B00C0C" length="16" value="-0.9375, -0.84375, 0, 0" />
+      <Item type="CBuffer" name="YFkvwVA_0x37BBB4F2" length="16" value="7, 3.5, 0, 0" />
+      <Item type="CBuffer" name="ooKioMA_0x9E125C7A" length="16" value="-0.9375, -0.84375, 0, 0" />
+      <Item type="CBuffer" name="imhSjaA_0x886E8A3B" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="GftZVaA_0xA5443302" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="ripplespeed" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="ripplescale" length="16" value="2.3, 0, 0, 0" />
+      <Item type="CBuffer" name="mBbINNA_0xAE16E2BD" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="EZVaiAA_0xDB2BCA5C" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="RhZSBIA_0x598C91B5" length="16" value="60, 0, 0, 0" />
+      <Item type="CBuffer" name="VbWHXJA_0x1403AE11" length="16" value="0.05, 0, 0, 0" />
+      <Item type="CBuffer" name="jWbdyLA_0x76A0234A" length="16" value="0.05, 0, 0, 0" />
+      <Item type="CBuffer" name="oiRxaHA_0xFEFF61EE" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="cuXKzBA_0x233F803A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ScusqBA_0x28564A30" length="16" value="0.6, 0, 0, 0" />
+      <Item type="CBuffer" name="yeIqdGA_0x6680F0D4" length="16" value="0.42, 0, 0, 0" />
+      <Item type="CBuffer" name="ZHDqSDA_0x5E95F7B4" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="TPxITAA_0x690B1C88" length="16" value="5, 0, 0, 0" />
+      <Item type="CBuffer" name="iOtoSeA_0x5302A095" length="16" value="0.7, 0, 0, 0" />
+      <Item type="CBuffer" name="xhOxEHB_0xC36EB0D9" length="16" value="1.94, 0, 0, 0" />
+      <Item type="CBuffer" name="fyeZQrA_0xAAACF53A" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="HvWQBEA_0x9729D71A" length="16" value="123.952, 0, 0, 0" />
+      <Item type="CBuffer" name="specularintensity" length="16" value="5.1, 0, 0, 0" />
+      <Item type="CBuffer" name="aocCoGA_0x73E4F90C" length="16" value="0.84, 0, 0, 0" />
+      <Item type="CBuffer" name="tRrVHBA_0xAB33CEF5" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="shYgoCA_0x180C9A71" length="16" value="6, 0, 0, 0" />
+      <Item type="CBuffer" name="oqMPVGA_0x3CB526D2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="jfEeAaA_0xFF7F03D8" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="PFwXnEA_0x5DCE766C" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="PcbvhPA_0xD20B53D1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="g" length="256" value="1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 0, 1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 1, 1, 0, 0, 0, -1, 1, 0, -1, 1, 0, 0, 0, -1, -1, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_alpha</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.05, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="bumpselfshadowamount" length="16" value="0.25, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_river_water_joint</Name>
+    <DrawBucket>4</DrawBucket>
+    <Params>
+      <Item type="Texture" name="flowsampler" />
+      <Item type="Texture" name="xppNwQA_0x8F4A2632" />
+      <Item type="Texture" name="YKpBFGA_0x31D7079A" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="sTFaCKA_0xDA6AF83F" length="16" value="50, 50, 0, 0" />
+      <Item type="CBuffer" name="KzWDRDA_0xBF48D40B" length="16" value="50, 0, 0, 0" />
+      <Item type="CBuffer" name="wzyXItA_0xD2F5EB77" length="16" value="0.002, 0, 0, 0" />
+      <Item type="CBuffer" name="HBNWZjA_0xDB92326A" length="16" value="0.002, 0, 0, 0" />
+      <Item type="CBuffer" name="KkuReIA_0xEC771D54" length="16" value="0.008, 0, 0, 0" />
+      <Item type="CBuffer" name="AKqMKDA_0xF68D4F7C" length="16" value="0.008, 0, 0, 0" />
+      <Item type="CBuffer" name="wEcFdLA_0x3C290D25" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="gZkcvWA_0x21F4CA8E" length="16" value="0.003, 0, 0, 0" />
+      <Item type="CBuffer" name="GqnKdIA_0xD014D246" length="16" value="-1, 0, 0, 0" />
+      <Item type="CBuffer" name="lvVCDuA_0xBB5B451B" length="16" value="0.08, 0, 0, 0" />
+      <Item type="CBuffer" name="DmMPOBA_0x8EE9855E" length="16" value="5, 0, 0, 0" />
+      <Item type="CBuffer" name="UWKDQAA_0xFFD0B1C1" length="16" value="-1, 0.5, 0, 0" />
+      <Item type="CBuffer" name="uSjhZUA_0xE8289EB9" length="16" value="0.2, 0, 0, 0" />
+      <Item type="CBuffer" name="dBJaoZA_0xDB8D1EA4" length="16" value="3.5, 0, 0, 0" />
+      <Item type="CBuffer" name="jELjlNA_0x66224BDC" length="16" value="0.02037, 0, 0, 0" />
+      <Item type="CBuffer" name="jIOvlBA_0x3F2AD466" length="16" value="0.75, 0, 0, 0" />
+      <Item type="CBuffer" name="xUsWPBA_0x9EDE0789" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="oUFCVAA_0x23F74D57" length="16" value="3.5, 3.5, 0, 0" />
+      <Item type="CBuffer" name="UAVHEHA_0x24B00C0C" length="16" value="-1.71875, -2.5, 0, 0" />
+      <Item type="CBuffer" name="YFkvwVA_0x37BBB4F2" length="16" value="3.5, 3.5, 0, 0" />
+      <Item type="CBuffer" name="ooKioMA_0x9E125C7A" length="16" value="-1.71875, -2.5, 0, 0" />
+      <Item type="CBuffer" name="imhSjaA_0x886E8A3B" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="GftZVaA_0xA5443302" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="sGcjcFA_0x59E18655" length="16" value="0.38, 0.07, 0, 0" />
+      <Item type="CBuffer" name="znjCtDA_0x5BA61836" length="16" value="10, 3.4, 0, 0" />
+      <Item type="CBuffer" name="KskIaXA_0x7FDBA5E7" length="16" value="0.5, 0.5, 0, 0" />
+      <Item type="CBuffer" name="GNscHCA_0x417E6C4A" length="16" value="0.55, 5, 0, 0" />
+      <Item type="CBuffer" name="HYujxJA_0x614250B4" length="16" value="15, 10, 0, 0" />
+      <Item type="CBuffer" name="VAaoHHA_0x109D7F44" length="16" value="2, 2, 0, 0" />
+      <Item type="CBuffer" name="suYfLHA_0x9D803488" length="16" value="0.1, 0.1, 0, 0" />
+      <Item type="CBuffer" name="tywjIYA_0xFFDED5EA" length="16" value="0.1, 0.05, 0, 0" />
+      <Item type="CBuffer" name="qrPfkbA_0xD46BA203" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="GwABJBA_0x1357DC9F" length="16" value="0.6, 1, 0, 0" />
+      <Item type="CBuffer" name="shHQPDA_0xF2BCC00A" length="16" value="0.4, 0.4, 0, 0" />
+      <Item type="CBuffer" name="kzqCICA_0x5FD04548" length="16" value="2.5, 1, 0, 0" />
+      <Item type="CBuffer" name="SnUUgBA_0xCCC3A079" length="16" value="20, 10, 0, 0" />
+      <Item type="CBuffer" name="iOtoSeA_0x5302A095" length="16" value="0.7, 0, 0, 0" />
+      <Item type="CBuffer" name="IjpkKBA_0x9CB9AE09" length="16" value="3.27, 1.79, 0, 0" />
+      <Item type="CBuffer" name="fyeZQrA_0xAAACF53A" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="BhMyuEA_0x1095B8C5" length="16" value="256, 256, 0, 0" />
+      <Item type="CBuffer" name="GAoSjEC_0x77884F23" length="16" value="8, 15.2, 0, 0" />
+      <Item type="CBuffer" name="GMjzrjA_0x3FE30231" length="16" value="0.605, 0.355, 0, 0" />
+      <Item type="CBuffer" name="kzOahEA_0x58CFB396" length="16" value="0.255, 0.231, 0, 0" />
+      <Item type="CBuffer" name="vDlmpNA_0xC7DFC84E" length="16" value="1.4, 3, 0, 0" />
+      <Item type="CBuffer" name="oqMPVGA_0x3CB526D2" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="DSYpqWA_0xAE97E3C9" length="16" value="1.172, 1, 0, 0" />
+      <Item type="CBuffer" name="GUEmSEA_0xA298B285" length="16" value="0.12, 0.4, 0, 0" />
+      <Item type="CBuffer" name="PLIcwFA_0x0AF7BED2" length="16" value="0.35, 0.2, 0, 0" />
+      <Item type="CBuffer" name="PcbvhPA_0xD20B53D1" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="g" length="256" value="1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 0, 1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 1, 1, 0, 0, 0, -1, 1, 0, -1, 1, 0, 0, 0, -1, -1, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_flattenterrain</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="detailsampler" />
+      <Item type="Texture" name="hKBJgIA_0x9EDA259F" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="192, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="192, 0, 0, 0" />
+      <Item type="CBuffer" name="detailmapscale" length="16" value="0.65, 0, 0, 0" />
+      <Item type="CBuffer" name="iXyjTEA_0x0652FE00" length="16" value="192, 192, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="VhpcIaA_0xF1F47A00" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="CSbJgIA_0xD2B27E6D" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="vpzMPJA_0xAB1600E6" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="sZQDzQA_0x1986A08E" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_ao_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="aibnWBA_0x4CE3D854" />
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="ouHSkAA_0xFB952501" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="PFLloFA_0xC9DE4194" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.05, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="nwSokAA_0x92165D5E" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="tesrrRA_0xE55CF27C" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="bumpselfshadowamount" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_flattenterrain_blend</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="YMjHvBA_0x8B3111A3" />
+      <Item type="Texture" name="aibnWBA_0x4CE3D854" />
+      <Item type="Texture" name="TIPjwDA_0x76EC3A73" />
+      <Item type="Texture" name="bARJcPA_0xD321D1E3" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="lBAJdFA_0xD4E64D4A" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscalev" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="detailnormalmapscaleu" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="kYLUjIA_0x0A6C9E0F" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="JDshUVA_0xA18F5482" length="16" value="192, 0, 0, 0" />
+      <Item type="CBuffer" name="KzJzTAA_0xC1047A55" length="16" value="192, 0, 0, 0" />
+      <Item type="CBuffer" name="sJmXwUA_0xAD5E3659" length="16" value="0.65, 0, 0, 0" />
+      <Item type="CBuffer" name="WROEYdA_0xD98AA1C6" length="16" value="192, 192, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="18, 0, 0, 0" />
+      <Item type="CBuffer" name="wAubgKA_0xA46DDC14" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="xSQaaFA_0x4696CE31" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="sevcJLA_0xF624B5F1" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="AqhvOKA_0xE9ECAFA5" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="FcNOUFA_0xDCBE6337" length="16" value="1, 1, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_traintrack_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.1, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="65, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="CBuffer" name="MnrovLA_0x79D622FE" length="16" value="-2559.7893, 314.60107, 511.83228, 528" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_lod4_water</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="CBuffer" name="MnrovLA_0x79D622FE" length="16" value="1498.9248, 76.27783, 512.0005, 528" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_window_glow</Name>
+    <DrawBucket>8</DrawBucket>
+    <Params>
+      <Item type="CBuffer" name="gcameradistanceatmaxdisplacement" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="gmaxdisplacement" length="16" value="0.3, 0, 0, 0" />
+      <Item type="CBuffer" name="CGWMKHA_0x296E66D3" length="16" value="3, 0, 0, 0" />
+      <Item type="CBuffer" name="GYHhBEB_0xCBEB37AB" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="ovTxwLA_0xA2536C9E" length="16" value="15, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_door_glow</Name>
+    <DrawBucket>8</DrawBucket>
+    <Params>
+      <Item type="CBuffer" name="gsoftparticlerange" length="16" value="1.5, 0, 0, 0" />
+      <Item type="CBuffer" name="gcameradistanceatmaxdisplacement" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="gmaxdisplacement" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="CGWMKHA_0x296E66D3" length="16" value="4, 0, 0, 0" />
+      <Item type="CBuffer" name="GYHhBEB_0xCBEB37AB" length="16" value="15, 0, 0, 0" />
+      <Item type="CBuffer" name="ovTxwLA_0xA2536C9E" length="16" value="8, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_nodirt_singlesided</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_decal</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="Texture" name="texturesampler3" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_nodistortion_bump_spec_ao</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_mirror</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="specsampler" />
+      <Item type="Texture" name="nkrBGQA_0x3C9796A8" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="aocCoGA_0x73E4F90C" length="16" value="0.6, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_singlesided</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_ambocc_cpv</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.15, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_graffiti</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="gcameradistanceatmaxdisplacement" length="16" value="100, 0, 0, 0" />
+      <Item type="CBuffer" name="gmaxdisplacement" length="16" value="0.4, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc_bridge</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item type="Texture" name="texturesampler" />
+      <Item type="Texture" name="texturesampler2" />
+      <Item type="Texture" name="bumpsampler" />
+      <Item type="Texture" name="amboccsampler" />
+      <Item type="CBuffer" name="colors" length="144" value="1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1" />
+      <Item type="CBuffer" name="bumpiness" length="16" value="2, 0, 0, 0" />
+      <Item type="CBuffer" name="specularcolorfactor" length="16" value="0.5, 0, 0, 0" />
+      <Item type="CBuffer" name="specularfactor" length="16" value="30, 0, 0, 0" />
+      <Item type="CBuffer" name="ZzGuzNA_0x20E08001" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="HtJcfCA_0x86E87AE0" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="JMipCVA_0xD71FB6F1" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="qgCowWA_0xBE172D21" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="wxcTWCA_0x5279419E" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="fresnelterm" length="16" value="0.9, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenbias" length="16" value="0, 0, 0, 0" />
+      <Item type="CBuffer" name="speculargreenscale" length="16" value="1, 0, 0, 0" />
+      <Item type="CBuffer" name="physicsmaterial" length="16" value="0, 0, 0, 0" />
+    </Params>
+  </Item>
+</RDR1Shaders>
