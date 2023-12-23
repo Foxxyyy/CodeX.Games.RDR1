@@ -3,15 +3,12 @@ using CodeX.Core.Numerics;
 using CodeX.Core.Shaders;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
-using SharpDX;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Xml;
-using static System.Net.Mime.MediaTypeNames;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
@@ -742,6 +739,14 @@ namespace CodeX.Games.RDR1.RSC6
 
                 switch (hash)
                 {
+                    case 0x60F5992A: //rdr2_clouds_animsoft
+                    case 0x693DE1A1: //rdr2_clouds_altitude
+                    case 0x5218CB1D: //rdr2_clouds_fast
+                    case 0xE3136EFD: //rdr2_clouds_anim
+                    case 0xF6C04CCD: //rdr2_clouds_soft
+                    case 0xFE72D6A5: //rdr2_clouds_fog
+                        SetupSkyShader(shader);
+                        break;
                     case 0x707EF967: //rdr2_flattenterrain_blend
                     case 0xC242DAA7: //rdr2_terrain_blend
                         SetupBlendTerrainShader(shader);
@@ -771,23 +776,29 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x32A4918E: //rdr2_alpha
                     case 0x173D5F9D: //rdr2_grass
                     case 0xC714B86E: //rdr2_alpha_foliage
+                    case 0xBBCB0BF8: //rdr2_alpha_bspec_ao_shareduv
+                    case 0xC4724CCA: //rdr2_alpha_bspec_ao_shareduv_character_nooff
+                    case 0x14577406: //rdr2_alpha_bspec_ao_shareduv_character_hair
+                    case 0xC14300BB: //rdr2_alpha_bspec_ao_shareduv_character_cutscene
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                     case 0x949EC19C: //rdr2_alpha_bspec_ao_shared
                         ShaderInputs.SetFloat(0xDF918855, 1.0f); //BumpScale
+                        ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                 }
 
                 switch (bucket)
                 {
                     default: throw new Exception("Unknown RenderBucket");
-                    case 0: ShaderBucket = ShaderBucket.Solid; break;  //solid
-                    case 1: ShaderBucket = ShaderBucket.Solid; break;  //glass or wire
-                    case 2: ShaderBucket = ShaderBucket.Decal1; break; //decal
-                    case 3: ShaderBucket = ShaderBucket.Alpha2; break; //alpha
-                    case 4: ShaderBucket = ShaderBucket.Decal1; break; //emissive
-                    case 5: ShaderBucket = ShaderBucket.Alpha1; break; //emissive alpha
-                    case 8: ShaderBucket = ShaderBucket.Alpha2; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //alpha
+                    case 0: ShaderBucket = ShaderBucket.Solid; break;  //Opaque
+                    case 1: ShaderBucket = ShaderBucket.SolidB; break; //Double-sided opaque
+                    case 2: ShaderBucket = ShaderBucket.Alpha1; break; //Hair
+                    case 3: ShaderBucket = ShaderBucket.Alpha1; break; //AlphaMask
+                    case 4: ShaderBucket = ShaderBucket.Translucency; break; //Water
+                    case 5: ShaderBucket = ShaderBucket.Translucency; break; //Transparent
+                    case 6: ShaderBucket = ShaderBucket.Alpha2; break; //DistortionGlass
+                    case 8: ShaderBucket = ShaderBucket.AlphaF; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //Alpha
                 }
             }
         }
@@ -804,6 +815,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             var sfresnel = 0.96f;
             var sintensitymult = 0.2f;
+            var glowscale = 0.0f;
             var sfalloffmult = 35.0f;
 
             for (int p = 0; p < parms.Length; p++)
@@ -822,7 +834,7 @@ namespace CodeX.Games.RDR1.RSC6
                                 break;
                             case 0x46b7c64f: //bumpsampler
                             case 0x8ac11cb0: //normalsampler
-                                Textures[1] = tex;
+                                //Textures[1] = tex;
                                 break;
                         }
                     }
@@ -843,19 +855,27 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x166E0FD1: //specularfactor eg 30
                             sfalloffmult = parm.Vector.Vector.X;
                             break;
+                        case 0x09C8E492: //gglowfuncscale
+                            glowscale = parm.Vector.Vector.X * 0.025f;
+                            break;
                     }
                 }
             }
             ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
+            ShaderInputs.SetFloat(0x92176B1A, 0.3f); //MeshSmoothness
+
+            if (glowscale != 0.0f)
+                ShaderInputs.SetFloat(0x83DDF493, FloatUtil.Saturate(glowscale)); //EmissiveMult
+            else
+                ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
         }
 
         private void SetupBlendTerrainShader(Rsc6ShaderFX s)
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetFloat4(0x7CB163F5, Vector4.One); //"BumpScales"
-            ShaderInputs.SetUInt32(0x9B920BD, 40); //"BlendMode"
+            ShaderInputs.SetUInt32(0x9B920BD, 40); //BlendMode
 
             if (s == null)
                 return;
@@ -905,7 +925,8 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-
+                        default:
+                            break;
                     }
                 }
             }
@@ -915,7 +936,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 40); //"BlendMode"
+            ShaderInputs.SetUInt32(0x9B920BD, 40); //BlendMode
 
             if (s == null)
                 return;
@@ -1069,7 +1090,7 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (parm.Hash)
                     {
                         case 0xf6712b81: //bumpiness
-                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X * 0.25f); //"BumpScale"
+                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X * 0.25f); //"BumpScale"
                             break;
                         case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
                             sfresnel = parm.Vector.Vector.X;
@@ -1086,6 +1107,7 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //MeshMetallicity
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //MeshParamsMult
             ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
+            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
         }
 
         private void SetNoSpecShader(Rsc6ShaderFX s) //diffuse + diffuse2 + bump + ambocc
@@ -1150,6 +1172,53 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
             ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
+            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
+        }
+
+        private void SetupSkyShader(Rsc6ShaderFX s)
+        {
+            SetDefaultShader();
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetFloat(0xDF918855, 1.0f);//"BumpScale"
+            ShaderInputs.SetUInt32(0x249983FD, 1); //"ParamsMapConfig"
+            ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //"AlphaScale"
+            ShaderInputs.SetFloat4(0x1C2824ED, Vector4.One);//"NoiseSettings"
+            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+            Textures = new Texture[2];
+
+            for (int p = 0; p < parms.Length; p++)
+            {
+                var parm = parms[p];
+                if (parm.DataType == 0)
+                {
+                    var tex = parm.Texture;
+                    if (tex != null)
+                    {
+                        switch (parm.Hash)
+                        {
+                            case 0xe43044d6: //densitysampler
+                                Textures[0] = tex;
+                                break;
+                            case 0x8ac11cb0: //normalsampler
+                                Textures[1] = tex;
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+
+                    switch (parm.Hash)
+                    {
+                        default:
+                            break;
+                    }
+                }
+            }
         }
 
         public override string ToString()

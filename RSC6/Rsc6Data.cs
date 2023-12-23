@@ -5,11 +5,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Numerics;
 using CodeX.Core.Numerics;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.JavaScript;
-using System.Runtime.Intrinsics;
-using SharpDX;
-using System.Drawing;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -57,49 +52,49 @@ namespace CodeX.Games.RDR1.RSC6
         {
             var v = BufferUtil.ReadShort(Data, GetDataOffset());
             Position += 2;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new ushort ReadUInt16()
         {
             var v = BufferUtil.ReadUshort(Data, GetDataOffset());
             Position += 2;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new int ReadInt32()
         {
             var v = BufferUtil.ReadInt(Data, GetDataOffset());
             Position += 4;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new uint ReadUInt32()
         {
             var v = BufferUtil.ReadUint(Data, GetDataOffset());
             Position += 4;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new long ReadInt64()
         {
             var v = BufferUtil.ReadLong(Data, GetDataOffset());
             Position += 8;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new ulong ReadUInt64()
         {
             var v = BufferUtil.ReadUlong(Data, GetDataOffset());
             Position += 8;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public new float ReadSingle()
         {
             var v = BufferUtil.ReadSingle(Data, GetDataOffset());
             Position += 4;
-            return v;
+            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
         public string ReadString()
@@ -286,6 +281,19 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
+        public Rsc6PtrToPtrArr<T> ReadPtrToItem<T>() where T : Rsc6Block, new()
+        {
+            var ptr = new Rsc6PtrToPtrArr<T>();
+            ptr.ReadPtr(this);
+            return ptr;
+        }
+
+        public Rsc6PtrToPtrArr<T> ReadItems<T>(Rsc6PtrToPtrArr<T> arr, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        {
+            arr.ReadItems(this, createFunc);
+            return arr;
+        }
+
         public Rsc6Arr<T> ReadArr<T>(bool size64 = false) where T : unmanaged
         {
             var arr = new Rsc6Arr<T>();
@@ -296,6 +304,13 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6CustomArr<T> ReadArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
         {
             var arr = new Rsc6CustomArr<T>();
+            arr.Read(this, createFunc);
+            return arr;
+        }
+
+        public Rsc6PoolArr<T> ReadPoolArr<T>() where T : unmanaged
+        {
+            var arr = new Rsc6PoolArr<T>();
             arr.Read(this);
             return arr;
         }
@@ -333,6 +348,13 @@ namespace CodeX.Games.RDR1.RSC6
             if (virtualSize != -1)
                 arr.Position += (ulong)virtualSize;
 
+            return arr;
+        }
+
+        public Rsc6RawPtrArr<T> ReadRawPtrArrPtr<T>() where T : Rsc6Block, new()
+        {
+            var arr = new Rsc6RawPtrArr<T>();
+            arr.ReadPtr(this);
             return arr;
         }
 
@@ -566,6 +588,11 @@ namespace CodeX.Games.RDR1.RSC6
         }
 
         public void WriteArr<T>(Rsc6Arr<T> arr) where T : unmanaged
+        {
+            arr.Write(this);
+        }
+
+        public void WritePoolArr<T>(Rsc6PoolArr<T> arr) where T : unmanaged
         {
             arr.Write(this);
         }
@@ -862,6 +889,11 @@ namespace CodeX.Games.RDR1.RSC6
             Item = item;
         }
 
+        public Rsc6Ptr(ulong pos)
+        {
+            Position = pos;
+        }
+
         public void ReadPtr(Rsc6DataReader reader)
         {
             Position = reader.ReadUInt32();
@@ -888,6 +920,109 @@ namespace CodeX.Games.RDR1.RSC6
         public override string ToString()
         {
             return Item?.ToString() ?? Position.ToString();
+        }
+    }
+
+    public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
+    {
+        public uint Position;
+        public ushort Count; //m_Size
+        public ushort Capacity; //m_FreeCount
+        public uint Size; //m_ElemSize
+        public uint FirstFree; //m_FirstFree, 2nd pointer
+        public ushort PeakUse; //m_PeakUse
+        public ushort Dummy = 0xCDCD; //m_Dummy
+        public byte OwnMem = 1; //m_OwnMem
+        public T[] Items;
+
+        public Rsc6PoolArr(T[] items)
+        {
+            Position = 0;
+            Count = (ushort)items.Length;
+            Capacity = Count;
+            Items = items;
+        }
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Position = reader.ReadUInt32();
+            Count = reader.ReadUInt16();
+            Capacity = reader.ReadUInt16();
+            Size = reader.ReadUInt32();
+            FirstFree = reader.ReadUInt32();
+            PeakUse = reader.ReadUInt16();
+            Dummy = reader.ReadUInt16();
+            OwnMem = reader.ReadByte();
+
+            var p = reader.Position;
+            reader.Position = Position;
+            Items = reader.ReadArray<T>(Count);
+            reader.Position = p;
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.AddPointerRef(Items);
+            writer.WriteUInt32(Position);
+            writer.WriteUInt16(Count);
+            writer.WriteUInt16(Capacity);
+            writer.WriteUInt32(Size);
+            writer.WriteUInt32(FirstFree);
+            writer.WriteUInt16(PeakUse);
+            writer.WriteUInt16(Dummy);
+            writer.WriteByte(OwnMem);
+            writer.WriteArray(Items);
+        }
+
+        public T this[int index]
+        {
+            get => Items[index];
+            set => Items[index] = value;
+        }
+
+        public override string ToString()
+        {
+            return "Count: " + Count.ToString();
+        }
+    }
+
+    public struct Rsc6PtrToPtrArr<T> where T : Rsc6Block, new()
+    {
+        public uint Position;
+        public Rsc6CustomArr<T> Array;
+
+        public void ReadPtr(Rsc6DataReader reader)
+        {
+            Position = reader.ReadUInt32();
+        }
+
+        public void ReadItems(Rsc6DataReader reader, Func<Rsc6DataReader, T> createFunc = null)
+        {
+            if (Position != 0)
+            {
+                var p = reader.Position;
+                reader.Position = Position;
+                Array = reader.ReadArr<T>(createFunc);
+                reader.Position = p;
+            }
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.AddPointerRef(Array);
+            writer.WriteUInt32(Position);
+            writer.WriteArr(Array);
+        }
+
+        public T this[int index]
+        {
+            get => Array[index];
+            set => Array[index] = value;
+        }
+
+        public override string ToString()
+        {
+            return "Count: " + (Array.Items?.Length.ToString() ?? "0");
         }
     }
 
@@ -1156,6 +1291,66 @@ namespace CodeX.Games.RDR1.RSC6
             writer.AddPointerRef(Items);
             writer.WriteUInt32((uint)Position);
             writer.WriteArray(Items);
+        }
+
+        public T this[int index]
+        {
+            get => Items[index];
+            set => Items[index] = value;
+        }
+
+        public override string ToString()
+        {
+            return "Count: " + (Items?.Length.ToString() ?? "0");
+        }
+    }
+
+    public struct Rsc6RawPtrArr<T> where T : Rsc6Block, new()
+    {
+        public uint Position;
+        public uint[] Pointers;
+        public T[] Items;
+
+        public void ReadPtr(Rsc6DataReader reader)
+        {
+            Position = reader.ReadUInt32();
+        }
+
+        public void ReadItems(Rsc6DataReader reader, uint count, Func<Rsc6DataReader, T> createFunc = null)
+        {
+            var p = reader.Position;
+            reader.Position = Position;
+            Pointers = reader.ReadArray<uint>(count);
+            Items = new T[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                Items[i] = reader.ReadBlock<T>(Pointers[i], createFunc);
+            }
+            reader.Position = p;
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            var ptrs = (Items != null) ? new uint[Items.Length] : null;
+            writer.AddPointerRef(ptrs);
+            writer.WriteUInt32(Position);
+
+            if (Items != null)
+            {
+                var data = writer.WriteArray(ptrs);
+                var offset = 0u;
+                for (int i = 0; i < Items.Length; i++)
+                {
+                    var item = Items[i];
+                    if (item != null)
+                    {
+                        writer.WriteBlock(item);
+                        writer.AddPointerRef(item, data, offset);
+                    }
+                    offset += 4;
+                }
+            }
         }
 
         public T this[int index]

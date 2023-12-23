@@ -11,90 +11,121 @@ namespace CodeX.Games.RDR1.RSC6
     class Rsc6Fragment : Rsc6Block
     {
         public ulong FilePosition { get; set; }
-        public ulong BlockLength => 204;
+        public ulong BlockLength => 348 + 164; //Actually sagFragtype + rage::fragType
         public bool IsPhysical => false;
         public uint VFT { get; set; }
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public Rsc6Ptr<Rsc6TextureDictionary> Textures { get; set; }
-        public float MaxInertiaNormalized { get; set; }
-        public float MaxInertia { get; set; }
-        public Vector4 CenterRadius { get; set; }
-        public Vector4 CenterOfMass { get; set; }
-        public Vector4 CenterOfMass2 { get; set; }
-        public Vector4 UnbrokenCGOffset { get; set; }
+        public float SmallestAngInertia { get; set; } //m_SmallestAngInertia
+        public float LargestAngInertia { get; set; } //m_LargestAngInertia
+        public Vector4 BoundingSphere { get; set; } //m_BoundingSphere
+        public Vector4 RootCGOffset { get; set; } //m_RootCGOffset
+        public Vector4 OriginalRootCGOffset { get; set; } //m_OriginalRootCGOffset
+        public Vector4 UnbrokenCGOffset { get; set; } //m_UnbrokenCGOffset
         public Vector4 DampingLinearC { get; set; }
         public Vector4 DampingLinearV { get; set; }
         public Vector4 DampingLinearV2 { get; set; }
         public Vector4 DampingAngularC { get; set; }
         public Vector4 DampingAngularV { get; set; }
         public Vector4 DampingAngularV2 { get; set; }
-        public Rsc6Str NameRef { get; set; }
-        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; }
+        public Rsc6Str NameRef { get; set; } //m_TuneName
+        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; } //m_ExtraDrawables
         public uint Unk0 { get; set; }
         public uint Unk1 { get; set; }
         public int UnkInt { get; set; }
         public int UnkInt2 { get; set; }
-        public uint ChildPtr { get; set; } //pointer to a child?
-        public uint GroupNamesPtr { get; set; } //string array
-        public uint GroupsPtr { get; set; } //fragTypeGroup array
-        public uint ChildrenPtr { get; set; } //fragTypeChild array
-        public uint UnkArray { get; set; }
-        public ushort UnkArrayCount { get; set; }
-        public ushort UnkArraySize { get; set; }
-        public uint UnkPtr { get; set; }
-        public Rsc6Ptr<Rsc6FragPhysArchetype> Archetype { get; set; }
-        public Rsc6Ptr<Rsc6FragPhysArchetype> Archetype2 { get; set; }
-        public Rsc6Ptr<Rsc6Bounds> Bound { get; set; }
-        public uint ChildInertiaPtr { get; set; } //vector3 array
-        public uint ChildInertiaDamagedPtr { get; set; } //vector3 array
-        public uint MatricesPtr { get; set; } //matrix3x4 array
-        public uint SelfCollisionIndices1Ptr { get; set; } //byte array
-        public uint SelfCollisionIndices2Ptr { get; set; } //byte array
-        public uint ModelIndex { get; set; } //?
-        public uint CollisionEventsPtr { get; set; } //evtSet array
-        public uint EstimatedCacheSize { get; set; }
-        public uint EstimatedArticulatedCacheSize { get; set; }
-        public byte SelfCollisionCount { get; set; }
-        public byte SelfCollisionCountAllocated { get; set; }
-        public byte GroupCount { get; set; }
-        public byte ChildCount { get; set; }
-        public byte FragTypeGroupCount { get; set; }
-        public byte DamageRegions { get; set; }
-        public byte ChildCount2 { get; set; }
-        public byte Flags { get; set; }
-        public byte EntityClass { get; set; }
-        public byte BecomeRope { get; set; }
-        public byte ArtAssetId { get; set; }
-        public byte AttachBottomEnd { get; set; }
-        public int UnkInt3 { get; set; }
-        public float MinMoveForce { get; set; }
+        public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild
+        public Rsc6RawLst<Rsc6String> GroupNames { get; set; } //m_GroupNames
+        public Rsc6RawPtrArr<Rsc6FragPhysGroup> Groups { get; set; } //m_Groups, rage::fragTypeGroup
+        public Rsc6RawPtrArr<Rsc6FragPhysChild> Children { get; set; } //m_Children, rage::fragTypeChild
+        public uint UnkArray { get; set; } //m_EnvCloth, rage::fragTypeEnvCloth
+        public ushort UnkArrayCount { get; set; } //m_Count
+        public ushort UnkArraySize { get; set; } //m_Capacity
+        public uint CharCloth { get; set; } //m_CharCloth, rage::fragTypeCharCloth
+        public Rsc6Ptr<Rsc6FragArchetypeDamp> Archetype1 { get; set; } //rage::phArchetypeDamp
+        public Rsc6Ptr<Rsc6FragArchetypeDamp> Archetype2 { get; set; } //rage::phArchetypeDamp
+        public Rsc6Ptr<Rsc6Bounds> Bound { get; set; } //m_CompositeBounds
+        public Rsc6RawArr<Vector4> UndamagedAngInertia { get; set; } //m_UndamagedAngInertia
+        public Rsc6RawArr<Vector4> DamagedAngInertia { get; set; } //m_DamagedAngInertia
+        public Rsc6RawArr<Matrix3x4> LinkAttachments { get; set; } //m_LinkAttachments
+        public uint MinBreakingImpulses { get; set; } //m_MinBreakingImpulses
+        public Rsc6RawArr<byte> SelfCollisionA { get; set; } //m_SelfCollisionA
+        public Rsc6RawArr<byte> SelfCollisionB { get; set; } //m_SelfCollisionB
+        public uint UserData { get; set; } //m_UserData
+        public uint JointParams { get; set; } //m_JointParams, rage::fragType
+        public uint CollisionEventset { get; set; } //m_CollisionEventset, rage::evtSet
+        public uint CollisionEventPlayer { get; set; } //m_CollisionEventPlayer, rage::evtPlayer
+        public uint AnimFrame { get; set; } //m_AnimFrame, rage::crFrame
+        public uint Skeleton1 { get; set; } //rage::crSkeleton
+        public uint Skeleton2 { get; set; } //rage::crSkeleton
+        public uint SharedMatrixSet { get; set; } //m_SharedMatrixSet
+        public uint EstimatedCacheSize { get; set; } //m_EstimatedCacheSizes
+        public uint EstimatedArticulatedCacheSize { get; set; } //m_EstimatedArticulatedCacheSize
+        public byte NumSelfCollisions { get; set; } //m_NumSelfCollisions
+        public byte MaxNumSelfCollisions { get; set; } //m_MaxNumSelfCollisions
+        public byte GroupCount { get; set; } //m_NumGroups
+        public byte ChildCount { get; set; } //m_NumChildren
+        public byte FragTypeGroupCount { get; set; } //m_RootGroupCount
+        public byte DamageRegions { get; set; } //m_NumRootDamageRegions
+        public byte ChildCount2 { get; set; } //m_NumBonyChildren
+        public byte EntityClass { get; set; } //m_EntityClass
+        public byte ARTAssetID { get; set; } //m_ARTAssetID
+        public byte AttachBottomEnd { get; set; } //m_AttachBottomEnd
+        public ushort Flags { get; set; } //m_Flags
+        public int ClientClassID { get; set; } //m_ClientClassID
+        public float MinMoveForce { get; set; } //m_MinMoveForce
+        public float UnbrokenElasticity { get; set; } //m_UnbrokenElasticity
+        public float BuoyancyFactor { get; set; } //m_BuoyancyFactor
+        public uint Unknown_14Ch { get; set; } //Always 0
+        public byte GlassAttachmentBone { get; set; } //m_GlassAttachmentBone, seems to always be 0 (root)
+        public byte NumGlassPaneModelInfos { get; set; } //m_NumGlassPaneModelInfos
+        public ushort Unknown_152h { get; set; } //Always 0
+        public uint GlassPaneModelInfos { get; set; } //m_GlassPaneModelInfos, rage::bgPaneModelInfoBase, used for windows (p_win), array of pointers using 'NumGlassPaneModelInfos'
+        public float GravityFactor { get; set; } = 1.0f; //m_GravityFactor
+        public uint Unknown_15Ch { get; set; }
+        public Rsc6PtrToPtrArr<Rsc6AssociationInfo> AssociatedFragments { get; set; } //m_AssociatedFragments, points to an array of pointers of 'AssociationInfo'
+        public uint Unknown_164h { get; set; }
+        public uint ChildDataSet { get; set; } //m_ChildDataSet, sagFragTypeChildDataSet
+        public uint Unknown_16Ch { get; set; }
+        public bool HasTextureLOD { get; set; } //m_HasTextureLOD
+        public bool HasFragLOD { get; set; } //m_HasFragLOD
+        public bool HasAnimNormalMap { get; set; } //m_HasAnimNrmMap
+        public byte[] Unknown_173h { get; set; }
+        public Rsc6Str ParentTextureLOD { get; set; } //m_ParentTextureLOD, used for hats
+        public int GlassGlowShaderIndex { get; set; } = -1; //m_GlassGlowShaderIndex
+        public uint TargetManager { get; set; } //m_TargetManager, rage::grbTargetManager
+        public byte[] VariableMeshArray1 { get; set; } //Used in scripts with 'ACTOR_ENABLE_VARIABLE_MESH' for enabling mesh components
+        public byte[] VariableMeshArray2 { get; set; }
+        public byte[] VariableMeshArray3 { get; set; }
+        public byte VariableMeshCount { get; set; } //m_VariableMeshCount
+        public byte AlwaysAddToShadow { get; set; } = 0xCD; //m_AlwayAddToShadow
+        public byte InnerSorting { get; set; } = 0xCD; //m_InnerSorting
+        public Rsc6Ptr<Rsc6TextureDictionary> Textures { get; set; } //m_BuiltInTextureDictionary
+        public uint PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
+        public JenkHash TuneNameHash { get; set; } //m_TuneNameHash
+        public ushort Unknown_1FCh { get; set; } = 0xCDCD; //Padding
+        public bool NoSnow { get; set; } //m_NoSnow
+        public bool ForceOutSide { get; set; } //m_ForceOutSide
 
-        public string[] GroupNames { get; set; }
-        public Rsc6FragTypeGroup[] Groups { get; set; }
-        public Rsc6FragTypeChild[] Children { get; set; }
-        public Vector4[] ChildInertia { get; set; }
-        public Vector4[] ChildInertiaDamaged { get; set; }
-        public Matrix3x4[] Matrices { get; set; }
-        public byte[] SelfCollisionIndices1 { get; set; }
-        public byte[] SelfCollisionIndices2 { get; set; }
-
-        public void Read(Rsc6DataReader reader)
+        public void Read(Rsc6DataReader reader) //sagFragType
         {
             VFT = reader.ReadUInt32();
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
 
-            //Loading textures before the rest or they won't be assigned
-            ulong pos = reader.Position;
+            //Loading textures before drawables
             reader.Position += 0x1E8;
-            Textures = reader.ReadPtr<Rsc6TextureDictionary>();
-            Files.WfdFile.TextureDictionary = Textures;
-            reader.Position = pos;
+            Textures = Files.WfdFile.TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
+            PlacedLightsGroup = reader.ReadUInt32();
+            TuneNameHash = reader.ReadUInt32();
+            Unknown_1FCh = reader.ReadUInt16();
+            NoSnow = reader.ReadBoolean();
+            ForceOutSide = reader.ReadBoolean();
+            reader.Position -= 0x1F8;
 
-            MaxInertiaNormalized = reader.ReadSingle();
-            MaxInertia = reader.ReadSingle();
-            CenterRadius = reader.ReadVector4(true);
-            CenterOfMass = reader.ReadVector4(true);
-            CenterOfMass2 = reader.ReadVector4(true);
+            SmallestAngInertia = reader.ReadSingle();
+            LargestAngInertia = reader.ReadSingle();
+            BoundingSphere = reader.ReadVector4(true);
+            RootCGOffset = reader.ReadVector4(true);
+            OriginalRootCGOffset = reader.ReadVector4(true);
             UnbrokenCGOffset = reader.ReadVector4(true);
             DampingLinearC = reader.ReadVector4(true);
             DampingLinearV = reader.ReadVector4(true);
@@ -108,118 +139,79 @@ namespace CodeX.Games.RDR1.RSC6
             Unk1 = reader.ReadUInt32();
             UnkInt = reader.ReadInt32();
             UnkInt2 = reader.ReadInt32();
-            ChildPtr = reader.ReadUInt32(); //pointer to a child?
-            GroupNamesPtr = reader.ReadUInt32(); //string array
-            GroupsPtr = reader.ReadUInt32(); //fragTypeGroup array
-            ChildrenPtr = reader.ReadUInt32(); //fragTypeChild array
+            DamagedDrawable = reader.ReadUInt32();
+            GroupNames = reader.ReadRawLstPtr<Rsc6String>();
+            Groups = reader.ReadRawPtrArrPtr<Rsc6FragPhysGroup>();
+            Children = reader.ReadRawPtrArrPtr<Rsc6FragPhysChild>();
             UnkArray = reader.ReadUInt32();
             UnkArrayCount = reader.ReadUInt16();
             UnkArraySize = reader.ReadUInt16();
-            UnkPtr = reader.ReadUInt32();
-            Archetype = reader.ReadPtr<Rsc6FragPhysArchetype>();
-            Archetype2 = reader.ReadPtr<Rsc6FragPhysArchetype>();
+            CharCloth = reader.ReadUInt32();
+            Archetype1 = reader.ReadPtr<Rsc6FragArchetypeDamp>();
+            Archetype2 = reader.ReadPtr<Rsc6FragArchetypeDamp>();
             Bound = reader.ReadPtr(Rsc6Bounds.Create);
-            ChildInertiaPtr = reader.ReadUInt32(); //vector3 array
-            ChildInertiaDamagedPtr = reader.ReadUInt32(); //vector3 array
-            MatricesPtr = reader.ReadUInt32(); //matrix3x4 array
-            SelfCollisionIndices1Ptr = reader.ReadUInt32(); //byte array
-            SelfCollisionIndices2Ptr = reader.ReadUInt32(); //byte array
-            ModelIndex = reader.ReadUInt32(); //?
-            CollisionEventsPtr = reader.ReadUInt32();//evtSet array
-            var _fC0 = reader.ReadUInt32();
-            var _fC4 = reader.ReadUInt32();
-            var _fC8 = reader.ReadUInt32(); //4 separate bytes?      
-            var frame = reader.ReadUInt32(); //crFrame ptr
-            var f1DC = reader.ReadUInt32(); //obj2 ptr
-            var f1E0 = reader.ReadUInt32(); //obj2 ptr
-            var f1E4 = reader.ReadUInt32(); //unk ptr
+            UndamagedAngInertia = reader.ReadRawArrPtr<Vector4>();
+            DamagedAngInertia = reader.ReadRawArrPtr<Vector4>();
+            LinkAttachments = reader.ReadRawArrPtr<Matrix3x4>();
+            MinBreakingImpulses = reader.ReadUInt32();
+            SelfCollisionA = reader.ReadRawArrPtr<byte>();
+            SelfCollisionB = reader.ReadRawArrPtr<byte>();
+            UserData = reader.ReadUInt32();
+            JointParams = reader.ReadUInt32();
+            CollisionEventset = reader.ReadUInt32();
+            CollisionEventPlayer = reader.ReadUInt32();
+            AnimFrame = reader.ReadUInt32();
+            Skeleton1 = reader.ReadUInt32();
+            Skeleton2 = reader.ReadUInt32();
+            SharedMatrixSet = reader.ReadUInt32();
             EstimatedCacheSize = reader.ReadUInt32();
             EstimatedArticulatedCacheSize = reader.ReadUInt32();
-            SelfCollisionCount = reader.ReadByte();
-            SelfCollisionCountAllocated = reader.ReadByte();
+            NumSelfCollisions = reader.ReadByte();
+            MaxNumSelfCollisions = reader.ReadByte();
             GroupCount = reader.ReadByte();
             ChildCount = reader.ReadByte();
             FragTypeGroupCount = reader.ReadByte();
             DamageRegions = reader.ReadByte();
             ChildCount2 = reader.ReadByte();
-            Flags = reader.ReadByte();
             EntityClass = reader.ReadByte();
-            BecomeRope = reader.ReadByte();
-            ArtAssetId = reader.ReadByte();
+            ARTAssetID = reader.ReadByte();
             AttachBottomEnd = reader.ReadByte();
-            UnkInt3 = reader.ReadInt32();
+            Flags = reader.ReadUInt16();
+            ClientClassID = reader.ReadInt32();
             MinMoveForce = reader.ReadSingle();
-            var m_UnbrokenElasticity = reader.ReadSingle();
-            var m_BuoyancyFactor = reader.ReadSingle();
-            var m_GlassAttachmentBone = reader.ReadByte();
-            var m_NumGlassPaneModelInfos = reader.ReadByte();
+            UnbrokenElasticity = reader.ReadSingle();
+            BuoyancyFactor = reader.ReadSingle();
+            Unknown_14Ch = reader.ReadUInt32();
+            GlassAttachmentBone = reader.ReadByte();
+            NumGlassPaneModelInfos = reader.ReadByte();
+            Unknown_152h = reader.ReadUInt16();
+            GlassPaneModelInfos = reader.ReadUInt32();
+            GravityFactor = reader.ReadSingle();
+            Unknown_15Ch = reader.ReadUInt32();
+            AssociatedFragments = reader.ReadPtrToItem<Rsc6AssociationInfo>();
+            Unknown_164h = reader.ReadUInt32();
+            ChildDataSet = reader.ReadUInt32();
+            Unknown_16Ch = reader.ReadUInt32();
+            HasTextureLOD = reader.ReadBoolean();
+            HasFragLOD = reader.ReadBoolean();
+            HasAnimNormalMap = reader.ReadBoolean();
+            Unknown_173h = reader.ReadBytes(17); //???
+            ParentTextureLOD = reader.ReadStr();
+            GlassGlowShaderIndex = reader.ReadInt32();
+            TargetManager = reader.ReadUInt32();
+            VariableMeshArray1 = reader.ReadBytes(31);
+            VariableMeshArray2 = reader.ReadBytes(31);
+            VariableMeshArray3 = reader.ReadBytes(31);
+            VariableMeshCount = reader.ReadByte();
+            AlwaysAddToShadow = reader.ReadByte();
+            InnerSorting = reader.ReadByte();
 
-            if (GroupNamesPtr != 0)
-            {
-                var groupNamesPtrs = reader.ReadArray<uint>(GroupCount, GroupNamesPtr);
-                GroupNames = new string[GroupCount];
-                for (int i = 0; i < GroupCount; i++)
-                {
-                    if (groupNamesPtrs[i] != 0)
-                    {
-                        reader.Position = groupNamesPtrs[i];
-                        GroupNames[i] = reader.ReadString();
-                    }
-                }
-            }
-
-            if (GroupsPtr != 0)
-            {
-                var groupsPtrs = reader.ReadArray<uint>(GroupCount, GroupsPtr);
-                Groups = new Rsc6FragTypeGroup[GroupCount];
-                for (int i = 0; i < GroupCount; i++)
-                {
-                    if (groupsPtrs[i] != 0)
-                    {
-                        reader.Position = groupsPtrs[i];
-                        Groups[i] = reader.ReadBlock<Rsc6FragTypeGroup>();
-                    }
-                }
-            }
-
-            if (ChildrenPtr != 0)
-            {
-                var childrenPtrs = reader.ReadArray<uint>(ChildCount, ChildrenPtr);
-                Children = new Rsc6FragTypeChild[ChildCount];
-                for (int i = 0; i < ChildCount; i++)
-                {
-                    if (childrenPtrs[i] != 0)
-                    {
-                        reader.Position = childrenPtrs[i];
-                        Children[i] = reader.ReadBlock<Rsc6FragTypeChild>();
-                    }
-                }
-            }
-
-            if (ChildInertiaPtr != 0)
-            {
-                ChildInertia = reader.ReadArray<Vector4>(ChildCount, ChildInertiaPtr);
-            }
-
-            if (ChildInertiaDamagedPtr != 0)
-            {
-                ChildInertiaDamaged = reader.ReadArray<Vector4>(ChildCount, ChildInertiaDamagedPtr);
-            }
-
-            if (MatricesPtr != 0)
-            {
-                Matrices = reader.ReadArray<Matrix3x4>(ChildCount, MatricesPtr);
-            }
-
-            if (SelfCollisionIndices1Ptr != 0)
-            {
-                SelfCollisionIndices1 = reader.ReadArray<byte>(SelfCollisionCount, SelfCollisionIndices1Ptr);
-            }
-
-            if (SelfCollisionIndices2Ptr != 0)
-            {
-                SelfCollisionIndices2 = reader.ReadArray<byte>(SelfCollisionCount, SelfCollisionIndices2Ptr);
-            }
+            AssociatedFragments = reader.ReadItems(AssociatedFragments);
+            UndamagedAngInertia = reader.ReadRawArrItems(UndamagedAngInertia, ChildCount);
+            DamagedAngInertia = reader.ReadRawArrItems(DamagedAngInertia, ChildCount);
+            LinkAttachments = reader.ReadRawArrItems(LinkAttachments, ChildCount);
+            SelfCollisionA = reader.ReadRawArrItems(SelfCollisionA, NumSelfCollisions);
+            SelfCollisionB = reader.ReadRawArrItems(SelfCollisionB, NumSelfCollisions);
 
             //Name = NameRef.Value;
             //BuildPiece();
@@ -306,10 +298,10 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
 
-            if (Children != null)
+            if (Children.Items != null)
             {
                 var sg = d?.ShaderGroup ?? new Rsc6Ptr<Rsc6ShaderGroup>();
-                for (int i = 0; i < Children.Length; i++)
+                for (int i = 0; i < Children.Items.Length; i++)
                 {
                     var child = Children[i];
                     if (child == null) continue;
@@ -354,7 +346,103 @@ namespace CodeX.Games.RDR1.RSC6
         //TODO: determine what's different here
     }
 
-    public class Rsc6FragPhysArchetype : Rsc6BlockBase
+    public class Rsc6FragArchetypeDamp : Rsc6FragArchetypePhys //rage::phArchetypeDamp
+    {
+        public override ulong BlockLength => base.BlockLength + 100;
+        public Vector4[] DampingConstants { get; set; } //m_DampingConstant
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            DampingConstants = reader.ReadVector4Arr(6, true);
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+        }
+
+        public override string ToString()
+        {
+            return NameRef.Value;
+        }
+    }
+
+    public class Rsc6FragArchetypePhys : Rsc6FragArchetype //rage::phArchetypePhys
+    {
+        public override ulong BlockLength => base.BlockLength + 64;
+        public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD; //Padding
+        public ulong Unknown_20h { get; set; } = 0xCDCDCDCDCDCDCDCD; //Padding
+        public float Mass { get; set; } //m_Mass
+        public float InvMass { get; set; } //m_InvMass
+        public float GravityFactor { get; set; } //m_GravityFactor
+        public float MaxSpeed { get; set; } //m_MaxSpeed
+        public float MaxAngSpeed { get; set; } //m_MaxAngSpeed
+        public float BuoyancyFactor { get; set; } //m_BuoyancyFactor
+        public Vector4 AngleInertia { get; set; } //m_AngInertia
+        public Vector4 InverseAngleInertia { get; set; } //m_InvAngInertia
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Unknown_1Ch = reader.ReadUInt32();
+            Unknown_20h = reader.ReadUInt64();
+            Mass = reader.ReadSingle();
+            InvMass = reader.ReadSingle();
+            GravityFactor = reader.ReadSingle();
+            MaxSpeed = reader.ReadSingle();
+            MaxAngSpeed = reader.ReadSingle();
+            BuoyancyFactor = reader.ReadSingle();
+            AngleInertia = reader.ReadVector4(true);
+            InverseAngleInertia = reader.ReadVector4(true);
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteUInt32(Unknown_1Ch);
+            writer.WriteUInt64(Unknown_20h);
+            writer.WriteSingle(Mass);
+            writer.WriteSingle(InvMass);
+            writer.WriteSingle(GravityFactor);
+            writer.WriteSingle(MaxSpeed);
+            writer.WriteSingle(MaxAngSpeed);
+            writer.WriteSingle(BuoyancyFactor);
+            writer.WriteVector4(AngleInertia);
+            writer.WriteVector4(InverseAngleInertia);
+        }
+    }
+
+    public class Rsc6FragArchetype : Rsc6FileBase //rage::phArchetype
+    {
+        public override ulong BlockLength => 28;
+        public int Type { get; set; } //m_Type
+        public Rsc6Str NameRef { get; set; } //m_Filename
+        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound
+        public uint TypeFlags { get; set; } //m_TypeFlags
+        public int IncludeFlags { get; set; } //m_IncludeFlags
+        public ushort PropertyFlags { get; set; } //m_PropertyFlags
+        public ushort RefCount { get; set; } //m_RefCount
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Type = reader.ReadInt32();
+            NameRef = reader.ReadStr();
+            Bounds = reader.ReadPtr(Rsc6Bounds.Create);
+            TypeFlags = reader.ReadUInt32();
+            IncludeFlags = reader.ReadInt32();
+            PropertyFlags = reader.ReadUInt16();
+            RefCount = reader.ReadUInt16();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(0x00E6AEE8);
+        }
+    }
+
+    public class Rsc6FragPhysGroup : Rsc6BlockBase
     {
         public override ulong BlockLength => throw new NotImplementedException();
 
@@ -368,21 +456,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragTypeGroup : Rsc6BlockBase
-    {
-        public override ulong BlockLength => throw new NotImplementedException();
-
-        public override void Read(Rsc6DataReader reader)
-        {
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class Rsc6FragTypeChild : Rsc6BlockBase
+    public class Rsc6FragPhysChild : Rsc6BlockBase
     {
         public override ulong BlockLength => 156;
         public uint VFT { get; set; }
@@ -401,6 +475,45 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             throw new NotImplementedException();
+        }
+    }
+
+    public class Rsc6AssociationInfo : Rsc6Block
+    {
+        public ulong BlockLength => 20;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public Rsc6Str FragmentName { get; set; } //m_FragmentName
+        public Rsc6Str NonMangledName { get; set; } //m_NonMangledName
+        public Rsc6Str LocatorName { get; set; } //m_LocatorName
+        public JenkHash DesignTagHash { get; set; } //m_DesignTagHash
+        public bool Default { get; set; } //m_bDefault
+        public bool HardLink { get; set; } //m_bHardLink
+        public bool Detachable { get; set; } //m_bDetachable
+        public byte Pad { get; set; } //m_Pad
+
+        public void Read(Rsc6DataReader reader)
+        {
+            FragmentName = reader.ReadStr();
+            NonMangledName = reader.ReadStr();
+            LocatorName = reader.ReadStr();
+            DesignTagHash = reader.ReadUInt32();
+            Default = reader.ReadBoolean();
+            HardLink = reader.ReadBoolean();
+            Detachable = reader.ReadBoolean();
+            Pad = reader.ReadByte();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteStr(FragmentName);
+            writer.WriteStr(NonMangledName);
+            writer.WriteStr(LocatorName);
+            writer.WriteUInt32(DesignTagHash);
+            writer.WriteBoolean(Default);
+            writer.WriteBoolean(HardLink);
+            writer.WriteBoolean(Detachable);
+            writer.WriteByte(Pad);
         }
     }
 }
