@@ -2,91 +2,84 @@
 using System;
 using System.IO.Compression;
 using System.IO;
-using System.Numerics;
 using System.Security.Cryptography;
 using Zstandard.Net;
-using ICSharpCode.SharpZipLib.Checksum;
-using System.Text;
+using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.RPF6
 {
     public static class Rpf6Crypto
     {
+        public static Aes AesAlg;
         public static byte[] AES_KEY = new byte[32]
         {
             0xB7, 0x62, 0xDF, 0xB6, 0xE2, 0xB2, 0xC6, 0xDE, 0xAF, 0x72, 0x2A, 0x32, 0xD2, 0xFB, 0x6F, 0x0C, 0x98, 0xA3, 0x21, 0x74, 0x62, 0xC9, 0xC4, 0xED, 0xAD, 0xAA, 0x2E, 0xD0, 0xDD, 0xF9, 0x2F, 0x10
         };
 
-        public static byte[] DecryptAES(byte[] data)
+        public static bool Init(string folder)
         {
-            return DecryptAESData(data, AES_KEY);
+            AesAlg = Aes.Create();
+            AesAlg.BlockSize = 128;
+            AesAlg.KeySize = 256;
+            AesAlg.Mode = CipherMode.ECB;
+            AesAlg.Key = AES_KEY;
+            AesAlg.IV = new byte[16];
+            AesAlg.Padding = PaddingMode.None;
+            return true;
         }
 
-        public static byte[] DecryptAESData(byte[] data, byte[] key)
+        public static byte[] DecryptAES(byte[] data)
         {
-            byte[] buffer = new byte[data.Length];
-            data.CopyTo(buffer, 0);
+            var rijndael = Aes.Create();
+            rijndael.KeySize = 256;
+            rijndael.Key = AES_KEY;
+            rijndael.BlockSize = 128;
+            rijndael.Mode = CipherMode.ECB;
+            rijndael.Padding = PaddingMode.None;
 
-            int inputCount = buffer.Length & -16;
-            if (inputCount > 0)
+            var buffer = (byte[])data.Clone();
+            var length = data.Length & -16;
+
+            if (length > 0)
             {
-                Rijndael rijndael = Rijndael.Create();
-                rijndael.BlockSize = 128;
-                rijndael.KeySize = 256;
-                rijndael.Mode = CipherMode.ECB;
-                rijndael.Key = key;
-                rijndael.IV = new byte[16];
-                rijndael.Padding = PaddingMode.None;
-                ICryptoTransform decryptor = rijndael.CreateDecryptor();
-
-                for (int index = 0; index < 16; ++index)
-                {
-                    decryptor.TransformBlock(buffer, 0, inputCount, buffer, 0);
-                }
+                var decryptor = rijndael.CreateDecryptor();
+                for (var roundIndex = 0; roundIndex < 16; roundIndex++)
+                    decryptor.TransformBlock(buffer, 0, length, buffer, 0);
             }
             return buffer;
         }
 
         public static byte[] EncryptAES(byte[] data)
         {
-            return EncryptAESData(data, AES_KEY);
-        }
+            var rijndael = Aes.Create();
+            rijndael.KeySize = 256;
+            rijndael.Key = AES_KEY;
+            rijndael.BlockSize = 128;
+            rijndael.Mode = CipherMode.ECB;
+            rijndael.Padding = PaddingMode.None;
 
-        public static byte[] EncryptAESData(byte[] data, byte[] key)
-        {
-            byte[] buffer = new byte[data.Length];
-            data.CopyTo(buffer, 0);
+            var buffer = (byte[])data.Clone();
+            var length = data.Length & -16;
 
-            int inputCount = buffer.Length & -16;
-            if (inputCount > 0)
+            if (length > 0)
             {
-                Rijndael rijndael = Rijndael.Create();
-                rijndael.BlockSize = 128;
-                rijndael.KeySize = 256;
-                rijndael.Mode = CipherMode.ECB;
-                rijndael.Key = key;
-                rijndael.IV = new byte[16];
-                rijndael.Padding = PaddingMode.None;
-                ICryptoTransform encryptor = rijndael.CreateEncryptor();
-
-                for (int index = 0; index < 16; ++index)
-                {
-                    encryptor.TransformBlock(buffer, 0, inputCount, buffer, 0);
-                }
+                var encryptor = rijndael.CreateEncryptor();
+                for (var roundIndex = 0; roundIndex < 16; roundIndex++)
+                    encryptor.TransformBlock(buffer, 0, length, buffer, 0);
             }
             return buffer;
         }
 
-        public static byte[] DecompressDeflate(byte[] data, int decompSize, bool noHeader = true) //Decompress using ZLIB
+        public static byte[] DecompressDeflate(byte[] data, int decompSize, bool noHeader = true) //ZLIB
         {
             byte[] buffer = new byte[decompSize];
-            Inflater inflater = new Inflater(noHeader);
+            var inflater = new Inflater(noHeader);
             inflater.SetInput(data);
             inflater.Inflate(buffer);
             return buffer;
         }
 
-        public static byte[] DecompressZStandard(byte[] compressedData)
+        public static byte[] DecompressZStandard(byte[] compressedData) //ZStandard
         {
             byte[] decompressedData = null;
 
@@ -100,7 +93,7 @@ namespace CodeX.Games.RDR1.RPF6
             return decompressedData;
         }
 
-        public static byte[] CompressZStandard(byte[] decompressedData)
+        public static byte[] CompressZStandard(byte[] decompressedData) //ZStandard
         {
             byte[] compressedData = null;
 
@@ -146,6 +139,26 @@ namespace CodeX.Games.RDR1.RPF6
             return 32;
         }
 
+        public static void RemoveDictValue<TKey, TValue>(Dictionary<TKey, TValue> dictionary, TValue value)
+        {
+            //Find the key associated with the specified value
+            TKey keyToRemove = default;
+            foreach (var kvp in dictionary)
+            {
+                if (EqualityComparer<TValue>.Default.Equals(kvp.Value, value))
+                {
+                    keyToRemove = kvp.Key;
+                    break;
+                }
+            }
+
+            //Remove the key-value pair
+            if (!EqualityComparer<TKey>.Default.Equals(keyToRemove, default))
+            {
+                dictionary.Remove(keyToRemove);
+            }
+        }
+
         public static long RoundUp(long num, long multiple)
         {
             if (multiple == 0L)
@@ -170,20 +183,39 @@ namespace CodeX.Games.RDR1.RPF6
             return BitConverter.ToUInt32(data, 0);
         }
 
-        public static uint Vector3ToDec3N(in Vector3 v)
+        public static short Swap(short value)
         {
-            var sx = (v.X < 0.0f);
-            var sy = (v.Y < 0.0f);
-            var sz = (v.Z < 0.0f);
-            var x = Math.Min((uint)(Math.Abs(v.X) * 511.0f), 511);
-            var y = Math.Min((uint)(Math.Abs(v.Y) * 511.0f), 511);
-            var z = Math.Min((uint)(Math.Abs(v.Z) * 511.0f), 511);
-            var ux = (x & 0x1FF) + (sx ? 0x200 : 0);
-            var uy = (y & 0x1FF) + (sy ? 0x200 : 0);
-            var uz = (z & 0x1FF) + (sz ? 0x200 : 0);
-            var uw = 0u;
-            var u = uz + (ux << 10) + (uy << 20) + (uw << 30);
-            return (uint)u;
+            var data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            return BitConverter.ToInt16(data, 0);
+        }
+
+        public static ushort Swap(ushort value)
+        {
+            var data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            return BitConverter.ToUInt16(data, 0);
+        }
+
+        public static long Swap(long value)
+        {
+            var data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            return BitConverter.ToInt64(data, 0);
+        }
+
+        public static ulong Swap(ulong value)
+        {
+            var data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            return BitConverter.ToUInt64(data, 0);
+        }
+
+        public static float Swap(float value)
+        {
+            var data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            return BitConverter.ToSingle(data, 0);
         }
     }
 }

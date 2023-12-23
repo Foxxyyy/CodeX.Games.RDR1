@@ -37,8 +37,6 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 MaxAndInscribedRadius { get; set; } //m_MaxAndInscribedRadius
         public Vector4 BoundMin { get; set; }
         public Vector4 BoundMax { get; set; }
-        public BoundingBox Bounds { get; set; }
-        public BoundingBox StreamingBox { get; set; }
         public Rsc6Ptr<Rsc6PlacedLightsGroup> PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
         public Rsc6CustomArr<Rsc6PropInstanceInfo> Entities { get; set; } //m_Props
         public Rsc6PtrArr<Rsc6BlockMap> Unknown_DCh { get; set; }
@@ -97,6 +95,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_1DAh { get; set; }
         public ushort Unknown_1DEh { get; set; } //Always 0
 
+        public BoundingBox Bounds { get; set; }
+        public BoundingBox StreamingBox { get; set; }
+
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
@@ -122,10 +123,10 @@ namespace CodeX.Games.RDR1.RSC6
             HasBoneData = reader.ReadBoolean();
             Unknown_88h = reader.ReadUInt32();
             ExtraCurveData = reader.ReadUInt32();
-            MinAndBoundingRadius = reader.ReadVector4();
-            MaxAndInscribedRadius = reader.ReadVector4(); //End of sagCurveGroup
-            BoundMin = reader.ReadVector4();
-            BoundMax = reader.ReadVector4();
+            MinAndBoundingRadius = reader.ReadVector4(true);
+            MaxAndInscribedRadius = reader.ReadVector4(true); //End of sagCurveGroup
+            BoundMin = reader.ReadVector4(true);
+            BoundMax = reader.ReadVector4(true);
             PlacedLightsGroup = reader.ReadPtr<Rsc6PlacedLightsGroup>();
             Entities = reader.ReadArr<Rsc6PropInstanceInfo>();
             Unknown_DCh = reader.ReadPtrArr<Rsc6BlockMap>();
@@ -184,8 +185,9 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1DAh = reader.ReadUInt32();
             Unknown_1DEh = reader.ReadUInt16();
 
-            Bounds = new BoundingBox(new Vector3(BoundMin.Z, BoundMin.X, BoundMin.Y), new Vector3(BoundMax.Z, BoundMax.X, BoundMax.Y));
-            StreamingBox = new BoundingBox(new Vector3(BoundMin.Z - 500f, BoundMin.X - 500f, BoundMin.Y - 500f), new Vector3(BoundMax.Z + 500f, BoundMax.X + 500f, BoundMax.Y + 500f));
+            var scale = new Vector3(600.0f); //LOD distance for the terrain
+            Bounds = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
+            StreamingBox = new BoundingBox(BoundMin.XYZ() - scale, BoundMax.XYZ() + scale);
 
             for (int i = 0; i < Entities.Count; i++)
             {
@@ -557,13 +559,14 @@ namespace CodeX.Games.RDR1.RSC6
         public uint NextDrawableOffsetForBound { get; set; } //m_NextDrawableForBound
         public uint Unknown_D8h { get; set; } //Always 0
         public uint Unknown_DCh { get; set; } //Always 0
+        public BoundingBox Bounds { get; set; }
 
         public override void Read(Rsc6DataReader reader) //rdrDrawableInstanceBase
         {
             base.Read(reader);
             TimeLastVisible = reader.ReadSingle();
             Unknown_8h = reader.ReadUInt64();
-            LastKnownPositionAndFlags = reader.ReadVector4();
+            LastKnownPositionAndFlags = reader.ReadVector4(true);
             Node = reader.ReadInt32();
             AtDNode = reader.ReadInt32();
             Next = reader.ReadInt32();
@@ -575,8 +578,8 @@ namespace CodeX.Games.RDR1.RSC6
             VisibilityFlag = reader.ReadInt32();
             BucketFlag = reader.ReadInt32();
             Matrix = reader.ReadMatrix4x4();
-            BoundingBoxMin = reader.ReadVector4();
-            BoundingBoxMax = reader.ReadVector4();
+            BoundingBoxMin = reader.ReadVector4(true);
+            BoundingBoxMax = reader.ReadVector4(true);
             InstanceHash = reader.ReadUInt32();
             RoomBits = reader.ReadInt32();
             Elements = reader.ReadUInt32(); //rage::atFixedBitSet
@@ -597,6 +600,7 @@ namespace CodeX.Games.RDR1.RSC6
             NextDrawableOffsetForBound = reader.ReadUInt32();
             Unknown_D8h = reader.ReadUInt32();
             Unknown_DCh = reader.ReadUInt32();
+            Bounds = new BoundingBox(BoundingBoxMin.XYZ(), BoundingBoxMax.XYZ());
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -925,8 +929,8 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_24h = reader.ReadUInt32();
             Unknown_28h = reader.ReadUInt32();
             Unknown_2Ch = reader.ReadUInt32();
-            PlaneCoeffs = reader.ReadVector4();
-            Center = reader.ReadVector4();
+            PlaneCoeffs = reader.ReadVector4(true);
+            Center = reader.ReadVector4(true);
             Points = reader.ReadArr<Vector4>();
             VisibleEdges = reader.ReadArr<byte>();
             SingleSided = reader.ReadBoolean();
@@ -1092,7 +1096,7 @@ namespace CodeX.Games.RDR1.RSC6
             RotationZ = reader.ReadHalf();
             Flags = reader.ReadByte();
             AO = reader.ReadByte();
-            EntityPosition = reader.ReadVector4();
+            EntityPosition = reader.ReadVector4(true);
             Unknown_20h = reader.ReadUInt32();
             Unknown_24h = reader.ReadUInt32();
             PortalOffset = reader.ReadUInt32();
@@ -1163,8 +1167,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader) //sagSectorChild
         {
-            SectorBoundsMin = reader.ReadVector4();
-            SectorBoundsMax = reader.ReadVector4();
+            SectorBoundsMin = reader.ReadVector4(true);
+            SectorBoundsMax = reader.ReadVector4(true);
             Unknown_20h = reader.ReadUInt32();
             SectorName = reader.ReadString();
 
@@ -1176,9 +1180,9 @@ namespace CodeX.Games.RDR1.RSC6
             SectorName2 = reader.ReadStr();
             Unknown_68h = reader.ReadUInt32();
             IsImportantLandmark = reader.ReadUInt32();
-            SectorBounds = new BoundingBox(
-                new Vector3(SectorBoundsMin.Z, SectorBoundsMin.X, SectorBoundsMin.Y),
-                new Vector3(SectorBoundsMax.Z, SectorBoundsMax.X, SectorBoundsMax.Y));
+
+            var scale = new Vector3(1000.0f);
+            SectorBounds = new BoundingBox(SectorBoundsMin.XYZ() - scale, SectorBoundsMax.XYZ() + scale);
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -1321,8 +1325,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader) //rdrPlacedLight
         {
-            Position = reader.ReadVector4();
-            ParentPosition = reader.ReadVector4();
+            Position = reader.ReadVector4(true);
+            ParentPosition = reader.ReadVector4(true);
             Direction = reader.ReadHalf4();
             Color = reader.ReadHalf4();
             EnvInfluence = reader.ReadHalf4();
@@ -1663,24 +1667,39 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class WsiEntity : Entity
     {
-        public JenkHash ModelName;
-        public float LodDist;
-        public int EntityCount;
-
         public new string Name => ModelName.ToString();
+        public JenkHash ModelName;
+        public string ParentName; //Used for lights
+        public Vector3 ParentPosition; //Used for lights
 
-        public WsiEntity()
+        public WsiEntity(string modelName)
         {
-
+            ModelName = JenkHash.GenHash(modelName);
         }
 
-        public WsiEntity(Rsc6PropInstanceInfo entity)
+        public WsiEntity(Rsc6PropInstanceInfo entity) //Fragments, props
         {
-            Position = new Vector3(entity.EntityPosition.Z, entity.EntityPosition.X, entity.EntityPosition.Y);
+            Position = entity.EntityPosition.XYZ();
             ModelName = JenkHash.GenHash(entity.EntityName.Value.ToLowerInvariant());
-            LodDist = 100f;
-            LodDistMax = 100f;
-            EntityCount = 0;
+            LodDistMax = 100.0f;
+        }
+
+        public WsiEntity(Rsc6PlacedLight light, string parent) //Lights
+        {
+            Position = light.Position.XYZ();
+            ParentPosition = light.ParentPosition.XYZ();
+            ParentName = parent;
+            ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
+            LodDistMax = 100.0f;
+
+            Lights = new Light[]
+            {
+                Light.CreatePoint(light.Position.XYZ(),
+                    new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f),
+                    0.05f,
+                    5.0f,
+                    1.0f)
+            };
         }
 
         public override string ToString()

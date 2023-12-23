@@ -1,6 +1,7 @@
 ﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
-using System.Collections.Generic;
+using CodeX.Games.RDR1.RPF6;
+using System.Drawing;
 using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
@@ -36,9 +37,9 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             TreeForest = reader.ReadBlock<Rsc6TreeForest>();
-            GridMin = reader.ReadVector4();
-            GridMax = reader.ReadVector4();
-            BoundSphere = reader.ReadVector4();
+            GridMin = reader.ReadVector4(true);
+            GridMax = reader.ReadVector4(true);
+            BoundSphere = reader.ReadVector4(true);
             GridCells = reader.ReadArr<Rsc6TreeForestGridCell>();
             IndexList = reader.ReadArr<ushort>();
             Left = reader.ReadInt32();
@@ -56,6 +57,19 @@ namespace CodeX.Games.RDR1.RSC6
             EntireCellCull = reader.ReadBoolean();
             LoadedMeshes = reader.ReadBoolean();
             StreamRadius = reader.ReadSingle();
+
+            var min = GridMin.XYZ();
+            var max = GridMax.XYZ();
+            var siz = max - min;
+
+            for (int i = 0; i < GridCells.Items.Length; i++)
+            {
+                for (int i1 = 0; i1 < GridCells.Items[i].CombinedInstanceListPos.Count; i1++)
+                {
+                    var t = GridCells.Items[i].CombinedInstanceListPos[i1];
+                    t.Position = GridCells.Items[i].BoundSphere.XYZ() * (new Vector3(t.Z, t.X, t.Y) / 65535.0f); //wrong
+                }
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -100,7 +114,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            BoundSphere = reader.ReadVector4();
+            BoundSphere = reader.ReadVector4(true);
             CombinedInstanceListPos = reader.ReadArr<Rsc6PackedInstancePos>();
             CombinedInstanceListMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
             IndexList = reader.ReadArr<short>();
@@ -206,13 +220,11 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            X = reader.ReadUInt16();
-            Y = reader.ReadUInt16();
-            Z = reader.ReadUInt16();
+            X = Rpf6Crypto.Swap(reader.ReadUInt16());
+            Y = Rpf6Crypto.Swap(reader.ReadUInt16());
+            Z = Rpf6Crypto.Swap(reader.ReadUInt16());
             Fade = reader.ReadByte();
             Seed = reader.ReadByte();
-
-            Position = new Vector3(X / 65535.0f, Y / 65535.0f, Z / 65535.0f);
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -310,7 +322,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(Rsc6DataReader reader)
         {
             InstanceBase = reader.ReadBlock<Rsc6TreeInstanceBase>();
-            Position = reader.ReadVector4();
+            Position = reader.ReadVector4(true);
             Tilt = reader.ReadUInt16();
             Width = reader.ReadUInt16();
             Rotation = reader.ReadByte();
