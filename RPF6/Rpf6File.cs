@@ -1435,11 +1435,9 @@ namespace CodeX.Games.RDR1.RPF6
                     RSC85_TotalVSize = virtOrSize;
                     RSC85_TotalPSize = phys;
                 }
-                else
-                    RSC85_SetMemSizes(virtOrSize, phys);
+                else RSC85_SetMemSizes(virtOrSize, phys);
             }
-            else
-                Flag1 = (int)((long)Flag1 & 1073741824L | (long)virtOrSize & 3221225471L);
+            else Flag1 = (int)(Flag1 & 1073741824L | virtOrSize & 3221225471L);
         }
 
         public int GetCompactSize(int size)

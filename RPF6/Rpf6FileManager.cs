@@ -47,7 +47,6 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wsg", "Sector Grass", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".wsi", "Sector Info", FileTypeIcon.Process, FileTypeAction.ViewText, true);
             InitFileType(".wcs", "Cover Set", FileTypeIcon.SystemFile);
-            InitFileType(".wcd", "Cover Grid", FileTypeIcon.SystemFile);
             InitFileType(".wgd", "Gringo Dictionary", FileTypeIcon.SystemFile);
             InitFileType(".wsf", "ScaleForm", FileTypeIcon.Image, FileTypeAction.ViewTextures);
             InitFileType(".wsp", "Speed Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewText);
@@ -110,7 +109,7 @@ namespace CodeX.Games.RDR1.RPF6
         public override bool Init()
         {
             JenkIndex.LoadStringsFile("RDR1");
-            if (Rpf6Crypto.Init(Folder))
+            if (Rpf6Crypto.Init())
             {
                 return true;
             }
@@ -1026,12 +1025,14 @@ namespace CodeX.Games.RDR1.RPF6
 
         private void LoadFiles()
         {
+            var lowLod = RDR1Map.UseLowestLODSetting.GetBool();
             foreach (var archive in FileManager.AllArchives)
             {
                 foreach (var file in archive.AllEntries)
                 {
-                    var fe = file as Rpf6FileEntry;
-                    if (fe == null) continue;
+                    if (file is not Rpf6FileEntry fe) continue;
+                    if (lowLod && fe.Parent.Name == "resource_0") continue;
+                    if (!lowLod && fe.Parent.Name == "resource_1") continue;
 
                     if (fe.FlagInfos.IsResource)
                     {

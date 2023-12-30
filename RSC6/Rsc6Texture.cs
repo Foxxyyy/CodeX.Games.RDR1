@@ -497,7 +497,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-
     public class Rsc6TextureBase : Texture, Rsc6Block
     {
         public virtual ulong BlockLength => 32;

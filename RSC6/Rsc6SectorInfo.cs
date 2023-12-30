@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Numerics;
 using CodeX.Core.Numerics;
 using System.Text;
+using System.Linq;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -1680,6 +1680,8 @@ namespace CodeX.Games.RDR1.RSC6
         public WsiEntity(Rsc6PropInstanceInfo entity) //Fragments, props
         {
             Position = entity.EntityPosition.XYZ();
+            Orientation = Quaternion.CreateFromYawPitchRoll((float)entity.RotationZ, (float)entity.RotationX, (float)entity.RotationY);
+            OrientationInv = Quaternion.Inverse(Orientation);
             ModelName = JenkHash.GenHash(entity.EntityName.Value.ToLowerInvariant());
             LodDistMax = 100.0f;
         }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Numerics;
 using CodeX.Core.Numerics;
+using System.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -463,9 +464,15 @@ namespace CodeX.Games.RDR1.RSC6
                 IsResource = true,
                 IsExtendedFlags = false
             };
-            flags.SetTotalSize((int)vlen, (int)plen);
+
             int flag = flags.GetFlags((int)vlen, (int)plen);
             flags.IsExtendedFlags = false;
+
+            //TODO: Make sure this works
+            if (flags.IsExtendedFlags)
+                flags.SetTotalSize((int)vlen, (int)plen);
+            else
+                flags.RSC05_SetMemSizes((int)vlen, (int)plen);
 
             var compressed = Rpf6Crypto.CompressZStandard(data);
             var output = Rpf6ResourceFileEntry.AddResourceHeader(compressed, version, flag, flags.Flag2, flags);
@@ -477,10 +484,18 @@ namespace CodeX.Games.RDR1.RSC6
         {
             foreach (var pref in PointerRefs)
             {
-                if (pref.Data == null) continue;
-                if (pref.Object == null) continue;
-                if (blocks.TryGetValue(pref.Object, out var bblock) == false) continue;
-
+                if (pref.Data == null || pref.Object == null) continue;
+                if (blocks.TryGetValue(pref.Object, out var bblock) == false)
+                {
+                    if (pref.Object is Rsc6Bone bobject)
+                    {
+                        var kv = blocks.FirstOrDefault(e => e.Key is Rsc6SkeletonBoneData data);
+                        if (kv.Value != null)
+                        {
+                            bblock = kv.Value;
+                        }
+                    }
+                }
                 var ptr = GetPointer(bblock);
                 BufferUtil.WriteUint(pref.Data, (int)pref.Pos, (uint)(ptr + pref.EmbedOffset));
             }

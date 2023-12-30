@@ -3,6 +3,7 @@ using CodeX.Core.Numerics;
 using CodeX.Core.Shaders;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
+using CodeX.Games.RDR1.RPF6;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,7 +123,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 16;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; }
+        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
         public Rsc6Ptr<Rsc6Drawable> Drawables { get; set; }
 
         public override void Read(Rsc6DataReader reader)
@@ -132,7 +133,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             //Loading textures before everything else so we can assign them properly
             reader.Position += 4;
-            TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>(); //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+            TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
             WfdFile.TextureDictionary = TextureDictionary;
             reader.Position -= 8;
             Drawables = reader.ReadPtr<Rsc6Drawable>();
@@ -177,7 +178,7 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6Drawable : Rsc6DrawableBase
+    public class Rsc6Drawable : Rsc6DrawableBase //rage::rmcDrawable
     {
         public override ulong BlockLength => 208;
 
@@ -257,7 +258,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))]
     public class Rsc6DrawableGeometry : Mesh, Rsc6Block
     {
-        public ulong BlockLength => 76;
+        public ulong BlockLength => 80;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
@@ -276,11 +277,13 @@ namespace CodeX.Games.RDR1.RSC6
         public uint TrianglesCount { get; set; } //m_PrimCount
         public byte PrimitiveType { get; set; } = 3; //m_PrimType, indices per primitive (triangle)
         public bool DoubleBuffered { get; set; } //m_DoubleBuffered
-        public Rsc6RawArr<ushort> BoneIds { get; set; } //m_MtxPalette, data is embedded at the end of this struct
+        public Rsc6RawArr<ushort> BoneIds { get; set; } //m_MtxPalette, data is embedded at the end of this struct (m_boneMapping)
         public ushort BoneIdsCount { get; set; } //m_MtxCount
         public Rsc6RawArr<byte> VertexDataRef { get; set; } //m_VtxDeclOffset, always 0xCDCDCDCD
         public uint OffsetBuffer { get; set; } //m_OffsetBuffer
         public uint IndexOffset { get; set; } //m_IndexOffset
+        public uint Unknown_3Ch { get; set; }
+
         public Rsc6ShaderFX ShaderRef { get; set; } //Written by parent DrawableBase, using ShaderID
         public ushort ShaderID { get; set; } //Read-written by parent model
         public BoundingBox4 AABB { get; set; } //Read-written by parent model
@@ -313,6 +316,7 @@ namespace CodeX.Games.RDR1.RSC6
             VertexDataRef = reader.ReadRawArrPtr<byte>();
             OffsetBuffer = reader.ReadUInt32();
             IndexOffset = reader.ReadUInt32();
+            Unknown_3Ch = reader.ReadUInt32();
 
             if (VertexBuffer.Item != null) //hack to fix stupid "locked" things
             {
@@ -321,7 +325,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 if (VertexCount == 0)
                 {
-                    VertexCount = (int)VertexBuffer.Item.VertexCount;
+                    VertexCount = VertexBuffer.Item.VertexCount;
                 }
             }
 
@@ -335,6 +339,8 @@ namespace CodeX.Games.RDR1.RSC6
             var uvY1 = new List<float>();
             var uvOffset = new List<int>();
             var uvOffset1 = new List<int>();
+            var highLOD = reader.FileEntry.EntryParent.Name == "resource_0";
+            var terrainMesh = reader.FileEntry.Name.StartsWith("tile");
 
             for (int index = 0; index < numArray.Length; index += VertexStride) //set render.debugoutput 1
             {
@@ -346,76 +352,48 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (elem.Format)
                     {
                         case VertexElementFormat.Float3: //XYZ to ZXY
-                            var vec = BufferUtil.ReadVector3(VertexData, index + elemoffset);
-                            Buffer.BlockCopy(BitConverter.GetBytes(vec.Z), 0, numArray, index + elemoffset, 4);
-                            Buffer.BlockCopy(BitConverter.GetBytes(vec.X), 0, numArray, index + elemoffset + 4, 4);
-                            Buffer.BlockCopy(BitConverter.GetBytes(vec.Y), 0, numArray, index + elemoffset + 8, 4);
+                            var newVert = BufferUtil.ReadVector3(numArray, index + elemoffset);
+                            Rpf6Crypto.WriteVector3AtIndex(newVert, numArray, index + elemoffset);
                             break;
                         case VertexElementFormat.Dec3N:
-                            var fdssfd = BufferUtil.ReadUint(VertexData, index + elemoffset);
+                            var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
+                            var packedVec = FloatUtil.Dec3NToVector3(packed); //XYZ to ZXY
+                            packed = Rpf6Crypto.GetDec3N(packedVec);
+                            BufferUtil.WriteUint(numArray, index + elemoffset, packed);
                             break;
-                        case VertexElementFormat.Half2: //scale uvs
-                            {
-                                if (!reader.FileEntry.Name.StartsWith("tile")) continue;
-
-                                var half2 = BufferUtil.ReadStruct<Half2>(VertexData, index + elemoffset);
-                                var vector2 = new Vector2((float)half2.X * 2.0f, (float)half2.Y * 2.0f);
-                                half2 = vector2;
-
-                                byte[] x = BitConverter.GetBytes((ushort)half2.X);
-                                byte[] y = BitConverter.GetBytes((ushort)half2.Y);
-
-                                Buffer.BlockCopy(x, 0, numArray, index + elemoffset, 2);
-                                Buffer.BlockCopy(y, 0, numArray, index + elemoffset + 2, 2);
-                            }
+                        case VertexElementFormat.Half2: //Scale terrain UVs
+                            if (!terrainMesh) continue;
+                            var half2 = BufferUtil.ReadStruct<Half2>(numArray, index + elemoffset);
+                            half2 = Rpf6Crypto.RescaleHalf2(half2, 2.0f);
+                            BufferUtil.WriteStruct(numArray, index + elemoffset, ref half2);
                             break;
-                        case VertexElementFormat.UShort2N: //scale uvs
+                        case VertexElementFormat.UShort2N: //Scale UVs
+                            var tUv = Rpf6Crypto.ReadRescaleUShort2N(numArray, index + elemoffset, highLOD);
+                            if (tUv[0] is float.NaN || tUv[1] is float.NaN) continue; //Nothing to do
+                            if (elem.SemanticIndex == 0)
                             {
-                                byte[] x = new byte[2];
-                                byte[] y = new byte[2];
-                                Buffer.BlockCopy(numArray, index + elemoffset, x, 0, 2);
-                                Buffer.BlockCopy(numArray, index + elemoffset + 2, y, 0, 2);
-
-                                float xUnk4 = BitConverter.ToUInt16(x, 0) * (float)3.05185094e-005;
-                                float yUnk4 = BitConverter.ToUInt16(y, 0) * (float)3.05185094e-005;
-                                if (reader.FileEntry.EntryParent.Name == "resource_1")
-                                {
-                                    xUnk4 *= 2f; //resource_1 tiles
-                                    yUnk4 *= 2f; //resource_1 tiles
-                                }
-                                else
-                                {
-                                    if (elem.SemanticIndex == 0)
-                                    {
-                                        uvX.Add(xUnk4);
-                                        uvY.Add(yUnk4);
-                                        uvOffset.Add(index + elemoffset);
-                                    }
-                                    else if (elem.SemanticIndex == 1)
-                                    {
-                                        uvX1.Add(xUnk4);
-                                        uvY1.Add(yUnk4);
-                                        uvOffset1.Add(index + elemoffset);
-                                    }
-                                }
-
-                                ushort x1 = (ushort)(xUnk4 / 3.05185094e-005f);
-                                ushort y1 = (ushort)(yUnk4 / 3.05185094e-005f);
-                                x = BitConverter.GetBytes(x1);
-                                y = BitConverter.GetBytes(y1);
-
-                                Buffer.BlockCopy(x, 0, numArray, index + elemoffset, 2);
-                                Buffer.BlockCopy(y, 0, numArray, index + elemoffset + 2, 2);
+                                uvX.Add(tUv[0]);
+                                uvY.Add(tUv[1]);
+                                uvOffset.Add(index + elemoffset);
                             }
+                            else if (elem.SemanticIndex == 1)
+                            {
+                                uvX1.Add(tUv[0]);
+                                uvY1.Add(tUv[1]);
+                                uvOffset1.Add(index + elemoffset);
+                            }             
+                            break;
+                        default:
                             break;
                     }
                 }
             }
 
-            if (reader.FileEntry.EntryParent.Name == "resource_0")
+            //rdr2_cliffwall_ao
+            if (AreTexcoordsNormalizable() && highLOD)
             {
-                RescaleUVsForResource0(uvX, uvY, uvOffset, ref numArray);
-                RescaleUVsForResource0(uvX1, uvY1, uvOffset1, ref numArray);      
+                Rpf6Crypto.NormalizeUVs(uvX, uvY, uvOffset, ref numArray);
+                Rpf6Crypto.NormalizeUVs(uvX1, uvY1, uvOffset1, ref numArray);      
             }
 
             VertexData = numArray;
@@ -444,21 +422,24 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBoolean(DoubleBuffered);
             writer.WriteRawArrPtr(BoneIds);
             writer.WriteUInt16((ushort)VertexStride);
-            writer.WriteRawArrPtr(VertexDataRef);
+            writer.WriteUInt16(BoneIdsCount);
+            writer.WriteUInt32(0xCDCDCDCD);
             writer.WriteUInt32(OffsetBuffer);
             writer.WriteUInt32(IndexOffset);
+            writer.WriteUInt32(Unknown_3Ch);
         }
 
         public void ReadXml(XmlNode node)
         {
             ShaderID = (ushort)Xml.GetChildUIntAttribute(node, "ShaderIndex", "value");
+            BoneIdsCount = (ushort)Xml.GetChildUIntAttribute(node, "BoneIdsCount", "value");
+            Unknown_3Ch = Xml.GetChildUIntAttribute(node, "Unknown_3Ch", "value");
+
             var aabb = new BoundingBox4()
             {
-                Min = Xml.GetChildVector4Attributes(node, "BoundingBoxMin"),
-                Max = Xml.GetChildVector4Attributes(node, "BoundingBoxMax")
+                Min = Rpf6Crypto.GetXmlVector4(node, "BoundingBoxMin"),
+                Max = Rpf6Crypto.GetXmlVector4(node, "BoundingBoxMax")
             };
-            aabb.Min = new Vector4(aabb.Min.Y, aabb.Min.Z, aabb.Min.X, aabb.Min.W);
-            aabb.Max = new Vector4(aabb.Max.Y, aabb.Max.Z, aabb.Max.X, aabb.Max.W);
             AABB = aabb;
 
             var bnode = node.SelectSingleNode("BoneIDs");
@@ -504,7 +485,6 @@ namespace CodeX.Games.RDR1.RSC6
             VertexStride = (ushort)(VertexBuffer.Item != null ? VertexBuffer.Item.VertexStride : 0);
             IndicesCount = (IndexBuffer.Item != null ? IndexBuffer.Item.IndicesCount : 0);
             TrianglesCount = IndicesCount / 3;
-            BoneIdsCount = (ushort)(BoneIds.Items?.Length ?? 0);
         }
 
         public void WriteXml(StringBuilder sb, int indent, Vector3 center)
@@ -513,6 +493,8 @@ namespace CodeX.Games.RDR1.RSC6
             var aabbMax = AABB.Max;
 
             Xml.ValueTag(sb, indent, "ShaderIndex", ShaderID.ToString());
+            Xml.ValueTag(sb, indent, "BoneIdsCount", BoneIdsCount.ToString());
+            Xml.ValueTag(sb, indent, "Unknown_3Ch", Unknown_3Ch.ToString());
             Xml.SelfClosingTag(sb, indent, "BoundingBoxMin " + FloatUtil.GetVector4XmlString(aabbMin));
             Xml.SelfClosingTag(sb, indent, "BoundingBoxMax " + FloatUtil.GetVector4XmlString(aabbMax));
 
@@ -565,39 +547,9 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        private void RescaleUVsForResource0(List<float> uvX, List<float> uvY, List<int> uvOffset, ref byte[] numArray)
+        public bool AreTexcoordsNormalizable()
         {
-            if (uvX.Count <= 0 || uvY.Count <= 0 || uvOffset.Count <= 0) return;
-
-            float minU = uvX.Min();
-            float maxU = uvX.Max();
-            float minV = uvY.Min();
-            float maxV = uvY.Max();
-
-            //Shift the values to the origin
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                uvX[i] -= minU;
-                uvY[i] -= minV;
-            }
-
-            //Normalize the values
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                uvX[i] /= (maxU - minU);
-                uvY[i] /= (maxV - minV);
-            }
-
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                ushort x1 = (ushort)(uvX[i] / 3.05185094e-005f);
-                ushort y1 = (ushort)(uvY[i] / 3.05185094e-005f);
-                var x = BitConverter.GetBytes(x1);
-                var y = BitConverter.GetBytes(y1);
-
-                Buffer.BlockCopy(x, 0, numArray, uvOffset[i], 2);
-                Buffer.BlockCopy(y, 0, numArray, uvOffset[i] + 2, 2);
-            }
+            return VertexBuffer.Item.Layout.Item.Flags == 49369;
         }
 
         public string GenerateVertexData(int v, Vector3 center, ref int elemoffset)
@@ -754,15 +706,17 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0xF98973D1: //rdr2_terrain
                         SetupDefaultBlendTerrainShader(shader);
                         break;
+                    case 0x3103407E: //rdr2_cliffwall_ao_low_lod
                     case 0x249BB297: //rdr2_cliffwall_ao
-                        SetupAOTerrainShader(shader);
+                    case 0x227C5611: //rdr2_cliffwall_alpha
+                        SetupClifwallTerrainShader(shader);
                         break;
                     case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal
                     case 0x5A170205: //rdr2_layer_2_nospec_ambocc
-                        SetNoSpecShader(shader); 
+                        SetDiffuse2Shader(shader); 
                         break;
                     case 0x24982D70: //rdr2_layer_3_nospec_normal_ambocc
-                        SetNoSpecNormalShader(shader);
+                        SetDiffuse3Shader(shader);
                         break;
                     default:
                         SetupDefaultShader(shader);
@@ -771,8 +725,6 @@ namespace CodeX.Games.RDR1.RSC6
 
                 switch (hash)
                 {
-                    case 0x7668B157: //rdr2_glass_nodistortion_bump_spec_ao_shared
-                    case 0x72A21FFE: //rdr2_glass_nodistortion_bump_spec_ao
                     case 0x32A4918E: //rdr2_alpha
                     case 0x173D5F9D: //rdr2_grass
                     case 0xC714B86E: //rdr2_alpha_foliage
@@ -784,6 +736,12 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x949EC19C: //rdr2_alpha_bspec_ao_shared
                         ShaderInputs.SetFloat(0xDF918855, 1.0f); //BumpScale
+                        ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
+                        break;
+                    case 0x7668B157: //rdr2_glass_nodistortion_bump_spec_ao_shared
+                    case 0x72A21FFE: //rdr2_glass_nodistortion_bump_spec_ao
+                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 1, 0)); //"DecalMasks"
+                        ShaderInputs.SetUInt32(0x0188ECE8, 1u);  //"DecalMode"
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                 }
@@ -815,7 +773,6 @@ namespace CodeX.Games.RDR1.RSC6
 
             var sfresnel = 0.96f;
             var sintensitymult = 0.2f;
-            var glowscale = 0.0f;
             var sfalloffmult = 35.0f;
 
             for (int p = 0; p < parms.Length; p++)
@@ -829,11 +786,11 @@ namespace CodeX.Games.RDR1.RSC6
                         switch (parm.Hash)
                         {
                             case 0xF1FE2B71: //diffusesampler
-                            case 0x2b5170fd: //texturesampler
+                            case 0x2B5170FD: //texturesampler
                                 Textures[0] = tex;
                                 break;
-                            case 0x46b7c64f: //bumpsampler
-                            case 0x8ac11cb0: //normalsampler
+                            case 0x46B7C64F: //bumpsampler
+                            case 0x8AC11CB0: //normalsampler
                                 //Textures[1] = tex;
                                 break;
                         }
@@ -855,27 +812,19 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x166E0FD1: //specularfactor eg 30
                             sfalloffmult = parm.Vector.Vector.X;
                             break;
-                        case 0x09C8E492: //gglowfuncscale
-                            glowscale = parm.Vector.Vector.X * 0.025f;
-                            break;
                     }
                 }
             }
             ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
             ShaderInputs.SetFloat(0x92176B1A, 0.3f); //MeshSmoothness
-
-            if (glowscale != 0.0f)
-                ShaderInputs.SetFloat(0x83DDF493, FloatUtil.Saturate(glowscale)); //EmissiveMult
-            else
-                ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
         }
 
         private void SetupBlendTerrainShader(Rsc6ShaderFX s)
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 40); //BlendMode
+            ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
 
             if (s == null)
                 return;
@@ -883,7 +832,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null)
                 return;
 
-            Textures = new Texture[8];
+            Textures = new Texture[13];
             for (int k = 0; k < parms.Length; k++)
             {
                 var prm = parms[k];
@@ -891,31 +840,32 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0x2B5170FD: //"texturesampler"
+                        case 0xB5C6B283: //"terraindiffusesampler1"
                             Textures[0] = prm.Texture;
                             break;
-                        case 0x46B7C64F: //"bumpsampler"
+                        case 0x13376D63: //"terraindiffusesampler2"
                             Textures[1] = prm.Texture;
                             break;
-                        case 0x8B3111A3:
-                        case 0xB5C6B283: //"terraindiffusesampler1"
+                        case 0x3412AF91: //"terraindiffusesampler3"
                             Textures[2] = prm.Texture;
                             break;
-                        case 0x4CE3D854: //"terraindiffusesampler2"
-                        case 0x13376D63: //"terraindiffusesampler2"
+                        case 0x3D734252: //"terraindiffusesampler4"
                             Textures[3] = prm.Texture;
                             break;
-                        case 0x3412AF91: //"terraindiffusesampler3"
+                        case 0xFF4494B8: //"terrainnormalsampler1"
                             Textures[4] = prm.Texture;
                             break;
-                        case 0x3D734252: //"terraindiffusesampler4"
+                        case 0x2B0FEC4E: //"terrainnormalsampler2"
                             Textures[5] = prm.Texture;
                             break;
-                        case 0x4FB1E6CF: //"terraindiffusesampler5"
+                        case 0x1CAB4F85: //"terrainnormalsampler3"
                             Textures[6] = prm.Texture;
                             break;
-                        case 0xEAE71D3B: //"terraindiffusesampler6"
+                        case 0xC668A301: //"terrainnormalsampler4"
                             Textures[7] = prm.Texture;
+                            break;
+                        case 0xA0918A47: //"terrainblendmap2"
+                            Textures[12] = prm.Texture;
                             break;
                         default:
                             break;
@@ -925,6 +875,21 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
+                        case 0xf6712b81://"bumpiness"
+                            //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X));//"BumpScales"
+                            break;
+                        case 0x66C79BD6: //megatilerepetitions, how many times, across the 0-1 of the UV channel map, do the tiles repeat
+                            ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector.Vector); //"UVLookupIndex"
+                            break;
+                        case 0x62503593: //blendmapscale2
+                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
+                            break;
+                        case 0xBDDEBE2D: //blendmapoffset2 - offset of the UV for the tile when at (0,0) in the channel map
+                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
+                            break;
+                        case 0x4385A0D2: //megatileoffset - offset of the UV for the tile when at (0,0) in the channel map
+                            ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector.Vector); //"UVScaleOffset"      float4
+                            break;
                         default:
                             break;
                     }
@@ -936,7 +901,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 40); //BlendMode
+            ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
 
             if (s == null)
                 return;
@@ -944,7 +909,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null)
                 return;
 
-            Textures = new Texture[6];
+            Textures = new Texture[13];
             for (int k = 0; k < parms.Length; k++)
             {
                 var prm = parms[k];
@@ -964,11 +929,8 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x3D734252: //"terraindiffusesampler4"
                             Textures[3] = prm.Texture;
                             break;
-                        case 0x4FB1E6CF: //"terraindiffusesampler5"
-                            Textures[4] = prm.Texture;
-                            break;
-                        case 0xEAE71D3B: //"terraindiffusesampler6"
-                            Textures[5] = prm.Texture;
+                        case 0xA0918A47: //terrainblendmap2
+                            Textures[12] = prm.Texture;
                             break;
                         default:
                             break;
@@ -978,6 +940,21 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
+                        case 0xf6712b81://"bumpiness"
+                            //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X));//"BumpScales"
+                            break;
+                        case 0x66C79BD6: //megatilerepetitions - How many times, across the 0-1 of the UV channel map, do the tiles repeat
+                            ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector.Vector); //"UVLookupIndex"
+                            break;
+                        case 0x4385A0D2: //megatileoffset - offset of the UV for the tile when at (0,0) in the channel map
+                            ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector.Vector); //"UVScaleOffset"      float4
+                            break;
+                        case 0x62503593: //blendmapscale2
+                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
+                            break;
+                        case 0xBDDEBE2D: //blendmapoffset2 - offset of the UV for the tile when at (0,0) in the channel map
+                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
+                            break;
                         default:
                             break;
                     }
@@ -985,11 +962,11 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        private void SetupAOTerrainShader(Rsc6ShaderFX s)
+        private void SetupClifwallTerrainShader(Rsc6ShaderFX s)
         {
-            SetDefaultShader();
-            var df = Shader as DefaultShader;
-            ShaderInputs = df.MeshVars.GetDataBag();
+            SetCoreShader<BlendShader>(ShaderBucket.Solid);
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0x9B920BD, 22); //BlendMode
 
             if (s == null)
                 return;
@@ -997,10 +974,9 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null)
                 return;
 
-            var sfresnel = 0.96f;
             var sintensitymult = 0.3f;
             var sfalloffmult = 50.0f;
-            Textures = new Texture[2];
+            Textures = new Texture[16];
 
             for (int k = 0; k < parms.Length; k++)
             {
@@ -1012,8 +988,9 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x2B5170FD: //"texturesampler"
                             Textures[0] = prm.Texture;
                             break;
-                        case 0x46B7C64F: //"bumpsampler"
-                            Textures[1] = prm.Texture;
+                        case 0x4CE3D854: //flattenbumpsampler
+                        case 0x0ED966D5: //terrainblendmap1
+                            Textures[12] = prm.Texture;
                             break;
                         default:
                             break;
@@ -1023,94 +1000,30 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
-                            sfresnel = prm.Vector.Vector.X;
-                            break;
                         case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
                             sintensitymult = prm.Vector.Vector.X;
                             break;
                         case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
                             sfalloffmult = prm.Vector.Vector.X;
                             break;
+                        case 0xE55CF27C: //blendmapscalecliffflatten
+                        case 0x606B83EE: //blendmapscalecliff
+                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
+                            break;
+                        case 0x92165D5E: //blendmapoffsetcliffflatten
+                        case 0x99276EAE: //blendmapoffsetcliff
+                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
+                            break;
                         default:
                             break;
                     }
                 }
             }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
+            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult)); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
         }
 
-        private void SetNoSpecNormalShader(Rsc6ShaderFX s) //diffuse + diffuse2 + diffuse3 + bump + ambocc
-        {
-            SetDefaultShader();
-            var df = Shader as DefaultShader;
-            ShaderInputs = df.MeshVars.GetDataBag();
-
-            if (s == null) return;
-            var parms = s.ParametersList.Item?.Parameters;
-            if (parms == null) return;
-            Textures = new Texture[4];
-
-            var sfresnel = 0.96f;
-            var sintensitymult = 0.2f;
-            var sfalloffmult = 35.0f;
-
-            for (int p = 0; p < parms.Length; p++)
-            {
-                var parm = parms[p];
-                if (parm.DataType == 0)
-                {
-                    var tex = parm.Texture;
-                    if (tex != null)
-                    {
-                        switch (parm.Hash)
-                        {
-                            case 0xF1FE2B71: //diffusesampler
-                            case 0x2b5170fd: //texturesampler
-                            case 0x3e19076b: //detailmapsampler
-                            case 0x605fcc60: //distancemapsampler
-                                Textures[0] = tex;
-                                break;
-                            case 0x05645204: //texturesampler2
-                                Textures[1] = tex;
-                                break;
-                            case 0xA3348DA6: //texturesampler3
-                                Textures[2] = tex;
-                                break;
-                            case 0x46b7c64f: //bumpsampler
-                            case 0x8ac11cb0: //normalsampler
-                                Textures[3] = tex;
-                                break;
-                        }
-                    }
-                }
-                else
-                {
-                    switch (parm.Hash)
-                    {
-                        case 0xf6712b81: //bumpiness
-                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X * 0.25f); //"BumpScale"
-                            break;
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
-                            sfresnel = parm.Vector.Vector.X;
-                            break;
-                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
-                            sintensitymult = parm.Vector.Vector.X;
-                            break;
-                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
-                            sfalloffmult = parm.Vector.Vector.X;
-                            break;
-                    }
-                }
-            }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //MeshMetallicity
-            ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //MeshParamsMult
-            ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
-            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
-        }
-
-        private void SetNoSpecShader(Rsc6ShaderFX s) //diffuse + diffuse2 + bump + ambocc
+        private void SetDiffuse2Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + bump + ambocc
         {
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
@@ -1143,10 +1056,6 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0x05645204: //texturesampler2
                                 Textures[1] = tex;
                                 break;
-                            case 0x46b7c64f: //bumpsampler
-                            case 0x8ac11cb0: //normalsampler
-                                Textures[2] = tex;
-                                break;
                         }
                     }
                 }
@@ -1172,23 +1081,22 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
             ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
-            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
         }
 
-        private void SetupSkyShader(Rsc6ShaderFX s)
+        private void SetDiffuse3Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + diffuse3 + bump + ambocc
         {
             SetDefaultShader();
-            ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetFloat(0xDF918855, 1.0f);//"BumpScale"
-            ShaderInputs.SetUInt32(0x249983FD, 1); //"ParamsMapConfig"
-            ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //"AlphaScale"
-            ShaderInputs.SetFloat4(0x1C2824ED, Vector4.One);//"NoiseSettings"
-            ShaderInputs.SetFloat(0x83DDF493, 0.005f); //EmissiveMult
+            var df = Shader as DefaultShader;
+            ShaderInputs = df.MeshVars.GetDataBag();
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[2];
+            Textures = new Texture[4];
+
+            var sfresnel = 0.96f;
+            var sintensitymult = 0.2f;
+            var sfalloffmult = 35.0f;
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -1200,11 +1108,86 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         switch (parm.Hash)
                         {
-                            case 0xe43044d6: //densitysampler
+                            case 0xF1FE2B71: //diffusesampler
+                            case 0x2b5170fd: //texturesampler
+                            case 0x3e19076b: //detailmapsampler
+                            case 0x605fcc60: //distancemapsampler
                                 Textures[0] = tex;
                                 break;
+                            case 0x05645204: //texturesampler2
+                                Textures[2] = tex;
+                                break;
+                            case 0xA3348DA6: //texturesampler3
+                                Textures[3] = tex;
+                                break;
+                            case 0x46b7c64f: //bumpsampler
                             case 0x8ac11cb0: //normalsampler
+                                //Textures[1] = tex;
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    switch (parm.Hash)
+                    {
+                        case 0xf6712b81: //bumpiness
+                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X * 0.25f); //"BumpScale"
+                            break;
+                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
+                            sfresnel = parm.Vector.Vector.X;
+                            break;
+                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
+                            sintensitymult = parm.Vector.Vector.X;
+                            break;
+                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
+                            sfalloffmult = parm.Vector.Vector.X;
+                            break;
+                    }
+                }
+            }
+            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //MeshMetallicity
+            ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //MeshParamsMult
+            ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
+        }
+
+        private void SetupSkyShader(Rsc6ShaderFX s)
+        {
+            SetCoreShader<CloudShader>(ShaderBucket.CloudAndFog);
+            ShaderInputs = Shader.CreateShaderInputs();
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+            Textures = new Texture[6];
+
+            for (int p = 0; p < parms.Length; p++)
+            {
+                var parm = parms[p];
+                if (parm.DataType == 0)
+                {
+                    var tex = parm.Texture;
+                    if (tex != null)
+                    {
+                        switch (parm.Hash)
+                        {
+                            case 0xE43044D6: //densitysampler
+                                Textures[0] = tex;
+                                break;
+                            case 0x8AC11CB0: //normalsampler
                                 Textures[1] = tex;
+                                break;
+                            case 0x874FD28B: //detaildensitysampler
+                                Textures[2] = tex;
+                                break;
+                            case 0xAD1518E5: //detailnormalsampler
+                                Textures[3] = tex;
+                                break;
+                            case 0x9A35E36C: //detaildensity2sampler
+                                Textures[4] = tex;
+                                break;
+                            case 0x77755B8F: //detailnormal2sampler
+                                Textures[5] = tex;
                                 break;
                         }
                     }
@@ -1214,6 +1197,10 @@ namespace CodeX.Games.RDR1.RSC6
 
                     switch (parm.Hash)
                     {
+                        case 0xB33E5862: //gsuncolor
+                            break;
+                        case 0xC4B23E96: //guvoffset
+                            break;
                         default:
                             break;
                     }
@@ -1228,36 +1215,36 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6DrawableModel : Model, Rsc6Block
+    public class Rsc6DrawableModel : Model, Rsc6Block //rage::grmModel
     {
         public ulong BlockLength => 28;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
         public ulong VFT { get; set; } = 0x01854414;
-        public Rsc6PtrArr<Rsc6DrawableGeometry> Geometries { get; set; }
-        public Rsc6RawArr<BoundingBox4> BoundsData { get; set; }
-        public Rsc6RawArr<ushort> ShaderMapping { get; set; }
-        public byte MatrixCount { get; set; }
-        public byte Flags { get; set; }
-        public byte Type { get; set; }
-        public byte MatrixIndex { get; set; }
-        public byte Stride { get; set; }
-        public byte SkinFlag { get; set; }
-        public ushort GeometriesCount3 { get; set; } //Always equal to Geometries.Count
+        public Rsc6PtrArr<Rsc6DrawableGeometry> Geometries { get; set; } //m_Geometries
+        public Rsc6RawArr<BoundingBox4> BoundsData { get; set; } //m_AABBs
+        public Rsc6RawArr<ushort> ShaderMapping { get; set; } //m_ShaderIndex
+        public byte MatrixCount { get; set; } //m_MatrixCount, bone count
+        public byte Flags { get; set; } //m_Flags
+        public byte Type { get; set; } = 0xCD; //m_Type
+        public byte MatrixIndex { get; set; } //m_MatrixIndex
+        public byte Stride { get; set; } //m_Stride
+        public byte SkinFlag { get; set; } //m_SkinFlag
+        public ushort GeometriesCount3 { get; set; } //m_shaderMappingCount?
 
         public void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32(); //rage::grmModel
-            Geometries = reader.ReadPtrArr<Rsc6DrawableGeometry>(); //m_Geometries
-            BoundsData = reader.ReadRawArrPtr<BoundingBox4>(); //m_AABBs
-            ShaderMapping = reader.ReadRawArrPtr<ushort>(); //m_ShaderIndex
-            MatrixCount = reader.ReadByte(); //m_MatrixCount
-            Flags = reader.ReadByte(); //m_Flags
-            Type = reader.ReadByte(); //m_Type
-            MatrixIndex = reader.ReadByte(); //m_MatrixIndex
-            Stride = reader.ReadByte(); //m_Stride
-            SkinFlag = reader.ReadByte(); //m_SkinFlag
+            VFT = reader.ReadUInt32();
+            Geometries = reader.ReadPtrArr<Rsc6DrawableGeometry>();
+            BoundsData = reader.ReadRawArrPtr<BoundingBox4>();
+            ShaderMapping = reader.ReadRawArrPtr<ushort>();
+            MatrixCount = reader.ReadByte();
+            Flags = reader.ReadByte();
+            Type = reader.ReadByte();
+            MatrixIndex = reader.ReadByte();
+            Stride = reader.ReadByte();
+            SkinFlag = reader.ReadByte();
             GeometriesCount3 = reader.ReadUInt16();
 
             var geocount = Geometries.Count;
@@ -1320,6 +1307,7 @@ namespace CodeX.Games.RDR1.RSC6
             Flags = (byte)Xml.GetChildUIntAttribute(node, "Flags", "value");
             SkinFlag = (byte)Xml.GetChildUIntAttribute(node, "HasSkin", "value");
             MatrixIndex = (byte)Xml.GetChildUIntAttribute(node, "BoneIndex", "value");
+            MatrixCount = (byte)Xml.GetChildUIntAttribute(node, "MatrixCount", "value");
 
             var geoms = new List<Rsc6DrawableGeometry>();
             var aabbs = new List<BoundingBox4>();
@@ -1373,7 +1361,7 @@ namespace CodeX.Games.RDR1.RSC6
             Xml.ValueTag(sb, indent, "Flags", Flags.ToString());
             Xml.ValueTag(sb, indent, "HasSkin", SkinFlag.ToString());
             Xml.ValueTag(sb, indent, "BoneIndex", MatrixIndex.ToString());
-            Xml.ValueTag(sb, indent, "Unknown1", "0");
+            Xml.ValueTag(sb, indent, "MatrixCount", MatrixCount.ToString());
 
             if (Geometries.Items != null)
             {
@@ -1462,7 +1450,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32(); //13847916
+            VFT = reader.ReadUInt32();
             VertexCount = reader.ReadUInt16();
             Locked = reader.ReadByte();
             Flags = reader.ReadByte();
@@ -1487,7 +1475,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(VFT);
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+            writer.WriteUInt32(wfd ? 0x00D34D6C : VFT);
             writer.WriteUInt16(VertexCount);
             writer.WriteByte(Locked);
             writer.WriteByte(Flags);
@@ -1704,9 +1693,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 if (e <= LockedData.Items.Length)
                 {
-                    var u = (uint)(511.0f * val.X) & 0x3FF |
-                                (((uint)(511.0f * val.Y) & 0x3FF) << 10) & 0xC00FFFFF |
-                                (((uint)(511.0f * val.Z) & 0x3FF) << 20);
+                    var u = Rpf6Crypto.PackFixedPoint(val.X, 10, 0) | Rpf6Crypto.PackFixedPoint(val.Y, 10, 10) | Rpf6Crypto.PackFixedPoint(val.Z, 10, 20);
                     var b = BitConverter.GetBytes(u);
                     Buffer.BlockCopy(b, 0, LockedData.Items, o, 4);
                 }
@@ -1866,7 +1853,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))]
     public class Rsc6DrawableBase : Piece, Rsc6Block
     {
-        public virtual ulong BlockLength => 144;
+        public virtual ulong BlockLength => 120;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
@@ -1875,11 +1862,11 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6ShaderGroup> ShaderGroup { get; set; } //rage::grmShaderGroup
         public Rsc6Ptr<Rsc6Skeleton> SkeletonRef { get; set; } //rage::crSkeletonData
         public Vector3 BoundingCenter { get; set; } //m_CullSphere
-        public uint Unknown_1Ch { get; set; } = 0x7F800001; //NaN
+        public float Unknown_1Ch { get; set; } = float.NaN;
         public Vector3 BoundingBoxMin { get; set; } //m_BoxMin
-        public uint Unknown_2Ch { get; set; } = 0x7F800001; //NaN
+        public float Unknown_2Ch { get; set; } = float.NaN;
         public Vector3 BoundingBoxMax { get; set; } //m_BoxMax
-        public uint Unknown_3Ch { get; set; } = 0x7F800001; //NaN
+        public float Unknown_3Ch { get; set; } = float.NaN;
         public Rsc6Ptr<Rsc6DrawableLod> LodHigh { get; set; } //m_Lod[0]
         public Rsc6Ptr<Rsc6DrawableLod> LodMed { get; set; } //m_Lod[1]
         public Rsc6Ptr<Rsc6DrawableLod> LodLow { get; set; } //m_Lod[2]
@@ -1902,11 +1889,11 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderGroup = reader.ReadPtr<Rsc6ShaderGroup>();
             SkeletonRef = reader.ReadPtr<Rsc6Skeleton>();
             BoundingCenter = reader.ReadVector3(true);
-            Unknown_1Ch = reader.ReadUInt32();
+            Unknown_1Ch = reader.ReadSingle();
             BoundingBoxMin = reader.ReadVector3(true);
-            Unknown_2Ch = reader.ReadUInt32();
+            Unknown_2Ch = reader.ReadSingle();
             BoundingBoxMax = reader.ReadVector3(true);
-            Unknown_3Ch = reader.ReadUInt32();
+            Unknown_3Ch = reader.ReadSingle();
             LodHigh = reader.ReadPtr<Rsc6DrawableLod>();
             LodMed = reader.ReadPtr<Rsc6DrawableLod>();
             LodLow = reader.ReadPtr<Rsc6DrawableLod>();
@@ -1936,7 +1923,6 @@ namespace CodeX.Games.RDR1.RSC6
             if (LodVlow.Item != null) LodVlow.Item.LodDist = LodDistVlow;
 
             UpdateAllModels();
-            UpdateRDRBounds();
             AssignShaders();
             SetSkeleton(SkeletonRef.Item);
             CreateTexturePack(reader.FileEntry);
@@ -1953,11 +1939,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtr(ShaderGroup);
             writer.WritePtr(SkeletonRef);
             writer.WriteVector3(BoundingCenter);
-            writer.WriteUInt32(Unknown_1Ch);
+            writer.WriteSingle(Unknown_1Ch);
             writer.WriteVector3(BoundingBoxMin);
-            writer.WriteUInt32(Unknown_2Ch);
+            writer.WriteSingle(Unknown_2Ch);
             writer.WriteVector3(BoundingBoxMax);
-            writer.WriteUInt32(Unknown_3Ch);
+            writer.WriteSingle(Unknown_3Ch);
             writer.WritePtr(LodHigh);
             writer.WritePtr(LodMed);
             writer.WritePtr(LodLow);
@@ -1976,15 +1962,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void ReadXml(XmlNode node, string ddsfolder)
         {
-            var bc = Xml.GetChildVector3Attributes(node, "BoundingSphereCenter");
-            BoundingCenter = new Vector3(bc.Y, bc.Z, bc.X);
-
-            var bbmin = Xml.GetChildVector3Attributes(node, "BoundingBoxMin");
-            BoundingBoxMin = new Vector3(bbmin.Y, bbmin.Z, bbmin.X);
-
-            var bbmax = Xml.GetChildVector3Attributes(node, "BoundingBoxMax");
-            BoundingBoxMax = new Vector3(bbmax.Y, bbmax.Z, bbmax.X);
-
+            BoundingCenter = Rpf6Crypto.GetXmlVector3(node, "BoundingSphereCenter");
+            BoundingBoxMin = Rpf6Crypto.GetXmlVector3(node, "BoundingBoxMin");
+            BoundingBoxMax = Rpf6Crypto.GetXmlVector3(node, "BoundingBoxMax");
             BoundingSphereRadius = Xml.GetChildFloatAttribute(node, "BoundingSphereRadius", "value");
             LodDistHigh = Xml.GetChildFloatAttribute(node, "LodDistHigh", "value");
             LodDistMed = Xml.GetChildFloatAttribute(node, "LodDistMed", "value");
@@ -1994,6 +1974,10 @@ namespace CodeX.Games.RDR1.RSC6
             DrawBucketMaskMed = Xml.GetChildUIntAttribute(node, "FlagsMed", "value");
             DrawBucketMaskLow = Xml.GetChildUIntAttribute(node, "FlagsLow", "value");
             DrawBucketMaskVlow = Xml.GetChildUIntAttribute(node, "FlagsVlow", "value");
+
+            BoundingBoxMin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y + 1.0f, BoundingBoxMin.Z);
+            BoundingBoxMax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y + 1.0f, BoundingBoxMax.Z);
+            BoundingCenter = new Vector3(BoundingCenter.X, BoundingCenter.Y + 1.0f, BoundingCenter.Z);
 
             var sgnode = node.SelectSingleNode("ShaderGroup");
             if (sgnode != null)
@@ -2034,14 +2018,14 @@ namespace CodeX.Games.RDR1.RSC6
 
         public virtual void WriteXml(StringBuilder sb, int indent, string ddsfolder)
         {
-            var bbmin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y, BoundingBoxMin.Z - 1f);
-            var bbmax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y, BoundingBoxMax.Z - 1f);
-            var center = new BoundingSphere(new BoundingBox(bbmin, bbmax).Center, BoundingSphereRadius);
+            var bbmin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y, BoundingBoxMin.Z - 1.0f);
+            var bbmax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y, BoundingBoxMax.Z - 1.0f);
+            var center = new Vector3(BoundingCenter.X, BoundingCenter.Y, BoundingCenter.Z - 1.0f);
 
-            Xml.SelfClosingTag(sb, indent, "BoundingSphereCenter " + FloatUtil.GetVector3XmlString(center.Center/*Vector3.Subtract(BoundingSphere.Center, BoundingCenter)*/));
+            Xml.SelfClosingTag(sb, indent, "BoundingSphereCenter " + FloatUtil.GetVector3XmlString(center));
             Xml.ValueTag(sb, indent, "BoundingSphereRadius", FloatUtil.ToString(BoundingSphereRadius));
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMin " + FloatUtil.GetVector3XmlString(bbmin/*Vector3.Subtract(BoundingBoxMin, BoundingCenter)*/));
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMax " + FloatUtil.GetVector3XmlString(bbmax/*Vector3.Subtract(BoundingBoxMax, BoundingCenter)*/));
+            Xml.SelfClosingTag(sb, indent, "BoundingBoxMin " + FloatUtil.GetVector3XmlString(bbmin));
+            Xml.SelfClosingTag(sb, indent, "BoundingBoxMax " + FloatUtil.GetVector3XmlString(bbmax));
             Xml.ValueTag(sb, indent, "LodDistHigh", FloatUtil.ToString(LodDistHigh));
             Xml.ValueTag(sb, indent, "LodDistMed", FloatUtil.ToString(LodDistMed));
             Xml.ValueTag(sb, indent, "LodDistLow", FloatUtil.ToString(LodDistLow));
@@ -2093,12 +2077,6 @@ namespace CodeX.Games.RDR1.RSC6
                 LodVlow.Item.WriteXml(sb, indent + 1, BoundingCenter);
                 Xml.CloseTag(sb, indent, "DrawableModelsVeryLow");
             }
-        }
-
-        private void UpdateRDRBounds()
-        {
-            BoundingBoxMin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y, BoundingBoxMin.Z);
-            BoundingBoxMax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y, BoundingBoxMax.Z);
         }
 
         public void AssignShaders()
@@ -2171,8 +2149,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6Skeleton : Skeleton, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6Skeleton : Skeleton, Rsc6Block
     {
         public ulong BlockLength => 68;
         public ulong FilePosition { get; set; }
@@ -2188,14 +2165,14 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
-        public uint Flags { get; set; } //m_Flags
-        public Rsc6Arr<Rsc6BoneID> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
+        public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9 for .wft
+        public Rsc6CustomArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
         public uint RefCount { get; set; } = 1; //m_RefCount
-        public uint Signature { get; set; } //m_Signature
-        public Rsc6Str JointDataFileName { get; set; } //m_JointDataFileName
-        public uint JointData { get; set; } //m_JointData, rage::crJointDataFile
-        public uint Unknown6 { get; set; }
-        public uint Unknown7 { get; set; }
+        public uint Signature { get; set; } = 2135087653; //m_Signature
+        public Rsc6Str JointDataFileName { get; set; } //m_JointDataFileName, always NULL?
+        public uint JointData { get; set; } = 15649020; //m_JointData, rage::crJointDataFile, no idea? 15649020 is the most common value with 13814012 and 16435452
+        public uint Unknown6 { get; set; } //Always 0
+        public uint Unknown7 { get; set; } //Always 0
 
         public void Read(Rsc6DataReader reader)
         {
@@ -2210,7 +2187,7 @@ namespace CodeX.Games.RDR1.RSC6
             NumRotationDofs = reader.ReadUInt16();
             NumScaleDofs = reader.ReadUInt16();
             Flags = reader.ReadUInt32();
-            BoneIDs = reader.ReadArr<Rsc6BoneID>();
+            BoneIDs = reader.ReadArr<Rsc6SkeletonBoneTag>();
             RefCount = reader.ReadUInt32();
             Signature = reader.ReadUInt32();
             JointDataFileName = reader.ReadStr();
@@ -2229,7 +2206,7 @@ namespace CodeX.Games.RDR1.RSC6
             for (uint i = 0; i < BoneCount; i++)
             {
                 var b = (Rsc6Bone)Bones[i];
-                b.ParentIndices = (ParentIndices.Items != null) ? ParentIndices.Items[i] : 0;
+                b.ParentIndex = (ParentIndices.Items != null) ? ParentIndices.Items[i] : 0;
                 b.JointScaleOrients = (JointScaleOrients.Items != null) ? JointScaleOrients.Items[i] : Matrix4x4.Identity;
                 b.InverseJointScaleOrients = (InverseJointScaleOrients.Items != null) ? InverseJointScaleOrients.Items[i] : Matrix4x4.Identity;
                 b.DefaultTransforms = (DefaultTransforms.Items != null) ? DefaultTransforms.Items[i] : Matrix4x4.Identity;
@@ -2262,12 +2239,20 @@ namespace CodeX.Games.RDR1.RSC6
                 var bone = bonesSorted[i];
                 bone.UpdateAnimTransform();
                 bone.AbsTransform = bone.AnimTransform;
-                bone.BindTransformInv = Matrix4x4.Identity; //TODO!! //(i < (xfi?.Length ?? 0)) ? xfi[i] : Matrix.Invert(bone.AnimTransform);
+                bone.BindTransformInv = Matrix4x4.Identity;
                 bone.BindTransformInv.M44 = 1.0f;
                 bone.UpdateSkinTransform();
             }
+
             UpdateBoneTransforms();
             BuildBonesDictionary();
+            BuildBoneTags();
+
+            ///////////////////// Tests /////////////////
+            if ((Flags != 9 && Flags != 10) || Unknown6 != 0 || Unknown7 != 0)
+            {
+                throw new Exception($"Unknown values, flags : {Flags}");
+            }
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -2296,6 +2281,13 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void ReadXml(XmlNode node)
         {
+            NumTranslationDofs = (ushort)Xml.GetChildIntAttribute(node, "NumTranslationDofs", "value");
+            NumRotationDofs = (ushort)Xml.GetChildIntAttribute(node, "NumRotationDofs", "value");
+            NumScaleDofs = (ushort)Xml.GetChildIntAttribute(node, "NumScaleDofs", "value");
+            Flags = Xml.GetChildUIntAttribute(node, "Flags", "value");
+            Signature = Xml.GetChildUIntAttribute(node, "Signature", "value");
+            JointData = Xml.GetChildUIntAttribute(node, "JointData", "value");
+
             var snode = node.SelectSingleNode("Bones");
             if (snode != null)
             {
@@ -2309,27 +2301,32 @@ namespace CodeX.Games.RDR1.RSC6
                         bone.ReadXml(inode);
                         bones.Add(bone);
                     }
+
                     BoneData = new Rsc6RawLst<Rsc6Bone>(bones.ToArray());
                     Bones = BoneData.Items;
                     BoneCount = (ushort)(BoneData.Items?.Length ?? 0);
                 }
             }
+
             BuildIndices();
             AssignBoneParents();
-            //BuildBindMatrices();
+            BuildTransformations();
+            BuildBoneTags();
         }
 
         public void WriteXml(StringBuilder sb, int indent)
         {
-            Xml.ValueTag(sb, indent, "Unknown1C", "0");
-            Xml.ValueTag(sb, indent, "Unknown50", "3283568608");
-            Xml.ValueTag(sb, indent, "Unknown54", "3954038922");
-            Xml.ValueTag(sb, indent, "Unknown58", "3624623659");
+            Xml.ValueTag(sb, indent, "NumTranslationDofs", NumTranslationDofs.ToString());
+            Xml.ValueTag(sb, indent, "NumRotationDofs", NumRotationDofs.ToString());
+            Xml.ValueTag(sb, indent, "NumScaleDofs", NumScaleDofs.ToString());
+            Xml.ValueTag(sb, indent, "Flags", Flags.ToString());
+            Xml.ValueTag(sb, indent, "Signature", Signature.ToString());
+            Xml.ValueTag(sb, indent, "JointData", JointData.ToString());
 
             if (Bones != null)
             {
                 Xml.OpenTag(sb, indent, "Bones");
-                foreach (Rsc6Bone bone in Bones)
+                foreach (Rsc6Bone bone in Bones.Cast<Rsc6Bone>())
                 {
                     Xml.OpenTag(sb, indent + 1, "Item");
                     bone.WriteXml(sb, indent + 2);
@@ -2337,6 +2334,79 @@ namespace CodeX.Games.RDR1.RSC6
                 }
                 Xml.CloseTag(sb, indent, "Bones");
             }
+        }
+
+        public void BuildBoneTags()
+        {
+            var tags = new List<Rsc6SkeletonBoneTag>();
+            var bones = BoneData.Items;
+
+            if (bones != null)
+            {
+                for (int i = 0; i < bones.Length; i++)
+                {
+                    var bone = bones[i];
+                    var tag = new Rsc6SkeletonBoneTag
+                    {
+                        BoneTag = bone.BoneId,
+                        BoneIndex = (ushort)i
+                    };
+                    tags.Add(tag);
+                }
+            }
+
+            var skip = tags.Count < 1;
+            if (tags.Count == 1)
+            {
+                var t0 = tags[0];
+                skip = t0.BoneTag == 0;
+            }
+
+            if (skip)
+            {
+                BoneIDs = new();
+                return;
+            }
+
+            tags = tags.OrderBy(tag => tag.BoneIndex).ToList();
+            BoneIDs = new(tags.ToArray());
+        }
+
+        public void BuildTransformations()
+        {
+            var transforms = new List<Matrix4x4>();
+            var cumulativeTransforms = new List<Matrix4x4>();
+            if (Bones != null)
+            {
+                foreach (var bone in Bones.Cast<Rsc6Bone>())
+                {
+                    var pos = bone.Position;
+                    var ori = bone.Rotation;
+                    var sca = bone.Scale;
+
+                    var localTransform = Matrix4x4Ext.Transformation(sca, ori, pos);
+                    var cumulativeTransform = localTransform;
+
+                    var pbone = bone.Parent;
+                    while (pbone != null)
+                    {
+                        var parentPos = pbone.Position;
+                        var parentOri = pbone.Rotation;
+                        var parentSca = pbone.Scale;
+                        var parentTransform = Matrix4x4Ext.Transformation(parentSca, parentOri, parentPos);
+                        cumulativeTransform = parentTransform * cumulativeTransform;
+
+                        bone.AbsolutePosition = new Vector4(cumulativeTransform.Translation, 0.0f);
+                        pos = pbone.Rotation.Multiply(pos) + pbone.Position;
+                        ori = pbone.Rotation * ori;
+                        pbone = pbone.Parent;
+                    }
+                    transforms.Add(localTransform);
+                    cumulativeTransforms.Add(cumulativeTransform);
+                }
+            }
+            DefaultTransforms = (transforms.Count > 0) ? new(transforms.ToArray()) : new(null);
+            CumulativeDefaultTransforms = (cumulativeTransforms.Count > 0) ? new(cumulativeTransforms.ToArray()) : new(null);
         }
 
         public void BuildIndices()
@@ -2349,7 +2419,7 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i = 0; i < bones.Length; i++)
                 {
                     var bone = bones[i];
-                    var pind = bone.ParentIndices;
+                    var pind = bone.ParentIndex;
                     parents.Add(pind);
                 }
             }
@@ -2368,12 +2438,45 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     var bone = bones[i];
                     var pind = pinds[i];
+                    var sibling = bone.SiblingIndex;
+                    var child = bone.ChildIndex;
 
                     if ((pind >= 0) && (pind < bones.Length))
                     {
                         bone.Parent = bones[pind];
+                        bone.ParentRef = new Rsc6Ptr<Rsc6Bone>(bones[pind]);
+                    }
+
+                    if (sibling >= 0)
+                    {
+                        bone.NextSibling = new Rsc6Ptr<Rsc6Bone>(bones[sibling]);
+                    }
+
+                    if (child >= 0)
+                    {
+                        bone.FirstChild = new Rsc6Ptr<Rsc6Bone>(bones[child]);
                     }
                 }
+
+                /*for (uint i = 0; i < BoneCount; i++)
+                {
+                    var bone = bones[i];
+                    var ns = bone.NextSibling;
+                    var fc = bone.FirstChild;
+                    var pr = bone.ParentRef;
+
+                    if (reader.BlockPool.TryGetValue(ns.Position, out var nsi))
+                        ns.Item = nsi as Rsc6Bone;
+                    if (reader.BlockPool.TryGetValue(fc.Position, out var fci))
+                        fc.Item = fci as Rsc6Bone;
+                    if (reader.BlockPool.TryGetValue(pr.Position, out var pri))
+                        pr.Item = pri as Rsc6Bone;
+
+                    bone.NextSibling = ns;
+                    bone.FirstChild = fc;
+                    bone.ParentRef = pr;
+                    bone.Parent = pr.Item;
+                }*/
             }
         }
 
@@ -2412,7 +2515,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6Bone : Bone, Rsc6Block //rage::crBoneData
+    [TC(typeof(EXP))] public class Rsc6Bone : Bone, Rsc6Block //rage::crBoneData
     {
         public ulong BlockLength => 224;
         public ulong FilePosition { get; set; }
@@ -2430,13 +2533,13 @@ namespace CodeX.Games.RDR1.RSC6
         public byte NumScaleChannels { get; set; } //m_NumScaleChannels, related to OrigScale
         public ushort Unknown_1Dh { get; set; } //Pad
         public byte Unknown_1Fh { get; set; } //Pad
-        public Vector4 OrigPosition { get; set; } //m_DefaultTranslation, w = crc32 ((Dofs << 32) | MirrorIndex)
+        public Vector4 OrigPosition { get; set; } //m_DefaultTranslation
         public Vector4 OrigRotationEuler { get; set; } //m_DefaultRotation
         public Vector4 OrigRotation { get; set; } //m_DefaultRotationQuat
         public Vector4 OrigScale { get; set; } //m_DefaultScale
         public Vector4 AbsolutePosition { get; set; } //m_GlobalOffset, depending on Dofs, ParentRef->m_vOffset or m_vOffset transformed to the model space
         public Vector4 AbsoluteRotationEuler { get; set; } //m_JointOrient
-        public Vector4 Sorient { get; set; } //m_ScaleOrient
+        public Vector4 ScaleOrient { get; set; } //m_ScaleOrient
         public Vector4 TranslationMin { get; set; } //m_TransMin
         public Vector4 TranslationMax { get; set; } //m_TransMax
         public Vector4 RotationMin { get; set; } //m_RotMin
@@ -2446,7 +2549,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_D8h { get; set; } //Always 0
         public uint Unknown_DCh { get; set; } //Always 0
 
-        public int ParentIndices { get; set; }
+        public int SiblingIndex { get; set; }
+        public int ChildIndex { get; set; }
+        public int ParentIndex { get; set; }
         public Matrix4x4 JointScaleOrients { get; set; }
         public Matrix4x4 InverseJointScaleOrients { get; set; }
         public Matrix4x4 DefaultTransforms { get; set; }
@@ -2472,7 +2577,7 @@ namespace CodeX.Games.RDR1.RSC6
             OrigScale = reader.ReadVector4(true);
             AbsolutePosition = reader.ReadVector4(true);
             AbsoluteRotationEuler = reader.ReadVector4(true);
-            Sorient = reader.ReadVector4(true);
+            ScaleOrient = reader.ReadVector4(true);
             TranslationMin = reader.ReadVector4(true);
             TranslationMax = reader.ReadVector4(true);
             RotationMin = reader.ReadVector4(true);
@@ -2494,11 +2599,24 @@ namespace CodeX.Games.RDR1.RSC6
         
         public void Write(Rsc6DataWriter writer)
         {
+            Rsc6Bone parent = null, child = null, sibling = null;
+            var bdata = writer.BlockList.OfType<Rsc6SkeletonBoneData>().FirstOrDefault();
+
+            if (bdata != null)
+            {
+                if (NextSibling.Item != null)
+                    sibling = bdata.Bones.FirstOrDefault(b => string.Equals(b.Name, NextSibling.Item.Name));
+                if (FirstChild.Item != null)
+                    child = bdata.Bones.FirstOrDefault(b => string.Equals(b.Name, FirstChild.Item.Name));
+                if (ParentRef.Item != null)
+                    parent = bdata.Bones.FirstOrDefault(b => string.Equals(b.Name, ParentRef.Item.Name));
+            }
+
             writer.WriteStr(NameStr);
             writer.WriteUInt32(Dofs);
-            writer.WritePtr(NextSibling);
-            writer.WritePtr(FirstChild);
-            writer.WritePtr(ParentRef);
+            writer.WritePtrEmbed(sibling, sibling, (ulong)(224 * sibling?.Index ?? 0));
+            writer.WritePtrEmbed(child, child, (ulong)(224 * child?.Index ?? 0));
+            writer.WritePtrEmbed(parent, parent, (ulong)(224 * parent?.Index ?? 0));
             writer.WriteUInt16((ushort)Index);
             writer.WriteUInt16(BoneId);
             writer.WriteUInt16(MirrorIndex);
@@ -2513,7 +2631,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4(OrigScale);
             writer.WriteVector4(AbsolutePosition);
             writer.WriteVector4(AbsoluteRotationEuler);
-            writer.WriteVector4(Sorient);
+            writer.WriteVector4(ScaleOrient);
             writer.WriteVector4(TranslationMin);
             writer.WriteVector4(TranslationMax);
             writer.WriteVector4(RotationMin);
@@ -2527,15 +2645,35 @@ namespace CodeX.Games.RDR1.RSC6
         public void ReadXml(XmlNode node)
         {
             NameStr = new(Xml.GetChildInnerText(node, "Name"));
-            BoneId = (ushort)Xml.GetChildIntAttribute(node, "Tag", "value");
-            Index = (short)Xml.GetChildIntAttribute(node, "Index", "value");
-            ParentIndices = Xml.GetChildIntAttribute(node, "ParentIndex", "value");
-            Position = Xml.GetChildVector3Attributes(node, "Translation");
-            OrigRotation = Xml.GetChildVector4Attributes(node, "Rotation");
+            Dofs = Xml.GetChildUIntAttribute(node, "Dofs", "value");
+            Index = Xml.GetChildIntAttribute(node, "Index", "value");
+            BoneId = (ushort)Xml.GetChildIntAttribute(node, "BoneId", "value");
+            MirrorIndex = (ushort)Xml.GetChildIntAttribute(node, "MirrorIndex", "value");
+            NumTransChannels = (byte)Xml.GetChildIntAttribute(node, "NumTransChannels", "value");
+            NumRotChannels = (byte)Xml.GetChildIntAttribute(node, "NumRotChannels", "value");
+            NumScaleChannels = (byte)Xml.GetChildIntAttribute(node, "NumScaleChannels", "value");
+            OrigPosition = Rpf6Crypto.GetXmlVector4(node, "OrigPosition");
+            OrigRotationEuler = Rpf6Crypto.GetXmlVector4(node, "RotationEuler");
+            OrigRotation = Rpf6Crypto.GetXmlVector4(node, "Rotation");
+            OrigScale = Rpf6Crypto.GetXmlVector4(node, "Scale");
+            AbsolutePosition = Rpf6Crypto.GetXmlVector4(node, "AbsolutePosition");
+            AbsoluteRotationEuler = Rpf6Crypto.GetXmlVector4(node, "AbsoluteRotationEuler");
+            ScaleOrient = Rpf6Crypto.GetXmlVector4(node, "ScaleOrient");
+            TranslationMin = Rpf6Crypto.GetXmlVector4(node, "TranslationMin");
+            TranslationMax = Rpf6Crypto.GetXmlVector4(node, "TranslationMax");
+            RotationMin = Rpf6Crypto.GetXmlVector4(node, "RotationMin");
+            RotationMax = Rpf6Crypto.GetXmlVector4(node, "RotationMax");
+            JointData = Xml.GetChildUIntAttribute(node, "JointData");
+            SiblingIndex = Xml.GetChildIntAttribute(node, "SiblingIndex", "value");
+            ChildIndex = Xml.GetChildIntAttribute(node, "ChildIndex", "value");
+            ParentIndex = Xml.GetChildIntAttribute(node, "ParentIndex", "value");
 
             Name = NameStr.Value;
             NameHash = new JenkHash(Name);
+            Position = OrigPosition.XYZ();
             Rotation = OrigRotation.ToQuaternion();
+
+            Scale = Vector3.One;
             AnimRotation = Rotation;
             AnimTranslation = Position;
         }
@@ -2543,20 +2681,64 @@ namespace CodeX.Games.RDR1.RSC6
         public void WriteXml(StringBuilder sb, int indent)
         {
             Xml.StringTag(sb, indent, "Name", Name);
-            Xml.ValueTag(sb, indent, "Tag", BoneId.ToString());
+            Xml.ValueTag(sb, indent, "Dofs", Dofs.ToString());
             Xml.ValueTag(sb, indent, "Index", Index.ToString());
-            Xml.ValueTag(sb, indent, "ParentIndex", Parent == null ? "-1" : Parent.Index.ToString());
-            Xml.ValueTag(sb, indent, "SiblingIndex", Parent == null ? "-1" : (Index + 1).ToString());
-            Xml.StringTag(sb, indent, "Flags", "RotX, RotY, RotZ, TransX, TransY, TransZ");
-            Xml.SelfClosingTag(sb, indent, "Translation " + FloatUtil.GetVector3XmlString(Position));
+            Xml.ValueTag(sb, indent, "BoneId", BoneId.ToString());
+            Xml.ValueTag(sb, indent, "MirrorIndex", MirrorIndex.ToString());
+            Xml.ValueTag(sb, indent, "NumTransChannels", NumTransChannels.ToString());
+            Xml.ValueTag(sb, indent, "NumRotChannels", NumRotChannels.ToString());
+            Xml.ValueTag(sb, indent, "NumScaleChannels", NumScaleChannels.ToString());
+            Xml.SelfClosingTag(sb, indent, "OrigPosition " + FloatUtil.GetVector4XmlString(OrigPosition));
+            Xml.SelfClosingTag(sb, indent, "RotationEuler " + FloatUtil.GetVector4XmlString(OrigRotationEuler));
             Xml.SelfClosingTag(sb, indent, "Rotation " + FloatUtil.GetVector4XmlString(OrigRotation));
-            Xml.SelfClosingTag(sb, indent, "Scale " + FloatUtil.GetVector3XmlString(Scale));
-            Xml.SelfClosingTag(sb, indent, "TransformUnk " + FloatUtil.GetVector4XmlString(new Vector4(0f, 4f, -3, 0f)));
+            Xml.SelfClosingTag(sb, indent, "Scale " + FloatUtil.GetVector4XmlString(OrigScale));
+            Xml.SelfClosingTag(sb, indent, "AbsolutePosition " + FloatUtil.GetVector4XmlString(AbsolutePosition));
+            Xml.SelfClosingTag(sb, indent, "AbsoluteRotationEuler " + FloatUtil.GetVector4XmlString(AbsoluteRotationEuler));
+            Xml.SelfClosingTag(sb, indent, "ScaleOrient " + FloatUtil.GetVector4XmlString(ScaleOrient));
+            Xml.SelfClosingTag(sb, indent, "TranslationMin " + FloatUtil.GetVector4XmlString(TranslationMin));
+            Xml.SelfClosingTag(sb, indent, "TranslationMax " + FloatUtil.GetVector4XmlString(TranslationMax));
+            Xml.SelfClosingTag(sb, indent, "RotationMin " + FloatUtil.GetVector4XmlString(RotationMin));
+            Xml.SelfClosingTag(sb, indent, "RotationMax " + FloatUtil.GetVector4XmlString(RotationMax));
+            Xml.ValueTag(sb, indent, "JointData", JointData.ToString());
+            Xml.ValueTag(sb, indent, "SiblingIndex", (NextSibling.Item == null) ? "-1" : NextSibling.Item.Index.ToString());
+            Xml.ValueTag(sb, indent, "ChildIndex", FirstChild.Item == null ? "-1" : FirstChild.Item.Index.ToString());
+            Xml.ValueTag(sb, indent, "ParentIndex", Parent == null ? "-1" : Parent.Index.ToString());
+        }
+
+        public ulong GetSignatureNonChiral()
+        {
+            return ((ulong)BoneId << 32) |
+                   ((Dofs & ((uint)Rsc6DoFs.TRANSLATE_X | (uint)Rsc6DoFs.TRANSLATE_Y | (uint)Rsc6DoFs.TRANSLATE_Z)) != 0 ? 0x1UL : 0x0UL) |
+                   ((Dofs & ((uint)Rsc6DoFs.ROTATE_X | (uint)Rsc6DoFs.ROTATE_Y | (uint)Rsc6DoFs.ROTATE_Z)) != 0 ? 0x2UL : 0x0UL) |
+                   ((Dofs & ((uint)Rsc6DoFs.SCALE_X | (uint)Rsc6DoFs.SCALE_Y | (uint)Rsc6DoFs.SCALE_Z)) != 0 ? 0x4UL : 0x0UL);
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6SkeletonBoneData : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6SkeletonBoneTag : Rsc6BlockBase //rage::crSkeletonData::BoneIdData
+    {
+        public override ulong BlockLength => 4;
+        public ushort BoneTag { get; set; }
+        public ushort BoneIndex { get; set; }
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            BoneTag = reader.ReadUInt16();
+            BoneIndex = reader.ReadUInt16();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt16(BoneTag);
+            writer.WriteUInt16(BoneIndex);
+        }
+
+        public override string ToString()
+        {
+            return $"{BoneTag} : {BoneIndex}";
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6SkeletonBoneData : Rsc6BlockBase
     {
         public override ulong BlockLength => BonesCount * 224;
         public uint BonesCount { get; set; }
@@ -2589,19 +2771,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6BoneID //rage::crSkeletonData::BoneIdData
-    {
-        public short ID { get; set; } //m_Id
-        public short Index { get; set; } //m_Index
-
-        public override string ToString()
-        {
-            return Index.ToString() + ": " + ID.ToString();
-        }
-    }
-
-    [TC(typeof(EXP))]
-    public class Rsc6ShaderGroup : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6ShaderGroup : Rsc6BlockBase
     {
         public override ulong BlockLength => 32;
         public uint VFT { get; set; } = 0x0184A26C;
@@ -3098,8 +3268,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6ShaderParameter
+    [TC(typeof(EXP))] public class Rsc6ShaderParameter
     {
         public byte RegisterCount { get; set; }
         public byte RegisterIndex { get; set; }
@@ -3127,10 +3296,20 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(RegisterCount);
             writer.WriteByte(Unknown_3h);
 
+            Rsc6TextureBase texture = null;
+            if (Texture != null)
+            {
+                object block = writer.BlockList[0];
+                if (block is Rsc6FragDrawable<Rsc6Drawable> wfd)
+                    texture = wfd.TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                else
+                    texture = ((Rsc6VisualDictionary<Rsc6Drawable>)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+            }
+
             switch (DataType)
             {
                 case 0:
-                    writer.WritePtr(new Rsc6Ptr<Rsc6TextureBase>(Texture));
+                    writer.WritePtrEmbed(texture, texture, 0);
                     break;
                 case 1:
                     writer.WritePtr(new Rsc6Ptr<Rsc6Vector4>(Vector));
@@ -3194,8 +3373,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6ShaderParametersBlock : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6ShaderParametersBlock : Rsc6BlockBase
     {
         public override ulong BlockLength
         {
@@ -3406,11 +3584,9 @@ namespace CodeX.Games.RDR1.RSC6
             for (int i = 0; i < Parameters.Length; i++)
             {
                 var param = Parameters[i];
-                if (param.DataType == 0)
-                    writer.WriteBlock(param.Texture);
-                else if (param.DataType == 1)
+                if (param.DataType == 1)
                     writer.WriteVector4(param.Vector.Vector);
-                else
+                else if (param.DataType > 1)
                 {
                     foreach (var v in param.Array.Array)
                     {
@@ -3539,7 +3715,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6Vector4 : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6Vector4 : Rsc6BlockBase
     {
         public override ulong BlockLength => (ulong)(16 * Count);
         public int Count { get; set; }
@@ -3596,8 +3772,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6ShaderFX : Rsc6BlockBase //rage::grmShader + rage::grcInstanceData
+    [TC(typeof(EXP))] public class Rsc6ShaderFX : Rsc6BlockBase //rage::grmShader + rage::grcInstanceData
     {
         public override ulong BlockLength => 32;
         public Rsc6Ptr<Rsc6ShaderParametersBlock> ParametersList { get; set; } //Data
@@ -3702,15 +3877,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6VertexDeclaration : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6VertexDeclaration : Rsc6BlockBase
     {
         public override ulong BlockLength => 16;
-        public uint Flags { get; set; } //m_FvfChannelSizes, bit mask of the 'm_Fvf', mostly 16601, 16473 or 16857
-        public ushort Stride { get; set; } //m_FvfSize + m_Flags
-        public byte DynamicOrder { get; set; } //m_DynamicOrder, always 0
+        public uint Flags { get; set; } //m_Fvf, fvf channels currently used, mostly 16601, 16473 or 16857
+        public ushort Stride { get; set; } //m_FvfSize + m_Flags, total size of the fvf + various flags for transformed positions, etc
+        public byte DynamicOrder { get; set; } //m_DynamicOrder, padded dynamic order instead of standard order
         public byte Count { get; set; } //m_ChannelCount, number of '1's in 'Flags'
-        public Rsc6VertexDeclarationTypes Types { get; set; } //m_Fvf, 16 fields 4 bits each
+        public Rsc6VertexDeclarationTypes Types { get; set; } //m_FvfChannelSizes, 16 fields 4 bits each
         public VertexLayout VertexLayout { get; set; }
 
         public override void Read(Rsc6DataReader reader)
@@ -3782,6 +3956,17 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
             return res;
+        }
+
+        private bool IsPreTransform() //Query to see if the position channel contains pre-transformed data
+        {
+            return (Flags & 0x1) == 0x1;
+        }
+
+        private bool IsChannelActive(Rsc6VertexElementBits channel) //Determine if a channel is active
+        {
+            uint msk = 1U << (int)channel;
+            return (Flags & msk) == msk;
         }
 
         public Rsc6VertexComponentType GetComponentType(int index)
@@ -3907,8 +4092,10 @@ namespace CodeX.Games.RDR1.RSC6
                 case Rsc6VertexElementSemantic.TexCoord5: return 5;
                 case Rsc6VertexElementSemantic.TexCoord6: return 5;
                 case Rsc6VertexElementSemantic.TexCoord7: return 5;
-                case Rsc6VertexElementSemantic.Tangent: return 6;
-                case Rsc6VertexElementSemantic.Binormal: return 7;
+                case Rsc6VertexElementSemantic.Tangent0: return 6;
+                case Rsc6VertexElementSemantic.Tangent1: return 6;
+                case Rsc6VertexElementSemantic.Binormal0: return 7;
+                case Rsc6VertexElementSemantic.Binormal1: return 7;
             }
         }
 
@@ -3918,28 +4105,28 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public static class Rsc6VertexComponentTypes
+    [TC(typeof(EXP))] public static class Rsc6VertexComponentTypes
     {
         public static int GetSizeInBytes(Rsc6VertexComponentType type)
         {
             switch (type)
             {
-                case Rsc6VertexComponentType.Nothing: return 2;
-                case Rsc6VertexComponentType.Half2: return 4;
-                case Rsc6VertexComponentType.Float: return 6;
-                case Rsc6VertexComponentType.Half4: return 8;
-                case Rsc6VertexComponentType.FloatUnk: return 4;
-                case Rsc6VertexComponentType.Float2: return 8;
-                case Rsc6VertexComponentType.Float3: return 12;
-                case Rsc6VertexComponentType.Float4: return 16;
-                case Rsc6VertexComponentType.UByte4: return 4;
-                case Rsc6VertexComponentType.Colour: return 4;
-                case Rsc6VertexComponentType.Dec3N: return 4;
-                case Rsc6VertexComponentType.Unk1: return 8;
-                case Rsc6VertexComponentType.Unk2: return 8;
-                case Rsc6VertexComponentType.Unk3: return 0;
-                case Rsc6VertexComponentType.UShort2N: return 4;
-                case Rsc6VertexComponentType.Unk5: return 8;
+                case Rsc6VertexComponentType.Nothing: return 2; //Half
+                case Rsc6VertexComponentType.Half2: return 4; //Half2
+                case Rsc6VertexComponentType.Float: return 6; //Half3
+                case Rsc6VertexComponentType.Half4: return 8; //Half4
+                case Rsc6VertexComponentType.FloatUnk: return 4; //Float
+                case Rsc6VertexComponentType.Float2: return 8; //Float2
+                case Rsc6VertexComponentType.Float3: return 12; //Float3
+                case Rsc6VertexComponentType.Float4: return 16; //Float4
+                case Rsc6VertexComponentType.UByte4: return 4; //UByte4
+                case Rsc6VertexComponentType.Colour: return 4; //Color
+                case Rsc6VertexComponentType.Dec3N: return 4; //PackedNormal
+                case Rsc6VertexComponentType.Unk1: return 2; //Short_UNorm
+                case Rsc6VertexComponentType.Unk2: return 4; //Short2_Unorm
+                case Rsc6VertexComponentType.Unk3: return 2; //Byte2_UNorm
+                case Rsc6VertexComponentType.UShort2N: return 4; //Short2
+                case Rsc6VertexComponentType.Unk5: return 8; //Short4
                 default: return 0;
             }
         }
@@ -3964,14 +4151,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public enum Rsc6VertexElementSemantic : byte
+    public enum Rsc6VertexElementSemantic : byte //grcFvfChannels, list of fvf channels available
     {
         Position = 0,
         BlendWeights = 1,
-        BlendIndices = 2,
+        BlendIndices = 2, //Binding
         Normal = 3,
-        Colour0 = 4,
-        Colour1 = 5,
+        Colour0 = 4, //Normal
+        Colour1 = 5, //Diffuse
         TexCoord0 = 6,
         TexCoord1 = 7,
         TexCoord2 = 8,
@@ -3980,8 +4167,34 @@ namespace CodeX.Games.RDR1.RSC6
         TexCoord5 = 11,
         TexCoord6 = 12,
         TexCoord7 = 13,
-        Tangent = 14,
-        Binormal = 15,
+        Tangent0 = 14,
+        Tangent1 = 15,
+        Binormal0 = 16,
+        Binormal1 = 17,
+    }
+
+    public enum Rsc6VertexElementBits : uint //grcFvfChannelBits
+    {
+        PositionMask = 0x1,
+        BlendWeightsMask = 0x2,
+        BlendIndicesMask = 0x4, //Binding
+        NormalMask = 0x8,
+        Colour0Mask = 0x10, //Normal
+        Colour1Mask = 0x20, //Diffuse
+        TexCoord0Mask = 0x40,
+        TexCoord1Mask = 0x80,
+        TexCoord2Mask = 0x100,
+        TexCoord3Mask = 0x200,
+        TexCoord4Mask = 0x400,
+        TexCoord5Mask = 0x800,
+        TexCoord6Mask = 0x1000,
+        TexCoord7Mask = 0x2000,
+        Tangent0Mask = 0x4000,
+        Tangent1Mask = 0x8000,
+        Binormal0Mask = 0x10000,
+        Binormal1Mask = 0x20000,
+        PositionHalf4Mask = 0x40000000,
+        PositionFloat4Mask = 0x20000000,
     }
 
     public enum Rsc6VertexComponentType : byte
@@ -4016,4 +4229,25 @@ namespace CodeX.Games.RDR1.RSC6
         LightmapColorHDR,
         LightmapExpHDR
     }
+
+    [Flags] public enum Rsc6DoFs : uint //Degrees of freedom ({rotate,translate,scale} X {x,y,z}) and limits
+    {
+        ROTATE_X = 1, //Can rotate on x-axis
+        ROTATE_Y = 2, // Can rotate on y-axis
+        ROTATE_Z = 4, //Can rotate on z-axis
+        HAS_ROTATE_LIMITS = 8, //Is rotation limited?
+        TRANSLATE_X = 16, //Can translate in x-axis
+        TRANSLATE_Y = 32, //Can translate in y-axis
+        TRANSLATE_Z = 64, //Can translate in z-axis
+        HAS_TRANSLATE_LIMITS = 128, //Is translation limited?
+        SCALE_X = 256, //Can scale in x-axis
+        SCALE_Y = 512, //Can scale in y-axis
+        SCALE_Z = 1024, //Can scale in z-axis
+        HAS_SCALE_LIMITS = 2048, //Is scale limited?
+        HAS_CHILD = 4096, //Children?
+        IS_SKINNED = 8192, //Bone is skinned to
+        ROTATION = ROTATE_X | ROTATE_Y | ROTATE_Z, //7
+        TRANSLATION = TRANSLATE_X | TRANSLATE_Y | TRANSLATE_Z, //112
+        SCALE = SCALE_X | SCALE_Y | SCALE_Z, //1792
+    };
 }

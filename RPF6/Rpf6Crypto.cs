@@ -5,18 +5,23 @@ using System.IO;
 using System.Security.Cryptography;
 using Zstandard.Net;
 using System.Collections.Generic;
+using CodeX.Core.Utilities;
+using System.Numerics;
+using System.Xml;
+using CodeX.Core.Numerics;
+using System.Linq;
 
 namespace CodeX.Games.RDR1.RPF6
 {
     public static class Rpf6Crypto
     {
-        public static Aes AesAlg;
-        public static byte[] AES_KEY = new byte[32]
+        static Aes AesAlg;
+        static byte[] AES_KEY = new byte[32]
         {
             0xB7, 0x62, 0xDF, 0xB6, 0xE2, 0xB2, 0xC6, 0xDE, 0xAF, 0x72, 0x2A, 0x32, 0xD2, 0xFB, 0x6F, 0x0C, 0x98, 0xA3, 0x21, 0x74, 0x62, 0xC9, 0xC4, 0xED, 0xAD, 0xAA, 0x2E, 0xD0, 0xDD, 0xF9, 0x2F, 0x10
         };
 
-        public static bool Init(string folder)
+        public static bool Init()
         {
             AesAlg = Aes.Create();
             AesAlg.BlockSize = 128;
@@ -216,6 +221,112 @@ namespace CodeX.Games.RDR1.RPF6
             var data = BitConverter.GetBytes(value);
             Array.Reverse(data);
             return BitConverter.ToSingle(data, 0);
+        }
+
+        public static Vector3 GetXmlVector3(XmlNode node, string name)
+        {
+            var vector = Xml.GetChildVector3Attributes(node, name);
+            return new Vector3(vector.Y, vector.Z, vector.X);
+        }
+
+        public static Vector4 GetXmlVector4(XmlNode node, string name)
+        {
+            var vector = Xml.GetChildVector4Attributes(node, name);
+            return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
+        }
+
+        //Converts a Vector3 (XYZ to ZXY) to Dec3N
+        public static uint GetDec3N(Vector3 val)
+        {
+            return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20);
+        }
+
+        //Writes a Vector3 (XYZ to ZXY) at the given offset in a buffer
+        public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset)
+        {
+            var x = BitConverter.GetBytes(vec.X);
+            var y = BitConverter.GetBytes(vec.Y);
+            var z = BitConverter.GetBytes(vec.Z);
+            Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
+            Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
+            Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
+        }
+
+        //Rescale Half2 texcoords (used for the terrain tiles)
+        public static Vector2 RescaleHalf2(Half2 val, float scale)
+        {
+            return new Half2((float)val.X * scale, (float)val.Y * scale);
+        }
+
+        //Reads UShort2N texcoords and rescale the values depending of the current model LOD
+        public static float[] ReadRescaleUShort2N(byte[] buffer, int offset, bool highLOD)
+        {
+            var xBuf = BufferUtil.ReadArray<byte>(buffer, offset, 2);
+            var yBuf = BufferUtil.ReadArray<byte>(buffer, offset + 2, 2);
+            var xVal = BitConverter.ToUInt16(xBuf, 0) * 3.05185094e-005f;
+            var yVal = BitConverter.ToUInt16(yBuf, 0) * 3.05185094e-005f;
+
+            float[] values;
+            if (!highLOD)
+            {
+                xVal *= 2f;
+                yVal *= 2f;
+                values = new float[2] { float.NaN, float.NaN };
+            }
+            else
+            {
+                values = new float[2] { xVal, yVal };
+            }
+
+            //We can write the values anyway, for 'resource_0' they will be overwritten later...
+            BufferUtil.WriteArray(buffer, offset, BitConverter.GetBytes((ushort)(xVal / 3.05185094e-005f)));
+            BufferUtil.WriteArray(buffer, offset + 2, BitConverter.GetBytes((ushort)(yVal / 3.05185094e-005f)));
+            return values;
+        }
+
+        //Rescale and writes UV coords in a given byte array
+        //UV coords are normalized by dividing each coordinate by the range (difference between max and min values)
+        //After this step, they should lie in the range [0, 1].
+        public static void NormalizeUVs(List<float> uvX, List<float> uvY, List<int> uvOffset, ref byte[] buffer)
+        {
+            if (uvX.Count <= 0 || uvY.Count <= 0 || uvOffset.Count <= 0) return;
+
+            var minU = uvX.Min();
+            var maxU = uvX.Max();
+            var minV = uvY.Min();
+            var maxV = uvY.Max();
+
+            //Shift the values to the origin
+            for (int i = 0; i < uvX.Count; i++)
+            {
+                uvX[i] -= minU;
+                uvY[i] -= minV;
+            }
+
+            //Normalize the values
+            for (int i = 0; i < uvX.Count; i++)
+            {
+                uvX[i] /= maxU - minU;
+                uvY[i] /= maxV - minV;
+            }
+
+            //Convert to bytes and update buffer
+            for (int i = 0; i < uvX.Count; i++)
+            {
+                var x1 = (ushort)(uvX[i] / 3.05185094e-005f);
+                var y1 = (ushort)(uvY[i] / 3.05185094e-005f);
+                var xBuf = BitConverter.GetBytes(x1);
+                var yBuf = BitConverter.GetBytes(y1);
+                BufferUtil.WriteArray(buffer, uvOffset[i], xBuf);
+                BufferUtil.WriteArray(buffer, uvOffset[i] + 2, yBuf);
+            }
+        }
+
+        //Converts a floating point number into a fixed point number, it's simply multiplying the float by a constant value and discarding the extra bits
+        public static uint PackFixedPoint(float value, uint size, uint shift) //Vector3::Pack1010102
+        {
+            float scale = ((1u << (int)(size - 1)) - 1);
+            return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
         }
     }
 }

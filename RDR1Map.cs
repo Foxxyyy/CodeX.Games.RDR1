@@ -36,16 +36,26 @@ namespace CodeX.Games.RDR1
             {
                 "Armadillo" => new Vector3(2617.4f, -2180.6f, 20.2f),
                 "Chuparosa" => new Vector3(4243.8f, -2690.5f, 42.8f),
+                "Cochinay" => new Vector3(998.1f, -888.7f, 205.3f),
                 "El Presidio" => new Vector3(3304.5f, -690.9f, 68.2f),
+                "El Matadero" => new Vector3(3912.3f, -453.2f, 23.9f),
                 "Escalera" => new Vector3(4422.8f, -4339.2f, 35.5f),
                 "Fort Mercer" => new Vector3(3493.1f, -2699.5f, 70.7f),
                 "Gaptooth Breach" => new Vector3(3256.36f, -4453.0f, 13.8f),
                 "Las Hermanas" => new Vector3(4240.1f, -1699.9f, 12.6f),
                 "MacFarlane's Ranch" => new Vector3(2404.3f, -844.2f, 95.1f),
+                "Manzanita Post" => new Vector3(1639.6f, -435.1f, 155.6f),
+                "Nosalida" => new Vector3(3964.4f, -4673.6f, 7.0f),
+                "Pacific Union RR Camp" => new Vector3(2105.8f, -256.0f, 88.5f),
+                "Plainview" => new Vector3(3732.4f, -3130.1f, 50.3f),
                 "Rathskeller Fork" => new Vector3(2123.8f, -3661.3f, 48.4f),
+                "Ridgewood Farm" => new Vector3(2721.0f, -3274.5f, 20.2f),
+                "Tesoro Azul" => new Vector3(4547.6f, -3261.8f, 41.6f),
                 "Thieve's Landing" => new Vector3(2230.7f, -134.1f, 76.4f),
+                "Torquemada" => new Vector3(3456.4f, -370.5f, 80.7f),
                 "Tumbleweed" => new Vector3(2950.4f, -3941.5f, 32.6f),
-                _ => new Vector3(1315.5f, 735.2f, 80f),
+                "Twin Rocks" => new Vector3(2141.6f, -2430.9f, 28.0f),
+                _ => new Vector3(1315.5f, 735.2f, 80f), //Blackwater
             };
 
             Game = game;
@@ -84,6 +94,11 @@ namespace CodeX.Games.RDR1
             return true;
         }
 
+        private static string[] GetAreas()
+        {
+            return new[] { "Armadillo", "Blackwater", "Chuparosa", "Cochinay", "El Presidio", "El Matadero", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Manzanita Post", "Nosalida", "Pacific Union RR Camp", "Plainview", "Rathskeller Fork", "Ridgewood Farm", "Tesoro Azul", "Thieve's Landing", "Torquemada", "Tumbleweed", "Twin Rocks" };
+        }
+
         private bool ShouldSkipObject(Rpf6FileEntry entry)
         {
             return entry.Name.Contains("non-terrain")
@@ -95,7 +110,8 @@ namespace CodeX.Games.RDR1
 
         private bool ShouldSkipLOD(GameArchiveDirectory parent)
         {
-            return parent.Name.StartsWith("resource_2")
+            return (UseLowestLODSetting.GetBool() ? parent.Name.StartsWith("resource_0") : parent.Name.StartsWith("resource_1"))
+                || parent.Name.StartsWith("resource_2")
                 || parent.Name.StartsWith("resource_3")
                 || parent.Name.StartsWith("resource_4");
         }
@@ -103,11 +119,6 @@ namespace CodeX.Games.RDR1
         private bool IsObjectProp(string obj)
         {
             return obj.Contains("p_gen") || (obj.StartsWith("p_") && obj.EndsWith("x"));
-        }
-
-        public static string[] GetAreas()
-        {
-            return new[] { "Armadillo", "Blackwater", "Chuparosa", "El Presidio", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Rathskeller Fork", "Thieve's Landing", "Tumbleweed" };
         }
 
         private void LoadSectors(Rpf6DataFileMgr dfm)
@@ -162,15 +173,7 @@ namespace CodeX.Games.RDR1
             foreach (var file in files)
             {
                 var entry = file.Value;
-                if (ShouldSkipObject(entry) || ShouldSkipLOD(entry.Parent) || !file.Key.Str.StartsWith("tile_"))
-                    continue;
-
-                if (!UseLowestLODSetting.GetBool())
-                {
-                    if (entry.Parent.Name.StartsWith("resource_0"))
-                        continue;
-                }
-                else if (entry.Parent.Name.StartsWith("resource_1"))
+                if (!file.Key.Str.StartsWith("tile_") || ShouldSkipObject(entry) || ShouldSkipLOD(entry.Parent))
                     continue;
 
                 var piece = Cache.GetPiece(file.Key.Str, file.Key);

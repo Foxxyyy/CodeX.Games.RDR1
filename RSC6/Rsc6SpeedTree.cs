@@ -40,7 +40,7 @@ namespace CodeX.Games.RDR1.RSC6
             GridMin = reader.ReadVector4(true);
             GridMax = reader.ReadVector4(true);
             BoundSphere = reader.ReadVector4(true);
-            GridCells = reader.ReadArr<Rsc6TreeForestGridCell>();
+            GridCells = reader.ReadArr<Rsc6TreeForestGridCell>(); //Rsc6TreeForestGridCell[CellsWidth][CellsHeight]
             IndexList = reader.ReadArr<ushort>();
             Left = reader.ReadInt32();
             Right = reader.ReadInt32();
@@ -58,6 +58,7 @@ namespace CodeX.Games.RDR1.RSC6
             LoadedMeshes = reader.ReadBoolean();
             StreamRadius = reader.ReadSingle();
 
+            /////////////////////// Tests ///////////////////////
             var min = GridMin.XYZ();
             var max = GridMax.XYZ();
             var siz = max - min;
@@ -68,6 +69,48 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     var t = GridCells.Items[i].CombinedInstanceListPos[i1];
                     t.Position = GridCells.Items[i].BoundSphere.XYZ() * (new Vector3(t.Z, t.X, t.Y) / 65535.0f); //wrong
+                }
+            }
+
+            // Create the grid
+            var m_nWidth = Right - Left;
+            var m_nHeight = Bottom - Top;
+            var m_nCellsW = (int)(m_nWidth / WidthStep);
+            var m_nCellsH = (int)(m_nHeight / HeightStep);
+
+            if (m_nWidth % WidthStep != 0)
+                m_nCellsW++;
+            if (m_nHeight % HeightStep != 0)
+                m_nCellsH++;
+
+            var m_GridCells = new Rsc6TreeForestGridCell[m_nCellsW][];
+            for (int i = 0; i < m_nCellsW; i++)
+            {
+                m_GridCells[i] = new Rsc6TreeForestGridCell[m_nCellsH];
+                for (int j = 0; j < m_nCellsH; j++)
+                {
+                    // Calculate the bounding sphere of this grid cell
+                    Vector3 vCorner;
+                    Vector3 vCenter;
+
+                    if (YUp)
+                    {
+                        vCorner = new Vector3((float)(Left + (i * WidthStep)), 0.0f, (float)(Top + (j * HeightStep)));
+                        vCenter = vCorner + new Vector3((float)WidthStep * 0.5f, 0.0f, (float)HeightStep * 0.5f);
+                    }
+                    else
+                    {
+                        vCorner = new Vector3((float)(Left + (i * WidthStep)), (float)(Top + (j * HeightStep)), 0.0f);
+                        vCenter = vCorner + new Vector3((float)WidthStep * 0.5f, (float)HeightStep * 0.5f, 0.0f);
+                    }
+
+                    Vector3 vCenterToCorner = vCorner - vCenter;
+                    float fRadius = vCenterToCorner.Length();
+
+                    m_GridCells[i][j] = new Rsc6TreeForestGridCell()
+                    {
+                        BoundSphere = new Vector4(vCenter.X, vCenter.Y, vCenter.Z, fRadius)
+                    };
                 }
             }
         }
@@ -97,6 +140,20 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBoolean(EntireCellCull);
             writer.WriteBoolean(LoadedMeshes);
             writer.WriteSingle(StreamRadius);
+        }
+
+        public void GetGridCell(Vector3 vPosition, out int nCellW, out int nCellH)
+        {
+            if (YUp)
+            {
+                nCellW = (int)((vPosition.X - Left) / WidthStep);
+                nCellH = (int)((vPosition.Z - Top) / HeightStep);
+            }
+            else
+            {
+                nCellW = ((int)vPosition.X - Left) / WidthStep;
+                nCellH = ((int)vPosition.Y - Top) / HeightStep;
+            }
         }
     }
 
