@@ -1,6 +1,6 @@
 # CodeX (022)
 
-Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potentially PS4)
+Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potentially PS4/PS5)
 
 --------------------
 
@@ -32,9 +32,9 @@ Im Foxxyyy
 Neos    
 
 # Random screenshots
-![Screenshot](Properties/codex_explorer.png)
-![Screenshot](Properties/codex_game_selector.png)
-![Screenshot](Properties/codex_scene_preview.png)
-![Screenshot](Properties/map_viewer_1.png)
-![Screenshot](Properties/map_viewer_2.png)
-![Screenshot](Properties/model_viewer.png)
+![Screenshot](Files/Properties/codex_explorer.png)
+![Screenshot](Files/Properties/codex_game_selector.png)
+![Screenshot](Files/Properties/codex_scene_preview.png)
+![Screenshot](Files/Properties/map_viewer_1.png)
+![Screenshot](Files/Properties/map_viewer_2.png)
+![Screenshot](Files/Properties/model_viewer.png)

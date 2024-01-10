@@ -52,5 +52,6 @@ C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\bin\Debug\net7.0-windows\CodeX.Core
 C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\bin\Debug\net7.0-windows\CodeX.Core.pdb
 C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\CodeX.Games.RDR1.csproj.CopyComplete
 C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\ref\CodeX.Games.RDR1.dll
-C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\CodeX.Games.RDR1.Properties.Resources.resources
 C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\CodeX.Games.RDR1.csproj.GenerateResource.cache
+C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\CodeX.Games.RDR1.sourcelink.json
+C:\Research\CodeX\CodeX-021\CodeX.Games.RDR1\obj\Debug\net7.0-windows\CodeX.Games.RDR1.Files.Properties.Resources.resources

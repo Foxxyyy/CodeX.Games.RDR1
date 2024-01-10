@@ -701,14 +701,11 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x707EF967: //rdr2_flattenterrain_blend
                     case 0xC242DAA7: //rdr2_terrain_blend
-                        SetupBlendTerrainShader(shader);
-                        break;
                     case 0xF98973D1: //rdr2_terrain
-                        SetupDefaultBlendTerrainShader(shader);
+                        SetupBlendTerrainShader(shader);
                         break;
                     case 0x3103407E: //rdr2_cliffwall_ao_low_lod
                     case 0x249BB297: //rdr2_cliffwall_ao
-                    case 0x227C5611: //rdr2_cliffwall_alpha
                         SetupClifwallTerrainShader(shader);
                         break;
                     case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal
@@ -727,11 +724,14 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     case 0x32A4918E: //rdr2_alpha
                     case 0x173D5F9D: //rdr2_grass
+                    case 0x171C9E47: //rdr2_glass_glow
                     case 0xC714B86E: //rdr2_alpha_foliage
+                    case 0x592D7DC2: //rdr2_alpha_foliage_no_fade
                     case 0xBBCB0BF8: //rdr2_alpha_bspec_ao_shareduv
                     case 0xC4724CCA: //rdr2_alpha_bspec_ao_shareduv_character_nooff
                     case 0x14577406: //rdr2_alpha_bspec_ao_shareduv_character_hair
                     case 0xC14300BB: //rdr2_alpha_bspec_ao_shareduv_character_cutscene
+                    case 0x2FE0F698: //rdr2_bump_spec_ambocc_shared
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                     case 0x949EC19C: //rdr2_alpha_bspec_ao_shared
@@ -740,7 +740,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x7668B157: //rdr2_glass_nodistortion_bump_spec_ao_shared
                     case 0x72A21FFE: //rdr2_glass_nodistortion_bump_spec_ao
-                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 1, 0)); //"DecalMasks"
+                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 0, 0)); //"DecalMasks"
                         ShaderInputs.SetUInt32(0x0188ECE8, 1u);  //"DecalMode"
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
@@ -754,7 +754,7 @@ namespace CodeX.Games.RDR1.RSC6
                     case 2: ShaderBucket = ShaderBucket.Alpha1; break; //Hair
                     case 3: ShaderBucket = ShaderBucket.Alpha1; break; //AlphaMask
                     case 4: ShaderBucket = ShaderBucket.Translucency; break; //Water
-                    case 5: ShaderBucket = ShaderBucket.Translucency; break; //Transparent
+                    case 5: ShaderBucket = ShaderBucket.Alpha1; break; //Transparent
                     case 6: ShaderBucket = ShaderBucket.Alpha2; break; //DistortionGlass
                     case 8: ShaderBucket = ShaderBucket.AlphaF; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //Alpha
                 }
@@ -824,7 +824,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
+            ShaderInputs.SetUInt32(0x9B920BD, 25); //BlendMode
 
             if (s == null)
                 return;
@@ -832,7 +832,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null)
                 return;
 
-            Textures = new Texture[13];
+            Textures = new Texture[14];
             for (int k = 0; k < parms.Length; k++)
             {
                 var prm = parms[k];
@@ -840,32 +840,29 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0xB5C6B283: //"terraindiffusesampler1"
+                        case 0xB5C6B283: //terraindiffusesampler1
                             Textures[0] = prm.Texture;
                             break;
-                        case 0x13376D63: //"terraindiffusesampler2"
+                        case 0x13376D63: //terraindiffusesampler2
                             Textures[1] = prm.Texture;
                             break;
-                        case 0x3412AF91: //"terraindiffusesampler3"
+                        case 0x3412AF91: //terraindiffusesampler3
                             Textures[2] = prm.Texture;
                             break;
-                        case 0x3D734252: //"terraindiffusesampler4"
+                        case 0x3D734252: //terraindiffusesampler4
                             Textures[3] = prm.Texture;
                             break;
-                        case 0xFF4494B8: //"terrainnormalsampler1"
+                        case 0x4FB1E6CF: //terraindiffusesampler5
                             Textures[4] = prm.Texture;
                             break;
-                        case 0x2B0FEC4E: //"terrainnormalsampler2"
+                        case 0xEAE71D3B: //terraindiffusesampler6
                             Textures[5] = prm.Texture;
                             break;
-                        case 0x1CAB4F85: //"terrainnormalsampler3"
-                            Textures[6] = prm.Texture;
-                            break;
-                        case 0xC668A301: //"terrainnormalsampler4"
-                            Textures[7] = prm.Texture;
-                            break;
-                        case 0xA0918A47: //"terrainblendmap2"
+                        case 0x0ED966D5: //terrainblendmap1
                             Textures[12] = prm.Texture;
+                            break;
+                        case 0xA0918A47: //terrainblendmap2
+                            Textures[13] = prm.Texture;
                             break;
                         default:
                             break;
@@ -876,84 +873,25 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (prm.Hash)
                     {
                         case 0xf6712b81://"bumpiness"
-                            //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X));//"BumpScales"
+                            //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X)); //"BumpScales"
                             break;
                         case 0x66C79BD6: //megatilerepetitions, how many times, across the 0-1 of the UV channel map, do the tiles repeat
                             ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector.Vector); //"UVLookupIndex"
                             break;
-                        case 0x62503593: //blendmapscale2
-                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
-                            break;
-                        case 0xBDDEBE2D: //blendmapoffset2 - offset of the UV for the tile when at (0,0) in the channel map
-                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
-                            break;
                         case 0x4385A0D2: //megatileoffset - offset of the UV for the tile when at (0,0) in the channel map
                             ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector.Vector); //"UVScaleOffset"      float4
                             break;
-                        default:
+                        case 0x9FBAB08B: //blendmapscale1
+                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector.Vector); //LODColourLevels    float4
                             break;
-                    }
-                }
-            }
-        }
-
-        private void SetupDefaultBlendTerrainShader(Rsc6ShaderFX s)
-        {
-            SetCoreShader<BlendShader>(ShaderBucket.Solid);
-            ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
-
-            if (s == null)
-                return;
-            var parms = s.ParametersList.Item?.Parameters;
-            if (parms == null)
-                return;
-
-            Textures = new Texture[13];
-            for (int k = 0; k < parms.Length; k++)
-            {
-                var prm = parms[k];
-                if (prm.DataType == 0)
-                {
-                    switch (prm.Hash)
-                    {
-                        case 0xB5C6B283: //"terraindiffusesampler1"
-                            Textures[0] = prm.Texture;
-                            break;
-                        case 0x13376D63: //"terraindiffusesampler2"
-                            Textures[1] = prm.Texture;
-                            break;
-                        case 0x3412AF91: //"terraindiffusesampler3"
-                            Textures[2] = prm.Texture;
-                            break;
-                        case 0x3D734252: //"terraindiffusesampler4"
-                            Textures[3] = prm.Texture;
-                            break;
-                        case 0xA0918A47: //terrainblendmap2
-                            Textures[12] = prm.Texture;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                else
-                {
-                    switch (prm.Hash)
-                    {
-                        case 0xf6712b81://"bumpiness"
-                            //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X));//"BumpScales"
-                            break;
-                        case 0x66C79BD6: //megatilerepetitions - How many times, across the 0-1 of the UV channel map, do the tiles repeat
-                            ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector.Vector); //"UVLookupIndex"
-                            break;
-                        case 0x4385A0D2: //megatileoffset - offset of the UV for the tile when at (0,0) in the channel map
-                            ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector.Vector); //"UVScaleOffset"      float4
+                        case 0xAC181AA0: //blendmapoffset1
+                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector.Vector); //LODColourBlends    float4
                             break;
                         case 0x62503593: //blendmapscale2
-                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
+                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //HBBScales          float4
                             break;
-                        case 0xBDDEBE2D: //blendmapoffset2 - offset of the UV for the tile when at (0,0) in the channel map
-                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
+                        case 0xBDDEBE2D: //blendmapoffset2
+                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //HBBOffsets         float4
                             break;
                         default:
                             break;
@@ -966,17 +904,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0x9B920BD, 22); //BlendMode
+            ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
 
-            if (s == null)
-                return;
+            if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
-            if (parms == null)
-                return;
-
-            var sintensitymult = 0.3f;
-            var sfalloffmult = 50.0f;
-            Textures = new Texture[16];
+            if (parms == null) return;
+            Textures = new Texture[13];
 
             for (int k = 0; k < parms.Length; k++)
             {
@@ -988,7 +921,6 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x2B5170FD: //"texturesampler"
                             Textures[0] = prm.Texture;
                             break;
-                        case 0x4CE3D854: //flattenbumpsampler
                         case 0x0ED966D5: //terrainblendmap1
                             Textures[12] = prm.Texture;
                             break;
@@ -1000,38 +932,31 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
-                            sintensitymult = prm.Vector.Vector.X;
-                            break;
-                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
-                            sfalloffmult = prm.Vector.Vector.X;
-                            break;
                         case 0xE55CF27C: //blendmapscalecliffflatten
                         case 0x606B83EE: //blendmapscalecliff
-                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector.Vector); //"HBBScales"          float4
+                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector.Vector); //LODColourLevels    float4
                             break;
                         case 0x92165D5E: //blendmapoffsetcliffflatten
                         case 0x99276EAE: //blendmapoffsetcliff
-                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector.Vector); //"HBBOffsets"         float4
+                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector.Vector); //LODColourBlends    float4
                             break;
                         default:
                             break;
                     }
                 }
             }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult)); //"MeshMetallicity"
-            ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
         }
 
         private void SetDiffuse2Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + bump + ambocc
         {
-            SetDefaultShader();
+            SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0x9B920BD, 22); //BlendMode
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[3];
+            Textures = new Texture[2];
 
             var sfresnel = 0.96f;
             var sintensitymult = 0.2f;
@@ -1063,9 +988,6 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (parm.Hash)
                     {
-                        case 0xf6712b81: //bumpiness
-                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X); //"BumpScale"
-                            break;
                         case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
                             sfresnel = parm.Vector.Vector.X;
                             break;
@@ -1085,14 +1007,14 @@ namespace CodeX.Games.RDR1.RSC6
 
         private void SetDiffuse3Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + diffuse3 + bump + ambocc
         {
-            SetDefaultShader();
-            var df = Shader as DefaultShader;
-            ShaderInputs = df.MeshVars.GetDataBag();
+            SetCoreShader<BlendShader>(ShaderBucket.Solid);
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0x9B920BD, 23); //BlendMode
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[4];
+            Textures = new Texture[3];
 
             var sfresnel = 0.96f;
             var sintensitymult = 0.2f;
@@ -1115,14 +1037,10 @@ namespace CodeX.Games.RDR1.RSC6
                                 Textures[0] = tex;
                                 break;
                             case 0x05645204: //texturesampler2
-                                Textures[2] = tex;
+                                Textures[1] = tex;
                                 break;
                             case 0xA3348DA6: //texturesampler3
-                                Textures[3] = tex;
-                                break;
-                            case 0x46b7c64f: //bumpsampler
-                            case 0x8ac11cb0: //normalsampler
-                                //Textures[1] = tex;
+                                Textures[2] = tex;
                                 break;
                         }
                     }
@@ -1131,9 +1049,6 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (parm.Hash)
                     {
-                        case 0xf6712b81: //bumpiness
-                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X * 0.25f); //"BumpScale"
-                            break;
                         case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
                             sfresnel = parm.Vector.Vector.X;
                             break;
@@ -2165,7 +2080,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
-        public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9 for .wft
+        public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9 for .wft or 14
         public Rsc6CustomArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
         public uint RefCount { get; set; } = 1; //m_RefCount
         public uint Signature { get; set; } = 2135087653; //m_Signature
@@ -2249,7 +2164,7 @@ namespace CodeX.Games.RDR1.RSC6
             BuildBoneTags();
 
             ///////////////////// Tests /////////////////
-            if ((Flags != 9 && Flags != 10) || Unknown6 != 0 || Unknown7 != 0)
+            if ((Flags != 9 && Flags != 10 && Flags != 14) || Unknown6 != 0 || Unknown7 != 0)
             {
                 throw new Exception($"Unknown values, flags : {Flags}");
             }

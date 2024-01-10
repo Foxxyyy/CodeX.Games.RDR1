@@ -1,13 +1,10 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
-using CodeX.Core.Physics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -39,10 +36,7 @@ namespace CodeX.Games.RDR1.Files
             if (Fragment != null)
             {
                 var d = Fragment.Drawable.Item;
-                var b = Fragment.Bound.Item;
-
-                d.Collider = b;
-                d.UpdateBounds();
+                var b = Fragment.Bounds.Item;
 
                 if (d.BoundingSphere.Center == Vector3.Zero)
                 {
@@ -59,17 +53,6 @@ namespace CodeX.Games.RDR1.Files
         public override byte[] Save()
         {
             return null;
-        }
-
-        public virtual string WriteXml(string ddsfolder)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            Xml.OpenTag(sb, 0, "Fragment", true, "");
-            Xml.StringTag(sb, 1, "Name", Name.Replace(".wft", ""), "");
-            Fragment.WriteXml(sb, 1, ddsfolder);
-            Xml.CloseTag(sb, 0, "Fragment", true);
-            return sb.ToString();
         }
     }
 }

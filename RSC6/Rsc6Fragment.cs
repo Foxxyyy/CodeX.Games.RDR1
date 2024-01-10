@@ -1,15 +1,28 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
+using CodeX.Core.Physics.Vehicles;
 using CodeX.Core.Utilities;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 using System.Text;
+using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    class Rsc6Fragment : Rsc6Block
+    class Rsc6Fragment : Rsc6Block, MetaNode
     {
+        /*
+         * These will not do anything unless the game utilizes m_UnbrokenElasticity :
+         * - DampingLinearC
+         * - DampingLinearV
+         * - DampingLinearV2
+         * - DampingAngularC
+         * - DampingAngularV
+         * - DampingAngularV2
+         */
+
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 348 + 164; //Actually sagFragtype + rage::fragType
         public bool IsPhysical => false;
@@ -28,12 +41,12 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 DampingAngularV { get; set; }
         public Vector4 DampingAngularV2 { get; set; }
         public Rsc6Str NameRef { get; set; } //m_TuneName
-        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; } //m_ExtraDrawables
-        public uint Unk0 { get; set; }
-        public uint Unk1 { get; set; }
-        public int UnkInt { get; set; }
+        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; } //m_CommonDrawable, contains data common to all the parts of the fragment type, the shader groups, etc.
+        public Rsc6Ptr<Rsc6FragDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
+        public uint Unk1 { get; set; } //m_NumExtraDrawables
+        public int UnkInt { get; set; } //m_ExtraDrawableNames
         public int UnkInt2 { get; set; }
-        public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild
+        public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild, when health value reaches zero, the piece can be swapped for a damaged version, which can also take more damage for further mesh deformation and texture adjustment
         public Rsc6RawLst<Rsc6String> GroupNames { get; set; } //m_GroupNames
         public Rsc6RawPtrArr<Rsc6FragPhysGroup> Groups { get; set; } //m_Groups, rage::fragTypeGroup
         public Rsc6RawPtrArr<Rsc6FragPhysChild> Children { get; set; } //m_Children, rage::fragTypeChild
@@ -43,7 +56,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint CharCloth { get; set; } //m_CharCloth, rage::fragTypeCharCloth
         public Rsc6Ptr<Rsc6FragArchetypeDamp> Archetype1 { get; set; } //rage::phArchetypeDamp
         public Rsc6Ptr<Rsc6FragArchetypeDamp> Archetype2 { get; set; } //rage::phArchetypeDamp
-        public Rsc6Ptr<Rsc6Bounds> Bound { get; set; } //m_CompositeBounds
+        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_CompositeBounds
         public Rsc6RawArr<Vector4> UndamagedAngInertia { get; set; } //m_UndamagedAngInertia
         public Rsc6RawArr<Vector4> DamagedAngInertia { get; set; } //m_DamagedAngInertia
         public Rsc6RawArr<Matrix3x4> LinkAttachments { get; set; } //m_LinkAttachments
@@ -70,7 +83,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte EntityClass { get; set; } //m_EntityClass
         public byte ARTAssetID { get; set; } //m_ARTAssetID
         public byte AttachBottomEnd { get; set; } //m_AttachBottomEnd
-        public ushort Flags { get; set; } //m_Flags
+        public Rsc6FragTypeFlags Flags { get; set; } //m_Flags
         public int ClientClassID { get; set; } //m_ClientClassID
         public float MinMoveForce { get; set; } //m_MinMoveForce
         public float UnbrokenElasticity { get; set; } //m_UnbrokenElasticity
@@ -135,7 +148,7 @@ namespace CodeX.Games.RDR1.RSC6
             DampingAngularV2 = reader.ReadVector4(true);
             NameRef = reader.ReadStr();
             Drawable = reader.ReadPtr<Rsc6FragDrawable>();
-            Unk0 = reader.ReadUInt32();
+            ExtraDrawables = reader.ReadPtr<Rsc6FragDrawable>();
             Unk1 = reader.ReadUInt32();
             UnkInt = reader.ReadInt32();
             UnkInt2 = reader.ReadInt32();
@@ -149,7 +162,7 @@ namespace CodeX.Games.RDR1.RSC6
             CharCloth = reader.ReadUInt32();
             Archetype1 = reader.ReadPtr<Rsc6FragArchetypeDamp>();
             Archetype2 = reader.ReadPtr<Rsc6FragArchetypeDamp>();
-            Bound = reader.ReadPtr(Rsc6Bounds.Create);
+            Bounds = reader.ReadPtr(Rsc6Bounds.Create);
             UndamagedAngInertia = reader.ReadRawArrPtr<Vector4>();
             DamagedAngInertia = reader.ReadRawArrPtr<Vector4>();
             LinkAttachments = reader.ReadRawArrPtr<Matrix3x4>();
@@ -176,7 +189,7 @@ namespace CodeX.Games.RDR1.RSC6
             EntityClass = reader.ReadByte();
             ARTAssetID = reader.ReadByte();
             AttachBottomEnd = reader.ReadByte();
-            Flags = reader.ReadUInt16();
+            Flags = (Rsc6FragTypeFlags)reader.ReadUInt16();
             ClientClassID = reader.ReadInt32();
             MinMoveForce = reader.ReadSingle();
             UnbrokenElasticity = reader.ReadSingle();
@@ -212,9 +225,6 @@ namespace CodeX.Games.RDR1.RSC6
             LinkAttachments = reader.ReadRawArrItems(LinkAttachments, ChildCount);
             SelfCollisionA = reader.ReadRawArrItems(SelfCollisionA, NumSelfCollisions);
             SelfCollisionB = reader.ReadRawArrItems(SelfCollisionB, NumSelfCollisions);
-
-            //Name = NameRef.Value;
-            //BuildPiece();
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -222,132 +232,163 @@ namespace CodeX.Games.RDR1.RSC6
             throw new NotImplementedException();
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsfolder)
+        public void Read(MetaNodeReader reader)
         {
-            if (Drawable.Item == null)
-            {
-                return;
-            }
-
-            Xml.SelfClosingTag(sb, indent, "BoundingSphereCenter " + FloatUtil.GetVector3XmlString(Vector3.Subtract(Drawable.Item.BoundingSphere.Center, Drawable.Item.BoundingCenter)));
-            Xml.ValueTag(sb, indent, "BoundingSphereRadius", FloatUtil.ToString(Drawable.Item.BoundingSphereRadius));
-            Xml.ValueTag(sb, indent, "UnknownB0", "0");
-            Xml.ValueTag(sb, indent, "UnknownB8", "0");
-            Xml.ValueTag(sb, indent, "UnknownBC", "0");
-            Xml.ValueTag(sb, indent, "UnknownC0", "65280");
-            Xml.ValueTag(sb, indent, "UnknownC4", "1");
-            Xml.ValueTag(sb, indent, "UnknownCC", "0");
-            Xml.ValueTag(sb, indent, "GravityFactor", "1");
-            Xml.ValueTag(sb, indent, "BuoyancyFactor", "1");
-
-            float[] matrices = new float[] { 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
-            if (Drawable.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "Drawable", true, "");
-                 //Xml.StringTag(sb, indent + 1, "Name", Name, "");
-                  Xml.WriteRawArray(sb, indent + 1, "Matrix", matrices, null, 3);
-                 Drawable.Item.WriteXml(sb, indent + 1, ddsfolder);
-                Xml.CloseTag(sb, indent, "Drawable", true);
-            }
+            throw new NotImplementedException();
         }
 
-        public void BuildPiece()
+        public void Write(MetaNodeWriter writer)
         {
-            var d = Drawable.Item;
-            var b = Bound.Item;
-            var bbmin = Vector3.Zero;
-            var bbmax = Vector3.Zero;
-            var loddist0 = 250.0f;
-            var loddist1 = 500.0f;
-            var loddist2 = 1000.0f;
-            var loddist3 = 9999.0f;
-            var lodlists = new List<Model>[4];
+            writer.WriteUInt32("@version", 0);
+            writer.WriteSingle("SmallestAngInertia", SmallestAngInertia);
+            writer.WriteSingle("LargestAngInertia", LargestAngInertia);
+            writer.WriteVector4("BoundingSphere", BoundingSphere);
+            writer.WriteVector4("RootCGOffset", RootCGOffset);
+            writer.WriteVector4("OriginalRootCGOffset", OriginalRootCGOffset);
+            writer.WriteVector4("UnbrokenCGOffset", UnbrokenCGOffset);
+            writer.WriteVector4("DampingLinearC", DampingLinearC);
+            writer.WriteVector4("DampingLinearV", DampingLinearV);
+            writer.WriteVector4("DampingLinearV2", DampingLinearV2);
+            writer.WriteVector4("DampingAngularC", DampingAngularC);
+            writer.WriteVector4("DampingAngularV", DampingAngularV);
+            writer.WriteVector4("DampingAngularV2", DampingAngularV2);
+            if (NameRef.Value != null) writer.WriteString("Name", NameRef.Value);
+            if (Drawable.Item != null) writer.WriteNode("Drawable", Drawable.Item);
+            if (ExtraDrawables.Item != null) writer.WriteNode("ExtraDrawables", ExtraDrawables.Item);
+            writer.WriteUInt32("Unk1", Unk1);
+            writer.WriteInt32("UnkInt", UnkInt);
+            writer.WriteInt32("UnkInt2", UnkInt2);
+            writer.WriteUInt32("DamagedDrawable", DamagedDrawable);
+            if (GroupNames.Items != null) writer.WriteStringArray("GroupNames", GroupNames.Items.Select(s => s.Value).ToArray());
+            if (Groups.Items != null) writer.WriteNodeArray("Groups", Groups.Items);
+            if (Children.Items != null) writer.WriteNodeArray("Children", Children.Items);
+            writer.WriteUInt32("UnkArray", UnkArray);
+            writer.WriteUInt16("UnkArrayCount", UnkArrayCount);
+            writer.WriteUInt16("UnkArraySize", UnkArraySize);
+            writer.WriteUInt32("CharCloth", CharCloth);
+            if (Archetype1.Item != null) writer.WriteNode("Archetype1", Archetype1.Item);
+            if (Archetype2.Item != null) writer.WriteNode("Archetype2", Archetype2.Item);
+            //if (Bounds.Item != null) writer.WriteNode("Bounds", Bounds.Item); //not yet
+            if (UndamagedAngInertia.Items != null) writer.WriteVector4Array("UndamagedAngInertia", UndamagedAngInertia.Items);
+            if (DamagedAngInertia.Items != null) writer.WriteVector4Array("DamagedAngInertia", DamagedAngInertia.Items);
+            if (LinkAttachments.Items != null) writer.WriteMatrix3x4Array("LinkAttachments", LinkAttachments.Items);
+            writer.WriteUInt32("MinBreakingImpulses", MinBreakingImpulses);
+            if (SelfCollisionA.Items != null) writer.WriteByteArray("SelfCollisionA", SelfCollisionA.Items);
+            if (SelfCollisionB.Items != null) writer.WriteByteArray("SelfCollisionB", SelfCollisionB.Items);
+            writer.WriteUInt32("UserData", UserData);
+            writer.WriteUInt32("JointParams", JointParams);
+            writer.WriteUInt32("CollisionEventset", CollisionEventset);
+            writer.WriteUInt32("CollisionEventPlayer", CollisionEventPlayer);
+            writer.WriteUInt32("AnimFrame", AnimFrame);
+            writer.WriteUInt32("Skeleton1", Skeleton1);
+            writer.WriteUInt32("Skeleton2", Skeleton2);
+            writer.WriteUInt32("SharedMatrixSet", SharedMatrixSet);
+            writer.WriteUInt32("EstimatedCacheSize", EstimatedCacheSize);
+            writer.WriteUInt32("EstimatedArticulatedCacheSize", EstimatedArticulatedCacheSize);
+            writer.WriteByte("NumSelfCollisions", NumSelfCollisions);
+            writer.WriteByte("MaxNumSelfCollisions", MaxNumSelfCollisions);
+            writer.WriteByte("GroupCount", GroupCount);
+            writer.WriteByte("ChildCount", ChildCount);
+            writer.WriteByte("FragTypeGroupCount", FragTypeGroupCount);
+            writer.WriteByte("DamageRegions", DamageRegions);
+            writer.WriteByte("ChildCount2", ChildCount2);
+            writer.WriteByte("EntityClass", EntityClass);
+            writer.WriteByte("ARTAssetID", ARTAssetID);
+            writer.WriteByte("AttachBottomEnd", AttachBottomEnd);
+            writer.WriteUInt16("Flags", (ushort)Flags);
+            writer.WriteInt32("ClientClassID", ClientClassID);
+            writer.WriteSingle("MinMoveForce", MinMoveForce);
+            writer.WriteSingle("UnbrokenElasticity", UnbrokenElasticity);
+            writer.WriteSingle("BuoyancyFactor", BuoyancyFactor);
+            writer.WriteUInt32("Unknown_14Ch", Unknown_14Ch);
+            writer.WriteByte("GlassAttachmentBone", GlassAttachmentBone);
+            writer.WriteByte("NumGlassPaneModelInfos", NumGlassPaneModelInfos);
+            writer.WriteUInt16("Unknown_152h", Unknown_152h);
+            writer.WriteUInt32("GlassPaneModelInfos", GlassPaneModelInfos);
+            writer.WriteSingle("GravityFactor", GravityFactor);
+            writer.WriteUInt32("Unknown_15Ch", Unknown_15Ch);
+            if (AssociatedFragments.Array.Items != null) writer.WriteNodeArray("AssociatedFragments", AssociatedFragments.Array.Items);
+            writer.WriteUInt32("Unknown_164h", Unknown_164h);
+            writer.WriteUInt32("ChildDataSet", ChildDataSet);
+            writer.WriteUInt32("Unknown_16Ch", Unknown_16Ch);
+            writer.WriteBool("HasTextureLOD", HasTextureLOD);
+            writer.WriteBool("HasFragLOD", HasFragLOD);
+            writer.WriteBool("HasAnimNormalMap", HasAnimNormalMap);
+            writer.WriteByteArray("Unknown_173h", Unknown_173h);
+            if (ParentTextureLOD.Value != null) writer.WriteString("ParentTextureLOD", ParentTextureLOD.Value);
+            writer.WriteInt32("GlassGlowShaderIndex", GlassGlowShaderIndex);
+            writer.WriteUInt32("TargetManager", TargetManager);
+            writer.WriteByteArray("VariableMeshArray1", VariableMeshArray1);
+            writer.WriteByteArray("VariableMeshArray2", VariableMeshArray2);
+            writer.WriteByteArray("VariableMeshArray3", VariableMeshArray3);
+            writer.WriteByte("VariableMeshCount", VariableMeshCount);
+            writer.WriteByte("AlwaysAddToShadow", AlwaysAddToShadow);
+            writer.WriteByte("InnerSorting", InnerSorting);
+        }
 
-            for (int l = 0; l < 4; l++)
-            {
-                lodlists[l] = new List<Model>();
-            }
+        public void SetFlags(ushort bits, bool set)
+        {
+            if (set)
+                Flags |= (Rsc6FragTypeFlags)(bits & ushort.MaxValue);
+            else
+                Flags &= (Rsc6FragTypeFlags)(~bits & ushort.MaxValue);
+        }
 
-            if (d != null)
-            {
-                if (d.Lods != null)
-                {
-                    for (int l = 0; l < 4; l++)
-                    {
-                        var lodlist = lodlists[l];
-                        var dlod = d.Lods[l];
+        public bool IsBreakingDisabled()
+        {
+	        return (Flags & Rsc6FragTypeFlags.DISABLE_BREAKING) != 0;
+        }
 
-                        if (dlod == null)
-                            continue;
+        public bool IsActivationDisabled()
+        {
+	        return (Flags & Rsc6FragTypeFlags.DISABLE_ACTIVATION) != 0;
+        }
 
-                        lodlist.AddRange(dlod.Models);
-                    }
-                }
-                bbmin = d.BoundingBoxMin;
-                bbmax = d.BoundingBoxMax;
-                loddist0 = Math.Max(d.LodDistHigh, 250.0f);
-                loddist1 = Math.Max(d.LodDistMed, 500.0f);
-                loddist2 = Math.Max(d.LodDistLow, 1000.0f);
-                loddist3 = Math.Max(d.LodDistVlow, 9999.0f);
-            }
+        public bool GetNeedsCacheEntryToActivate()
+        {
+	        return (Flags & Rsc6FragTypeFlags.NEEDS_CACHE_ENTRY_TO_ACTIVATE) != 0;
+        }
 
-            if (b != null)
-            {
-                bbmin = b.BoxMin.XYZ();
-                bbmax = b.BoxMax.XYZ();
-            }
+        public bool GetHasAnyArticulatedParts()
+        {
+	        return (Flags & Rsc6FragTypeFlags.HAS_ANY_ARTICULATED_PARTS) != 0;
+        }
 
+        public bool GetIsUserModified()
+        {
+	        return (Flags & Rsc6FragTypeFlags.IS_USER_MODIFIED) != 0;
+        }
 
-            if (Children.Items != null)
-            {
-                var sg = d?.ShaderGroup ?? new Rsc6Ptr<Rsc6ShaderGroup>();
-                for (int i = 0; i < Children.Items.Length; i++)
-                {
-                    var child = Children[i];
-                    if (child == null) continue;
-
-                    for (int l = 0; l < 4; l++)
-                    {
-                        var lodlist = lodlists[l];
-                        var d1 = child.Drawable.Item;
-
-                        if (d1?.Lods != null)
-                        {
-                            d1.ShaderGroup = sg;
-                            d1.AssignShaders();
-
-                            var dlod = d1.Lods[l];
-                            if (dlod == null) continue;
-
-                            lodlist.AddRange(dlod.Models);
-                        }
-                    }
-                }
-            }
-
-            bbmin = new Vector3(bbmin.Z, bbmin.X, bbmin.Y);
-            bbmax = new Vector3(bbmax.Z, bbmax.X, bbmax.Y);
-
-            /*Lods = new PieceLod[4];
-            Lods[0] = new PieceLod() { LodDist = loddist0, Models = lodlists[0].ToArray() };
-            Lods[1] = new PieceLod() { LodDist = loddist1, Models = lodlists[1].ToArray() };
-            Lods[2] = new PieceLod() { LodDist = loddist2, Models = lodlists[2].ToArray() };
-            Lods[3] = new PieceLod() { LodDist = loddist3, Models = lodlists[3].ToArray() };
-            Skeleton = d.Skeleton;
-            BoundingSphere = new BoundingSphere((bbmin + bbmax) * 0.5f, (bbmax - bbmin).Length() * 0.5f);
-            BoundingBox = new BoundingBox(bbmin, bbmax);
-            Collider = b;
-            UpdateAllModels();*/
+        public bool GetAllocateTypeAndIncludeFlags()
+        {
+            return (Flags & Rsc6FragTypeFlags.ALLOCATE_TYPE_AND_INCLUDE_FLAGS) != 0;
         }
     }
 
     public class Rsc6FragDrawable : Rsc6DrawableBase
     {
-        //TODO: determine what's different here
+        /*
+         * Handles the loading of the drawing and bounds data for each piece of a fragment type
+         * Each fragTypeChild owns one fragDrawable.
+         * The fragDrawable also loads other data, such as "locators" which are used to indicate the positions of the characters in vehicle seats, the entry
+         * and exit positions from every door, the position of particle effects, etc.
+         */
     }
 
-    public class Rsc6FragArchetypeDamp : Rsc6FragArchetypePhys //rage::phArchetypeDamp
+    public class Rsc6FragArchetypeDamp : Rsc6FragArchetypePhys, MetaNode //rage::phArchetypeDamp
     {
+        /*
+         * Each phArchetype contains a bound and flags for culling collision tests
+         * Each phArchetypePhys also contains mass and angular inertia and their inverses
+         * Each phArchetypeDamp also contains damping constants for active objects
+         * 
+         * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
+         * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
+         * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
+         * using this archetype, and a name for sharing, debugging and loading from resources
+         * 
+         * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
+         */
         public override ulong BlockLength => base.BlockLength + 100;
         public Vector4[] DampingConstants { get; set; } //m_DampingConstant
 
@@ -362,14 +403,37 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
         }
 
+        public new void Read(MetaNodeReader reader)
+        {
+
+        }
+
+        public new void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            if (DampingConstants != null) writer.WriteVector4Array("DampingConstants", DampingConstants);
+        }
+
         public override string ToString()
         {
             return NameRef.Value;
         }
     }
 
-    public class Rsc6FragArchetypePhys : Rsc6FragArchetype //rage::phArchetypePhys
+    public class Rsc6FragArchetypePhys : Rsc6FragArchetype, MetaNode //rage::phArchetypePhys
     {
+        /*
+         * Each phArchetype contains a bound and flags for culling collision tests
+         * Each phArchetypePhys also contains mass and angular inertia and their inverses
+         * Each phArchetypeDamp also contains damping constants for active objects
+         * 
+         * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
+         * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
+         * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
+         * using this archetype, and a name for sharing, debugging and loading from resources
+         * 
+         * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
+         */
         public override ulong BlockLength => base.BlockLength + 64;
         public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD; //Padding
         public ulong Unknown_20h { get; set; } = 0xCDCDCDCDCDCDCDCD; //Padding
@@ -411,38 +475,105 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4(AngleInertia);
             writer.WriteVector4(InverseAngleInertia);
         }
+
+        public new void Read(MetaNodeReader reader)
+        {
+            
+        }
+
+        public new void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteSingle("Mass", Mass);
+            writer.WriteSingle("InvMass", InvMass);
+            writer.WriteSingle("GravityFactor", GravityFactor);
+            writer.WriteSingle("MaxSpeed", MaxSpeed);
+            writer.WriteSingle("MaxAngSpeed", MaxAngSpeed);
+            writer.WriteSingle("BuoyancyFactor", BuoyancyFactor);
+            writer.WriteVector4("AngleInertia", AngleInertia);
+            writer.WriteVector4("InverseAngleInertia", InverseAngleInertia);
+        }
     }
 
-    public class Rsc6FragArchetype : Rsc6FileBase //rage::phArchetype
+    public class Rsc6FragArchetype : Rsc6FileBase, MetaNode //rage::phArchetype
     {
+        /*
+         * Each phArchetype contains a bound and flags for culling collision tests
+         * Each phArchetypePhys also contains mass and angular inertia and their inverses
+         * Each phArchetypeDamp also contains damping constants for active objects
+         * 
+         * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
+         * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
+         * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
+         * using this archetype, and a name for sharing, debugging and loading from resources
+         * 
+         * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
+         */
+
         public override ulong BlockLength => 28;
-        public int Type { get; set; } //m_Type
-        public Rsc6Str NameRef { get; set; } //m_Filename
-        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound
-        public uint TypeFlags { get; set; } //m_TypeFlags
-        public int IncludeFlags { get; set; } //m_IncludeFlags
-        public ushort PropertyFlags { get; set; } //m_PropertyFlags
-        public ushort RefCount { get; set; } //m_RefCount
+        public Rsc6ArchetypeType Type { get; set; } //m_Type, the type of archetype (phArchetype, phArchetypePhys, phArchetypeDamp)
+        public Rsc6Str NameRef { get; set; } //m_Filename, filename for the bank saving
+        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound, actual bound
+        public Rsc6ObjectTypeFlags TypeFlags { get; set; } //m_TypeFlags, tells what type of object this is (prop, water, creature, player, vehicle, etc)
+        public int IncludeFlags { get; set; } = -1; //m_IncludeFlags, tell what types of object this can collide with
+        public ushort PropertyFlags { get; set; } //m_PropertyFlags, used to assign physical properties to objects, such as whether or not they can have contact forces
+        public ushort RefCount { get; set; } = 1; //m_RefCount, number of references to this archetype
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Type = reader.ReadInt32();
+            Type = (Rsc6ArchetypeType)reader.ReadInt32(); //2
             NameRef = reader.ReadStr();
             Bounds = reader.ReadPtr(Rsc6Bounds.Create);
-            TypeFlags = reader.ReadUInt32();
-            IncludeFlags = reader.ReadInt32();
+            TypeFlags = (Rsc6ObjectTypeFlags)reader.ReadUInt32();
+            IncludeFlags = reader.ReadInt32(); //-1
             PropertyFlags = reader.ReadUInt16();
             RefCount = reader.ReadUInt16();
+
+            if (IncludeFlags != -1)
+            {
+                throw new Exception("Rsc6FragArchetype: Unknown IncludeFlags");
+            }
+            if (PropertyFlags != 0)
+            {
+                throw new Exception("Rsc6FragArchetype: Unknown PropertyFlags");
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt32(0x00E6AEE8);
+            writer.WriteStr(NameRef);
+            writer.WritePtr(Bounds);
+            writer.WriteUInt32((uint)TypeFlags);
+            writer.WriteInt32(IncludeFlags);
+            writer.WriteUInt16(PropertyFlags);
+            writer.WriteUInt32(RefCount);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteInt32("Type", (int)Type);
+            if (NameRef.Value != null) writer.WriteString("Name", NameRef.Value);
+            //if (Bounds.Item != null) writer.WriteNode("Bounds", Bounds.Item); //not yet
+            writer.WriteUInt32("TypeFlags", (uint)TypeFlags);
+            writer.WriteInt32("IncludeFlags", IncludeFlags);
+            writer.WriteUInt16("PropertyFlags", PropertyFlags);
+            writer.WriteUInt16("RefCount", RefCount);
+        }
+
+        public bool MatchFlags(uint includeFlags, uint typeFlags)
+        {
+            return ((includeFlags & (uint)TypeFlags) != 0) && ((IncludeFlags & typeFlags) != 0);
         }
     }
 
-    public class Rsc6FragPhysGroup : Rsc6BlockBase
+    public class Rsc6FragPhysGroup : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => throw new NotImplementedException();
 
@@ -454,9 +585,19 @@ namespace CodeX.Games.RDR1.RSC6
         {
             throw new NotImplementedException();
         }
+
+        public void Read(MetaNodeReader reader)
+        {
+
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            
+        }
     }
 
-    public class Rsc6FragPhysChild : Rsc6BlockBase
+    public class Rsc6FragPhysChild : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 156;
         public uint VFT { get; set; }
@@ -476,9 +617,26 @@ namespace CodeX.Games.RDR1.RSC6
         {
             throw new NotImplementedException();
         }
+
+        public void WriteXml(StringBuilder sb, int indent, string ddsFolder)
+        {
+            Drawable.Item?.WriteXml(sb, indent, ddsFolder);
+            Drawable2.Item?.WriteXml(sb, indent, ddsFolder);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            if (Drawable.Item != null) writer.WriteNode("Drawable", Drawable.Item);
+            if (Drawable2.Item != null) writer.WriteNode("Drawable2", Drawable2.Item);
+        }
     }
 
-    public class Rsc6AssociationInfo : Rsc6Block
+    public class Rsc6AssociationInfo : Rsc6Block, MetaNode
     {
         public ulong BlockLength => 20;
         public ulong FilePosition { get; set; }
@@ -515,5 +673,59 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBoolean(Detachable);
             writer.WriteByte(Pad);
         }
+
+        public void Read(MetaNodeReader reader)
+        {
+
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            if (FragmentName.Value != null) writer.WriteString("FragmentName", FragmentName.Value);
+            if (NonMangledName.Value != null) writer.WriteString("NonMangledName", NonMangledName.Value);
+            if (LocatorName.Value != null) writer.WriteString("LocatorName", LocatorName.Value);
+            writer.WriteUInt32("DesignTagHash", DesignTagHash);
+            writer.WriteBool("Default", Default);
+            writer.WriteBool("HardLink", HardLink);
+            writer.WriteBool("Detachable", Detachable);
+        }
+    }
+
+    public enum Rsc6ArchetypeType : int
+    {
+        ARCHETYPE = 0,
+        ARCHETYPE_PHYS = 1,
+        ARCHETYPE_DAMP = 2
+    }
+
+    public enum Rsc6FragTypeFlags : int
+    {
+        NEEDS_CACHE_ENTRY_TO_ACTIVATE = 1 << 0,
+        HAS_ANY_ARTICULATED_PARTS = 1 << 1,
+        UNUSED = 1 << 2,
+        CLONE_BOUND_PARTS_IN_CACHE = 1 << 3,
+        ALLOCATE_TYPE_AND_INCLUDE_FLAGS = 1 << 4,
+        BECOME_ROPE = 1 << 10,  //Some nasty RDR hack
+        IS_USER_MODIFIED = 1 << 11,   //Flag to help the user keep track of fragments they modified
+        DISABLE_ACTIVATION = 1 << 12,   //Disables activation on instances until the user enables
+        DISABLE_BREAKING = 1 << 13  //Disables activation on instances until the user enables
+    };
+
+    public enum Rsc6ObjectTypeFlags : uint
+    {
+        OBJ_SKINNED = 1, //Peds, all p_gen_ropesm's, p_gen_blood03x, p_blk_cityhall_clock01x
+        OBJ_STATIC_STANDARD = 1572869, //All p_gen_doorstandard's, p_gen_basin01x, p_gen_cranedock01x, p_gen_chairtheater01x, all debris_rockclusters
+        OBJ_SPECIAL = 1572999, //Most trees, p_gen_streetclock01x
+        OBJ_WEAPONS = 1572865, //revolver_lemat01x
+        OBJ_PROP_STANDARD = 1572871, //p_gen_cart01x, p_gen_barrel01x, p_gen_chair05x, p_gen_chaircomfy01x, p_gen_debrisboard02x, p_gen_coffin02x, car01x etc...
+        OBJ_SPECIAL2 = 1572997, //st_whitepine01x
+        OBJ_PROP_STANDARD2 = 3670021,
+        OBJ_SPECIAL3 = 3670023, //p_gen_milkcan02x, p_gen_trunk01x
+        OBJ_WINDOW = 3671047,
+        OBJ_SEPERATED_PROPS = 3670149, //p_gen_boxcar0101x
+        OBJ_CARS1 = 18350087, //armoredcar01x, flatcar01x
+        OBJ_CARS2 = 18350215, //northboxcar01x
+        OBJ_WATERTROUGH = 20447237, //p_gen_watertrough01x
+        OBJ_CARTS = 1075314695, //cart001x
     }
 }

@@ -1,13 +1,17 @@
 ﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using System.Drawing;
+using System;
 using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
     public class Rsc6TreeForestGrid : Rsc6FileBase
     {
+        //Manages a forest using a grid culling system.
+        //Each instance is put into a grid cell based on its position.
+        //Entire grid cells are rejected with a single sphere visiblity
+
         public override ulong BlockLength => 208;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6TreeForest TreeForest { get; set; }
@@ -68,7 +72,7 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i1 = 0; i1 < GridCells.Items[i].CombinedInstanceListPos.Count; i1++)
                 {
                     var t = GridCells.Items[i].CombinedInstanceListPos[i1];
-                    t.Position = GridCells.Items[i].BoundSphere.XYZ() * (new Vector3(t.Z, t.X, t.Y) / 65535.0f); //wrong
+                    t.Position = min + siz * (new Vector3(t.Z, t.X, t.Y) / 65535.0f); //wrong
                 }
             }
 
@@ -142,6 +146,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle(StreamRadius);
         }
 
+        //Get the coordinates of the grid cell where a position is in.
         public void GetGridCell(Vector3 vPosition, out int nCellW, out int nCellH)
         {
             if (YUp)
@@ -277,11 +282,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            X = Rpf6Crypto.Swap(reader.ReadUInt16());
-            Y = Rpf6Crypto.Swap(reader.ReadUInt16());
-            Z = Rpf6Crypto.Swap(reader.ReadUInt16());
+            X = reader.ReadUInt16();
+            Y = reader.ReadUInt16();
+            Z = reader.ReadUInt16();
             Fade = reader.ReadByte();
             Seed = reader.ReadByte();
+            Position = new Vector3(Rpf6Crypto.Swap((float)X), Rpf6Crypto.Swap((float)Y), Rpf6Crypto.Swap((float)Z));
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -327,12 +333,14 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class Rsc6TreeInstanceBase : Rsc6Block //rage::speedTreeInstanceBase
     {
+        //This is the data needed to exist an instance of a speedtree in the world
+
         public ulong BlockLength => 16;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
-        public float LODDist { get; set; } //m_fLOD
-        public byte LODLevels { get; set; } //m_uLodLevels
-        public byte Flags { get; set; } //m_uFlags
+        public float LODDist { get; set; } //m_fLOD, lod value between 0.0f (lowest) and 1.0f (highest)
+        public byte LODLevels { get; set; } //m_uLodLevels, LOD Levels[0-1] - 4 bits each
+        public Rsc6TreeInstanceFlags Flags { get; set; } //m_uFlags
         public byte TreeTypeID { get; set; } //m_TreeTypeID
         public byte Pad0 { get; set; } //m_Pad0
         public float FadeOut { get; set; } //m_fadeOut
@@ -342,7 +350,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             LODDist = reader.ReadSingle();
             LODLevels = reader.ReadByte();
-            Flags = reader.ReadByte();
+            Flags = (Rsc6TreeInstanceFlags)reader.ReadByte();
             TreeTypeID = reader.ReadByte();
             Pad0 = reader.ReadByte();
             FadeOut = reader.ReadSingle();
@@ -353,11 +361,73 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteSingle(LODDist);
             writer.WriteByte(LODLevels);
-            writer.WriteByte(Flags);
+            writer.WriteByte((byte)Flags);
             writer.WriteByte(TreeTypeID);
             writer.WriteByte(Pad0);
             writer.WriteSingle(FadeOut);
             writer.WriteUInt32(Pad1);
+        }
+
+        public int GetBranchLod() //Get the descreet branch level of detail from the speedtree runtime
+        {
+            return (int)(LODLevels & 0xF);
+        }
+
+        public int GetFrondLod() //Get the descreet frond level of detail from the speedtree runtime
+        {
+            return (int)(LODLevels >> 4);
+        }
+
+        public int GetLeafLod() //Get the descreet leaf level of detail from the speedtree runtime
+        {
+            return (int)((byte)Flags >> 4);
+        }
+
+        public bool IsValid() //Test to see if this instance is valid
+        {
+            return (Flags & Rsc6TreeInstanceFlags.FLAG_VALID) != 0;
+        }
+
+        public bool IsVisible() //Test to see if this instance is visible
+        {
+            return (Flags & Rsc6TreeInstanceFlags.FLAG_VISIBLE) != 0;
+        }
+
+        public bool IsBillboardActive() //Test to see if this instance should draw a billboard
+        {
+            return (Flags & Rsc6TreeInstanceFlags.FLAG_BILLBOARD_ACTIVE) != 0;
+        }
+
+        public bool IsBillboardOnly() //Test to see if this instance is only a billboard
+        {
+            return (Flags & Rsc6TreeInstanceFlags.FLAG_BILLBOARD_ONLY) != 0;
+        }
+
+        public int DiscreetLod(int numLevels, float lodLevel)
+        {
+            short sLevel = 0;
+            int nNumLodLevels = numLevels;
+
+            sLevel = (short)((1.0f - lodLevel) * nNumLodLevels);
+            if (sLevel == nNumLodLevels)
+            {
+                sLevel--;
+            }
+
+            if (sLevel < 0 || sLevel >= numLevels)
+            {
+                throw new InvalidOperationException("Invalid operation: sLevel >= 0 && sLevel < NumLevels");
+            }
+
+            return sLevel;
+        }
+
+        public void SetLod(Vector4 lods, float fLod)
+        {
+            LODDist = fLod;
+            LODLevels = (byte)((byte)DiscreetLod((int)lods.X, fLod) | ((byte)DiscreetLod((int)lods.Y, fLod) << 4));
+            Flags &= (Rsc6TreeInstanceFlags)0xF0;
+            Flags |= (Rsc6TreeInstanceFlags)DiscreetLod((int)lods.Z, fLod);
         }
     }
 
@@ -367,7 +437,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
-        public Vector4 Position { get; set; } //m_vPosition
+        public Vector4 Position { get; set; } //m_vPosition, Position.W is the rotation in the Y axis, other axis are 0.0f (radians)
         public ushort Tilt { get; set; } //m_tilt
         public ushort Width { get; set; } //m_width
         public byte Rotation { get; set; } //m_rot
@@ -401,5 +471,52 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_1Ch);
             writer.WriteUInt32(Unknown_20h);
         }
+
+        //Get the world Matrix3x4 for this instance
+        public Matrix3x4 GetMatrix3x4()
+        {
+            float ca = MathF.Cos(Position.W);
+            float sa = MathF.Sin(Position.W);
+
+            var translation = new Vector3(Position.X, Position.Y, Position.Z);
+            var scale = new Vector3(Position.X, Position.Y, Position.Z);
+            var orientation = new Quaternion(0, 0, sa, ca);
+
+            var matrix = new Matrix3x4()
+            {
+                Translation = translation,
+                Scale = scale,
+                Orientation = orientation
+            };
+            return matrix;
+        }
+
+        //Get the world Matrix4x4 for this instance
+        public Matrix4x4 GetMatrix44()
+        {
+            float ca = MathF.Cos(Position.W);
+            float sa = MathF.Sin(Position.W);
+            var matrix = new Matrix4x4
+            {
+                M11 = ca,
+                M13 = sa,
+                M14 = Position.X,
+                M22 = 1.0f,
+                M24 = Position.Y,
+                M31 = -sa,
+                M33 = ca,
+                M34 = Position.Z,
+                M44 = 1.0f
+            };
+            return Matrix4x4.Transpose(matrix);
+        }
     }
+
+    public enum Rsc6TreeInstanceFlags
+    {
+        FLAG_VISIBLE = (1 << 4),
+        FLAG_BILLBOARD_ONLY = (1 << 5),
+        FLAG_BILLBOARD_ACTIVE = (1 << 6),
+        FLAG_VALID = (1 << 7)
+    };
 }

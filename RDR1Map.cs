@@ -22,7 +22,7 @@ namespace CodeX.Games.RDR1
         public Dictionary<JenkHash, Rsc6SectorInfo> CurNodes;
         public Dictionary<JenkHash, Rsc6SectorInfo> StreamNodesPrev;
         public Dictionary<JenkHash, Rsc6SectorInfo> StreamNodes;
-        private WsiFile MainStreamingEntry;
+        private WsiFile MainStreamingEntry, TerrainStreamingEntry;
 
         public static Setting StartPositionSetting = Settings.Register("RDR1Map.Area", SettingType.String, "Blackwater", "Change position", false, false, GetAreas());
         public static Setting OnlyTerrainSetting = Settings.Register("RDR1Map.OnlyTerrain", SettingType.Bool, false);
@@ -81,7 +81,8 @@ namespace CodeX.Games.RDR1
             StreamNodesPrev = new Dictionary<JenkHash, Rsc6SectorInfo>();
             StreamNodes = new Dictionary<JenkHash, Rsc6SectorInfo>();
             WsiFiles = new Dictionary<JenkHash, Rsc6SectorInfo>();
-            MainStreamingEntry = dfm.WsiFiles.Values.First(item => item.Name == "swall.wsi"); //Getting data from the main sagSectorInfo
+            MainStreamingEntry = dfm.WsiFiles.Values.First(item => item.Name == "swall.wsi"); //swAll
+            TerrainStreamingEntry = dfm.WsiFiles.Values.First(item => item.Name == "swterrain.wsi"); //swTerrain
 
             LoadTiles(dfm);
             //LoadTrees(dfm);
@@ -121,11 +122,11 @@ namespace CodeX.Games.RDR1
             return obj.Contains("p_gen") || (obj.StartsWith("p_") && obj.EndsWith("x"));
         }
 
-        private void LoadSectors(Rpf6DataFileMgr dfm)
+        private void LoadSubsectors(Rpf6DataFileMgr dfm, WsiFile globalSector)
         {
-            for (int i = 0; i < MainStreamingEntry.StreamingItems.ItemMapChilds.Count; i++)
+            for (int i = 0; i < globalSector.StreamingItems.ItemMapChilds.Count; i++)
             {
-                var child = MainStreamingEntry.StreamingItems.ItemMapChilds[i];
+                var child = globalSector.StreamingItems.ItemMapChilds[i];
                 if (child.SectorName.StartsWith("cs") || child.SectorName.StartsWith("sw") || child.SectorName.StartsWith("dlc"))
                     continue;
 
@@ -141,21 +142,40 @@ namespace CodeX.Games.RDR1
                     }
 
                     var childEntry = dfm.WsiFiles.Values.First(item => item.Name == (child.SectorName + ".wsi").ToLower());
-                    for (int f = 0; f < childEntry.StreamingItems.ItemChilds.Item.Sectors.Count; f++)
+                    if (globalSector.Name == "swall.wsi")
                     {
-                        var sectorItem = childEntry.StreamingItems.ItemChilds.Item.Sectors[f];
-                        var sectorItemName = sectorItem.Name.Value.ToLower();
+                        for (int f = 0; f < childEntry.StreamingItems.ItemChilds.Item?.Sectors.Count; f++)
+                        {
+                            var sectorItem = childEntry.StreamingItems.ItemChilds.Item?.Sectors[f];
+                            var sectorItemName = sectorItem.Name.Value.ToLower();
 
-                        if (sectorItemName != childEntry.Name.Replace(".wsi", "") || sectorItemName.Contains("flags") || sectorItemName.Contains("props") || sectorItemName.StartsWith("mp_"))
-                            continue;
+                            if (sectorItemName != childEntry.Name.Replace(".wsi", "") || sectorItemName.Contains("flags") || sectorItemName.Contains("props") || sectorItemName.StartsWith("mp_"))
+                                continue;
 
-                        var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
-                        if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
-                            continue;
+                            var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
+                            if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
+                                continue;
 
-                        wsiConverted.BoundingBox = child.SectorBounds;
-                        wsiConverted.StreamingBox = child.SectorBounds;
-                        WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
+                            wsiConverted.BoundingBox = child.SectorBounds;
+                            wsiConverted.StreamingBox = child.SectorBounds;
+                            WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
+                        }
+                    }
+                    else
+                    {
+                        for (int f = 0; f < childEntry.StreamingItems.ChildPtrs.Items.Length; f++)
+                        {
+                            var sectorItem = childEntry.StreamingItems.ChildPtrs.Items[f];
+                            var sectorItemName = sectorItem.Name.Value.ToLower() + "_non-terrain";
+
+                            var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
+                            if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
+                                continue;
+
+                            wsiConverted.BoundingBox = child.SectorBounds;
+                            wsiConverted.StreamingBox = child.SectorBounds;
+                            WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
+                        }
                     }
                 }
                 else if (WsiFiles.ContainsValue(wsiConverted.StreamingItems))
@@ -240,7 +260,9 @@ namespace CodeX.Games.RDR1
             nodes.Clear();
             CurNodes.Clear();
             ents.Clear();
-            LoadSectors(FileManager.DataFileMgr);
+
+            LoadSubsectors(FileManager.DataFileMgr, MainStreamingEntry);
+            LoadSubsectors(FileManager.DataFileMgr, TerrainStreamingEntry);
 
             foreach (var kvp in WsiFiles)
             {
@@ -283,7 +305,7 @@ namespace CodeX.Games.RDR1
                 foreach (var kvp in CurNodes)
                 {
                     var node = kvp.Value;
-                    if (node.ItemChilds.Item != null)
+                    if (node.ItemChilds.Item != null) //swAll
                     {
                         node.RootEntities ??= new List<WsiEntity>();
                         node.RootEntities.Clear();
@@ -293,7 +315,7 @@ namespace CodeX.Games.RDR1
                             var child = node.ItemChilds.Item.Sectors[i];
                             var lights = child.PlacedLightsGroup.Item;
 
-                            foreach (var ent in child.Entities.Items) //Sectors childs's childs and props
+                            foreach (var ent in child.Entities.Items) //Sectors childs and props
                             {
                                 var childEntity = new WsiEntity(ent);
                                 node.RootEntities.Add(childEntity);
@@ -306,6 +328,25 @@ namespace CodeX.Games.RDR1
                                     var lightEntity = new WsiEntity(light, lights.Name.Value);
                                     node.RootEntities.Add(lightEntity);
                                 }
+                            }
+
+                            var entity = new WsiEntity(child.Name.Value.ToLower());
+                            if (!node.RootEntities.Any(e => e.Name == entity.Name))
+                            {
+                                node.RootEntities.Add(entity);
+                            }
+                        }
+                    }
+                    else if (node.ChildPtrs.Items != null) //swTerrain childs
+                    {
+                        node.RootEntities ??= new List<WsiEntity>();
+                        for (int i = 0; i < node.ChildPtrs.Items.Length; i++)
+                        {
+                            var child = node.ChildPtrs.Items[i];
+                            foreach (var ent in child.Entities.Items) //Sectors childs and props
+                            {
+                                var childEntity = new WsiEntity(ent);
+                                node.RootEntities.Add(childEntity);
                             }
 
                             var entity = new WsiEntity(child.Name.Value.ToLower());
@@ -382,8 +423,8 @@ namespace CodeX.Games.RDR1
             NodeCountStat.SetCounter(nodes.Count);
             EntityCountStat.SetCounter(ents.Count);
             StreamNodes = nodes;
-            StreamUpdateRequest = true;
-            StreamUpdate = true;
+            //StreamUpdateRequest = true;
+            //StreamUpdate = true;
 
             return true;
         }

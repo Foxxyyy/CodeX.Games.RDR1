@@ -223,6 +223,45 @@ namespace CodeX.Games.RDR1.RPF6
             return BitConverter.ToSingle(data, 0);
         }
 
+        //Swap the axes from XYZ to ZXY
+        public static BoundingBox4 ToZXY(BoundingBox4 bb)
+        {
+            var newBB = new BoundingBox()
+            {
+                Minimum = new Vector3(bb.Min.Z, bb.Min.X, bb.Min.Y),
+                Maximum = new Vector3(bb.Max.Z, bb.Max.X, bb.Max.Y)
+            };
+            return new BoundingBox4(newBB);
+        }
+
+        //Swap the axes from XYZ to ZXY
+        public static Matrix4x4 ToZXY(Matrix4x4 m)
+        {
+            var m44 = float.IsNaN(m.M44) ? 1.0f : m.M44;
+            var translation = m.Translation;
+
+            return new Matrix4x4(
+                m.M11, m.M12, m.M13, m.M14,
+                m.M21, m.M22, m.M23, m.M24,
+                m.M31, m.M32, m.M33, m.M34,
+                translation.Z, translation.X, translation.Y, m44
+            );
+        }
+
+        //Create a Matrix3x4 from a BoundingBox4
+        public static Matrix3x4 ToMatrix3x4(BoundingBox4 bb)
+        {
+            var translation = bb.ToBoundingBox().Center;
+            var scale = bb.Max - bb.Min;
+            var rotationMatrix = Matrix3x3.Identity;
+
+            var matrix = new Matrix3x4()
+            {
+                Translation = translation,
+            };
+            return matrix;
+        }
+
         public static Vector3 GetXmlVector3(XmlNode node, string name)
         {
             var vector = Xml.GetChildVector3Attributes(node, name);
@@ -327,6 +366,17 @@ namespace CodeX.Games.RDR1.RPF6
         {
             float scale = ((1u << (int)(size - 1)) - 1);
             return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
+        }
+
+        //Creates a Colour from a string representing RGB values, ie "255, 255, 255"
+        public static Colour ParseRGBString(string rgbString)
+        {
+            string[] rgbValues = rgbString.Split(',');
+            if (rgbValues.Length == 3 && int.TryParse(rgbValues[0], out int red) && int.TryParse(rgbValues[1], out int green) && int.TryParse(rgbValues[2], out int blue))
+            {
+                return new Colour(red, green, blue);
+            }
+            return Colour.Red;
         }
     }
 }

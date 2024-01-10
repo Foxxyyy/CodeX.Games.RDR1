@@ -95,7 +95,7 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".fx", "Visual Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".fxm", "Material Visual Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".todlight", "Timecycle Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
-            InitFileType(".ppp", "Post-Processing Elements", FileTypeIcon.TextFile, FileTypeAction.ViewText);
+            InitFileType(".ppp", "Post-Processing Pipeline", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".rmptx", "Particle Effects Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".tune", "Game Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".textune", "Texture Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
@@ -165,7 +165,7 @@ namespace CodeX.Games.RDR1.RPF6
                 if (archive.AllEntries != null)
                 {
                     ArchiveDict[archive.Path] = archive;
-                    foreach (Rpf6Entry entry in archive.AllEntries)
+                    foreach (Rpf6Entry entry in archive.AllEntries.Cast<Rpf6Entry>())
                     {
                         if (string.IsNullOrEmpty(entry.ShortNameLower)) continue;
                         JenkIndex.Ensure(entry.ShortNameLower, "RDR1");
@@ -189,6 +189,7 @@ namespace CodeX.Games.RDR1.RPF6
         private void InitGameFiles()
         {
             Core.Engine.Console.Write("RDR1.InitGameFiles", "Initialising RDR1...");
+            Rsc6BoundsMaterialTypes.Init(this);
             DataFileMgr ??= new Rpf6DataFileMgr(this);
             DataFileMgr.Init();
             Core.Engine.Console.Write("RDR1.InitGameFiles", "RDR1 Initialised.");
@@ -309,6 +310,7 @@ namespace CodeX.Games.RDR1.RPF6
                 switch (re.ResourceType)
                 {
                     case Rpf6FileExt.generic:
+                    case Rpf6FileExt.wft:
                     case Rpf6FileExt.wvd:
                         isResFilepack = true;
                         break;
@@ -319,43 +321,40 @@ namespace CodeX.Games.RDR1.RPF6
                         throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 " + re.ResourceType.ToString() + " files to XML.\nCodeX is a work in progress and this is a planned future feature.");
                 }
 
-                folder = string.IsNullOrEmpty(folder) ? "" : Path.Combine(folder, Path.GetFileNameWithoutExtension(file.Name));
-                if (isResFilepack || fileext == ".wfd")
+                if (re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd")
                 {
-                    if (re.ResourceType == Rpf6FileExt.wvd)
+                    newfilename = file.Name;
+                    return string.Empty;
+                }
+
+                folder = string.IsNullOrEmpty(folder) ? "" : Path.Combine(folder, Path.GetFileNameWithoutExtension(file.Name));
+                if (isResFilepack)
+                {
+                    if (fileext == ".wvd" || fileext == ".wfd")
                     {
                         ConvertXML = true;
                         newfilename = file.Name + ".xml";
                         PiecePack piecePack = LoadPiecePack(file, data, true);
                         ConvertXML = false;
 
-                        if (data != null && piecePack is WvdFile wvdFile)
+                        if (data != null)
                         {
-                            return wvdFile.WriteXml(folder);
+                            if (piecePack is WvdFile wvdFile)
+                                return wvdFile.WriteXml(folder);
+                            else if (piecePack is WfdFile wfdFile)
+                                return wfdFile.WriteXml(folder);
                         }
                     }
-                    if (fileext == ".wfd")
+                    else //Waiting for Sollumz to support dexy's new xmls
                     {
-                        ConvertXML = true;
                         newfilename = file.Name + ".xml";
-                        PiecePack piecePack = LoadPiecePack(file, data, true);
-                        ConvertXML = false;
-
-                        if (data != null && piecePack is WfdFile wfdFile)
-                        {
-                            return wfdFile.WriteXml(folder);
-                        }
-                    }
-                    else //Waiting for Sollumz to support dexy's new xmls, till that moment I will continue using the old methods above
-                    {
-                        //newfilename = file.Name + ".xml";
-                        //var fp = LoadFilePack(re, data, false);
+                        var fp = LoadFilePack(re, data, false);
                         //if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.DrawableDictionary);
-                        //if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
+                        if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
                         throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
                     }
                 }
-                else if (isRawBinaryRes) //We can atleast use the new xmls for .wsi resources
+                else if (isRawBinaryRes) //We can atleast use the new xmls for .wsi resources since we don't need Sollumz
                 {
                     newfilename = file.Name + ".xml";
                     var wsi = new WsiFile(re);
@@ -364,6 +363,7 @@ namespace CodeX.Games.RDR1.RPF6
                     throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
                 }
             }
+
             newfilename = file.Name + fmtext + ".xml";
 
             var bag = LoadMetadata(file, data);

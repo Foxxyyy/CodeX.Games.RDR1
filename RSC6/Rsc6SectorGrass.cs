@@ -1,4 +1,5 @@
-﻿using CodeX.Core.Utilities;
+﻿using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
 using System.Numerics;
 using System.Text;
 
@@ -62,7 +63,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 AABBMin { get; set; } //m_aabbMin
         public Vector4 AABBScale { get; set; } //m_aabbScale
         public Vector4 AABBOffset { get; set; } //m_aabbOffset
-        public uint TP { get; set; } //m_tp
+        public uint TP { get; set; } //m_tp, texPlacementValues
         public Rsc6Ptr<Rsc6VertexDeclaration> Layout { get; set; } //m_VertexDeclaration, always NULL
         public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer { get; set; } //m_VertexBuffer
         public byte Zup { get; set; } //m_Zup
@@ -72,6 +73,11 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_64h { get; set; } //0x0B000C00 ?
         public JenkHash NameHash { get; set; } //m_TypeHash
         public uint Pad1 { get; set; } = 0xCDCDCDCD; //m_Pad1
+
+        public const int MAX_PATCHES_PER_FIELD = 64000;
+        public const float MINIMUM_PATCH_HEIGHT = 0.2f;
+        public const float SPAWN_KIDS_HEIGHT = 0.1f;
+        public const float SPAWN_KID_MULTIPLIER = 4.0f;
 
         public void Read(Rsc6DataReader reader)
         {
@@ -107,6 +113,20 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteStr(Name);
             writer.WriteUInt32(Unknown_64h);
             writer.WriteUInt32(NameHash);
+        }
+
+        public Vector4 GetFieldCenter()
+        {
+	        var center = AABBMin + AABBMax;
+            return center * 0.5f;
+        }
+
+        public void SetBounds(Vector4 min, Vector4 max)
+        {
+            AABBMin = min;
+            AABBMax = max;
+            AABBScale = new Vector4(AABBMax.XYZ() - AABBMin.XYZ(), 0.0f);
+            AABBOffset = new Vector4(AABBMin.XYZ(), 16000.0f);
         }
 
         public override string ToString()
