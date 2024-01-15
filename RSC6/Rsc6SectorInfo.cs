@@ -1122,9 +1122,9 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             EntityName = new(reader.ReadString("EntityName"));
-            RotationX = reader.ReadHalf("RotationX");
-            RotationY = reader.ReadHalf("RotationY");
-            RotationZ = reader.ReadHalf("RotationZ");
+            RotationX = reader.ReadStruct<Half>("RotationX");
+            RotationY = reader.ReadStruct<Half>("RotationY");
+            RotationZ = reader.ReadStruct<Half>("RotationZ");
             Flags = reader.ReadByte("Flags");
             AO = reader.ReadByte("AO");
             EntityPosition = reader.ReadVector4("EntityPosition");
@@ -1134,9 +1134,9 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteString("EntityName", EntityName.Value);
-            writer.WriteHalf("RotationX", RotationX);
-            writer.WriteHalf("RotationY", RotationY);
-            writer.WriteHalf("RotationZ", RotationZ);
+            writer.WriteStruct("RotationX", RotationX);
+            writer.WriteStruct("RotationY", RotationY);
+            writer.WriteStruct("RotationZ", RotationZ);
             writer.WriteByte("Flags", Flags);
             writer.WriteByte("AO", AO);
             writer.WriteVector4("EntityPosition", EntityPosition);
@@ -1391,14 +1391,14 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Position = reader.ReadVector4("Position");
             ParentPosition = reader.ReadVector4("ParentPosition");
-            Direction = reader.ReadHalf4("Direction");
-            Color = reader.ReadHalf4("Color");
-            EnvInfluence = reader.ReadHalf4("EnvInfluence");
-            FillInfluence = reader.ReadHalf4("FillInfluence");
-            FlickerStrength = reader.ReadHalf4("FlickerStrength");
-            FlickerSpeed = reader.ReadHalf4("FlickerSpeed");
-            Attenuation = reader.ReadHalf4("Attenuation");
-            InnerConeOuterCone = reader.ReadHalf2("InnerConeOuterCone");
+            Direction = reader.ReadStruct<Half4>("Direction");
+            Color = reader.ReadStruct<Half4>("Color");
+            EnvInfluence = reader.ReadStruct<Half4>("EnvInfluence");
+            FillInfluence = reader.ReadStruct<Half4>("FillInfluence");
+            FlickerStrength = reader.ReadStruct<Half4>("FlickerStrength");
+            FlickerSpeed = reader.ReadStruct<Half4>("FlickerSpeed");
+            Attenuation = reader.ReadStruct<Half4>("Attenuation");
+            InnerConeOuterCone = reader.ReadStruct<Half2>("InnerConeOuterCone");
             Type = reader.ReadUInt32("Type");
             Flags = reader.ReadUInt32("Flags");
             Range = reader.ReadSingle("Range");
@@ -1422,13 +1422,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("Position", Position);
             writer.WriteVector4("ParentPosition", ParentPosition);
             writer.WriteStruct("Direction", Direction);
-            writer.WriteHalf4("Color", Color);
-            writer.WriteHalf4("EnvInfluence", EnvInfluence);
-            writer.WriteHalf4("FillInfluence", FillInfluence);
-            writer.WriteHalf4("FlickerStrength", FlickerStrength);
-            writer.WriteHalf4("FlickerSpeed", FlickerSpeed);
-            writer.WriteHalf4("Attenuation", Attenuation);
-            writer.WriteHalf2("InnerConeOuterCone", InnerConeOuterCone);
+            writer.WriteStruct("Color", Color);
+            writer.WriteStruct("EnvInfluence", EnvInfluence);
+            writer.WriteStruct("FillInfluence", FillInfluence);
+            writer.WriteStruct("FlickerStrength", FlickerStrength);
+            writer.WriteStruct("FlickerSpeed", FlickerSpeed);
+            writer.WriteStruct("Attenuation", Attenuation);
+            writer.WriteStruct("InnerConeOuterCone", InnerConeOuterCone);
             writer.WriteUInt32("Type", Type);
             writer.WriteUInt32("Flags", Flags);
             writer.WriteSingle("Range", Range);
@@ -1541,23 +1541,23 @@ namespace CodeX.Games.RDR1.RSC6
             StarColor = reader.ReadColour("StarColor");
             FogColor = reader.ReadColour("FogColor");
             StarTexture = reader.ReadInt32("StarTexture");
-            GlowScale = reader.ReadHalf2("GlowScale");
-            GlowIntensity = reader.ReadHalf("GlowIntensity");
-            FogIntensity = reader.ReadHalf("FogIntensity");
-            GlowOpacity = reader.ReadHalf("GlowOpacity");
-            FogConeAngle = reader.ReadHalf("FogConeAngle");
-            FogConeStart = reader.ReadHalf("FogConeStart");
-            FogConeEnd = reader.ReadHalf("FogConeEnd");
-            InnerRange = reader.ReadHalf("InnerRange");
-            NoiseSpeed = reader.ReadHalf("NoiseSpeed");
-            NoiseScale = reader.ReadHalf("NoiseScale");
-            NoiseFade = reader.ReadHalf("NoiseFade");
-            NoiseAzimuth = reader.ReadHalf("NoiseAzimuth");
-            NoiseElevation = reader.ReadHalf("NoiseElevation");
+            GlowScale = reader.ReadStruct<Half2>("GlowScale");
+            GlowIntensity = reader.ReadStruct<Half>("GlowIntensity");
+            FogIntensity = reader.ReadStruct<Half>("FogIntensity");
+            GlowOpacity = reader.ReadStruct<Half>("GlowOpacity");
+            FogConeAngle = reader.ReadStruct<Half>("FogConeAngle");
+            FogConeStart = reader.ReadStruct<Half>("FogConeStart");
+            FogConeEnd = reader.ReadStruct<Half>("FogConeEnd");
+            InnerRange = reader.ReadStruct<Half>("InnerRange");
+            NoiseSpeed = reader.ReadStruct<Half>("NoiseSpeed");
+            NoiseScale = reader.ReadStruct<Half>("NoiseScale");
+            NoiseFade = reader.ReadStruct<Half>("NoiseFade");
+            NoiseAzimuth = reader.ReadStruct<Half>("NoiseAzimuth");
+            NoiseElevation = reader.ReadStruct<Half>("NoiseElevation");
             GlowEnable = reader.ReadBool("GlowEnable");
             FogEnable = reader.ReadBool("FogEnable");
             NoiseEnable = reader.ReadBool("NoiseEnable");
-            FogConeOffset = reader.ReadHalf("FogConeOffset");
+            FogConeOffset = reader.ReadStruct<Half>("FogConeOffset");
             NoiseType = reader.ReadInt32("NoiseType");
         }
 
@@ -1567,23 +1567,23 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteColour("StarColor", StarColor);
             writer.WriteColour("FogColor", FogColor);
             writer.WriteInt32("StarTexture", StarTexture);
-            writer.WriteHalf2("GlowScale", GlowScale);
-            writer.WriteHalf("GlowIntensity", GlowIntensity);
-            writer.WriteHalf("FogIntensity", FogIntensity);
-            writer.WriteHalf("GlowOpacity", GlowOpacity);
-            writer.WriteHalf("FogConeAngle", FogConeAngle);
-            writer.WriteHalf("FogConeStart", FogConeStart);
-            writer.WriteHalf("FogConeEnd", FogConeEnd);
-            writer.WriteHalf("InnerRange", InnerRange);
-            writer.WriteHalf("NoiseSpeed", NoiseSpeed);
-            writer.WriteHalf("NoiseScale", NoiseScale);
-            writer.WriteHalf("NoiseFade", NoiseFade);
-            writer.WriteHalf("NoiseAzimuth", NoiseAzimuth);
-            writer.WriteHalf("NoiseElevation", NoiseElevation);
+            writer.WriteStruct("GlowScale", GlowScale);
+            writer.WriteStruct("GlowIntensity", GlowIntensity);
+            writer.WriteStruct("FogIntensity", FogIntensity);
+            writer.WriteStruct("GlowOpacity", GlowOpacity);
+            writer.WriteStruct("FogConeAngle", FogConeAngle);
+            writer.WriteStruct("FogConeStart", FogConeStart);
+            writer.WriteStruct("FogConeEnd", FogConeEnd);
+            writer.WriteStruct("InnerRange", InnerRange);
+            writer.WriteStruct("NoiseSpeed", NoiseSpeed);
+            writer.WriteStruct("NoiseScale", NoiseScale);
+            writer.WriteStruct("NoiseFade", NoiseFade);
+            writer.WriteStruct("NoiseAzimuth", NoiseAzimuth);
+            writer.WriteStruct("NoiseElevation", NoiseElevation);
             writer.WriteBool("GlowEnable", GlowEnable);
             writer.WriteBool("FogEnable", FogEnable);
             writer.WriteBool("NoiseEnable", NoiseEnable);
-            writer.WriteHalf("FogConeOffset", FogConeOffset);
+            writer.WriteStruct("FogConeOffset", FogConeOffset);
             writer.WriteInt32("NoiseType", NoiseType);
         }
     }

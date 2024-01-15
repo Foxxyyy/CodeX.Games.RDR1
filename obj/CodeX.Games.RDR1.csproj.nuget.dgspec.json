@@ -28,8 +28,8 @@
           "net7.0-windows7.0": {
             "targetAlias": "net7.0-windows",
             "projectReferences": {
-              "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\CodeX.Core.csproj": {
-                "projectPath": "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\CodeX.Core.csproj"
+              "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+                "projectPath": "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
               }
             }
           }
@@ -77,14 +77,14 @@
         }
       }
     },
-    "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\CodeX.Core.csproj": {
+    "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\CodeX.Core.csproj",
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "projectName": "CodeX.Core",
-        "projectPath": "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\CodeX.Core.csproj",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-        "outputPath": "C:\\Research\\CodeX\\CodeX-022\\CodeX.Core\\obj\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",

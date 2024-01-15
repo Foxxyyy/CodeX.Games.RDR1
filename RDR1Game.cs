@@ -40,13 +40,9 @@ namespace CodeX.Games.RDR1
             return false;
         }
 
-        public override FileManager GetFileManager()
+        public override FileManager CreateFileManager()
         {
-            if (FileManager == null)
-            {
-                FileManager = new Rpf6FileManager(this);
-            }
-            return FileManager;
+            return new Rpf6FileManager(this);
         }
 
         public override Level GetMapLevel()

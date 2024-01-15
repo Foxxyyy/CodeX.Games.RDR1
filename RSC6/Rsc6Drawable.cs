@@ -3666,11 +3666,11 @@ namespace CodeX.Games.RDR1.RSC6
         {
             if (Count == 1)
             {
-                Vector = reader.ReadVector4();
+                Vector = reader.ReadVector4(false);
             }
             else
             {
-                Array = reader.ReadVector4Arr(Count);
+                Array = reader.ReadVector4Arr(Count, false);
             }
         }
         

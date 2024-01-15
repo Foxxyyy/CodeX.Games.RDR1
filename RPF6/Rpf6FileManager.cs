@@ -985,6 +985,11 @@ namespace CodeX.Games.RDR1.RPF6
             if (errorfiles.Count > 0)
             { }
         }
+
+        public override T LoadMetaNode<T>(GameArchiveFileInfo file, byte[] data = null)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class Rpf6DataFileMgr

@@ -166,7 +166,7 @@ namespace CodeX.Games.RDR1.RSC6
             return vectors;
         }
 
-        public new Vector4 ReadVector4()
+        public Vector4 ReadVector4(bool toZXYW = true)
         {
             var v = BufferUtil.ReadVector4(Data, GetDataOffset());
             Position += 16;
@@ -175,15 +175,15 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 v = new Vector4(v.XYZ(), 0.0f);
             }
-            return new Vector4(v.Z, v.X, v.Y, v.W);
+            return toZXYW ? new Vector4(v.Z, v.X, v.Y, v.W) : v;
         }
 
-        public Vector4[] ReadVector4Arr(int count)
+        public Vector4[] ReadVector4Arr(int count, bool toZXYW = true)
         {
             var vectors = new Vector4[count];
             for (int i = 0; i < count; i++)
             {
-                vectors[i] = ReadVector4();
+                vectors[i] = ReadVector4(toZXYW);
             }
             return vectors;
         }
