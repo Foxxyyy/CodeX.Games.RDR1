@@ -38,15 +38,15 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 BoundMin { get; set; }
         public Vector4 BoundMax { get; set; }
         public Rsc6Ptr<Rsc6PlacedLightsGroup> PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
-        public Rsc6CustomArr<Rsc6PropInstanceInfo> Entities { get; set; } //m_Props
+        public Rsc6ManagedArr<Rsc6PropInstanceInfo> Entities { get; set; } //m_Props
         public Rsc6PtrArr<Rsc6BlockMap> Unknown_DCh { get; set; }
-        public Rsc6CustomArr<Rsc6SectorChild> ItemMapChilds { get; set; } //m_Children, 'swAll.wsi' only
+        public Rsc6ManagedArr<Rsc6SectorChild> ItemMapChilds { get; set; } //m_Children, 'swAll.wsi' only
         public uint Unknown_E4h { get; set; } = 0x00CDCDCD; //Always 0xCDCDCD00
         public Rsc6Ptr<Rsc6ScopedSectors> ItemChilds { get; set; } //m_ChildGroup
         public Rsc6PtrArr<Rsc6SectorInfo> ChildPtrs { get; set; } //m_ChildPtrs
-        public Rsc6CustomArr<Rsc6DrawableInstanceBase> DrawableInstances { get; set; } //m_SectorDrawableInstances
-        public Rsc6CustomArr<Rsc6BlockMap> Portals { get; set; } //m_Portals
-        public Rsc6CustomArr<Rsc6BlockMap> Attributes { get; set; } //m_Attributes
+        public Rsc6ManagedArr<Rsc6DrawableInstanceBase> DrawableInstances { get; set; } //m_SectorDrawableInstances
+        public Rsc6ManagedArr<Rsc6BlockMap> Portals { get; set; } //m_Portals
+        public Rsc6ManagedArr<Rsc6BlockMap> Attributes { get; set; } //m_Attributes
         public Rsc6StreamableBase VisualDictionary { get; set; } = new Rsc6StreamableBase();
         public Rsc6StreamableBase MedVisualDictionary { get; set; } = new Rsc6StreamableBase();
         public Rsc6StreamableBase LowVisualDictionary { get; set; } = new Rsc6StreamableBase();
@@ -55,7 +55,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6StreamableBase BoundDictionary { get; set; } = new Rsc6StreamableBase();
         public float LowLODFade { get; set; } = 1.0f;
         public JenkHash SectorNameLower { get; set; }
-        public Rsc6CustomArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
+        public Rsc6ManagedArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
         public uint LastVisibleMarker { get; set; } //m_LastVisibleMarker, always 0
         public uint ResidentStatus { get; set; } = 85; //m_ResidentStatus - 0 or 85
         public uint Unknown_18Ch { get; set; } //m_StreamedObjects? - always 0
@@ -63,7 +63,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_194h { get; set; } //m_ParentWithTD? - always 0
         public uint Unknown_198h { get; set; } //Always 0
         public Rsc6PtrStr PropNames { get; set; }
-        public Rsc6CustomArr<Rsc6LocatorStatic> Locators { get; set; } //m_Locators
+        public Rsc6ManagedArr<Rsc6LocatorStatic> Locators { get; set; } //m_Locators
         public bool AnyHighInstanceLoaded { get; set; } //m_AnyHighLODInstancesLoaded
         public byte ResidentVLowCount { get; set; } //m_ResidentVLowCount
         public bool HasVLowLODResource { get; set; } //m_HasVLowLodResource
@@ -123,10 +123,10 @@ namespace CodeX.Games.RDR1.RSC6
             HasBoneData = reader.ReadBoolean();
             Unknown_88h = reader.ReadUInt32();
             ExtraCurveData = reader.ReadUInt32();
-            MinAndBoundingRadius = reader.ReadVector4(true);
-            MaxAndInscribedRadius = reader.ReadVector4(true); //End of sagCurveGroup
-            BoundMin = reader.ReadVector4(true);
-            BoundMax = reader.ReadVector4(true);
+            MinAndBoundingRadius = reader.ReadVector4();
+            MaxAndInscribedRadius = reader.ReadVector4(); //End of sagCurveGroup
+            BoundMin = reader.ReadVector4();
+            BoundMax = reader.ReadVector4();
             PlacedLightsGroup = reader.ReadPtr<Rsc6PlacedLightsGroup>();
             Entities = reader.ReadArr<Rsc6PropInstanceInfo>();
             Unknown_DCh = reader.ReadPtrArr<Rsc6BlockMap>();
@@ -455,7 +455,7 @@ namespace CodeX.Games.RDR1.RSC6
             IndicesCapacity = reader.ReadUInt16();
             Name = reader.ReadStr(); //m_ScopeName
 
-            SectorsIndices = reader.ReadRawArrItems(SectorsIndices, IndicesCount, true);
+            SectorsIndices = reader.ReadRawArrItems(SectorsIndices, IndicesCount);
             Parents = new List<Rsc6SectorInfo>();
 
             for (int i = 0; i < SectorsParents.Count; i++)
@@ -566,7 +566,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             TimeLastVisible = reader.ReadSingle();
             Unknown_8h = reader.ReadUInt64();
-            LastKnownPositionAndFlags = reader.ReadVector4(true);
+            LastKnownPositionAndFlags = reader.ReadVector4();
             Node = reader.ReadInt32();
             AtDNode = reader.ReadInt32();
             Next = reader.ReadInt32();
@@ -578,8 +578,8 @@ namespace CodeX.Games.RDR1.RSC6
             VisibilityFlag = reader.ReadInt32();
             BucketFlag = reader.ReadInt32();
             Matrix = reader.ReadMatrix4x4();
-            BoundingBoxMin = reader.ReadVector4(true);
-            BoundingBoxMax = reader.ReadVector4(true);
+            BoundingBoxMin = reader.ReadVector4();
+            BoundingBoxMax = reader.ReadVector4();
             InstanceHash = reader.ReadUInt32();
             RoomBits = reader.ReadInt32();
             Elements = reader.ReadUInt32(); //rage::atFixedBitSet
@@ -726,7 +726,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint AddMarker { get; set; } = 0xFFFFFFFF; //m_AddMarker
         public Vector4 Bounds { get; set; } //m_Bounds
         public Matrix4x4 Matrix { get; set; } //m_Matrix
-        public Rsc6CustomArr<Rsc6Polygon> Polygons { get; set; } //m_Polygons
+        public Rsc6ManagedArr<Rsc6Polygon> Polygons { get; set; } //m_Polygons
         public Rsc6Arr<ushort> StaticObjects { get; set; } //m_StaticObjects
         public Rsc6PtrArr<Rsc6Portal> Portals { get; set; } //m_Portals
         public uint Flags { get; set; } //m_Flags - 0, 2, 4, 20 or 22
@@ -929,8 +929,8 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_24h = reader.ReadUInt32();
             Unknown_28h = reader.ReadUInt32();
             Unknown_2Ch = reader.ReadUInt32();
-            PlaneCoeffs = reader.ReadVector4(true);
-            Center = reader.ReadVector4(true);
+            PlaneCoeffs = reader.ReadVector4();
+            Center = reader.ReadVector4();
             Points = reader.ReadArr<Vector4>();
             VisibleEdges = reader.ReadArr<byte>();
             SingleSided = reader.ReadBoolean();
@@ -1096,7 +1096,7 @@ namespace CodeX.Games.RDR1.RSC6
             RotationZ = reader.ReadHalf();
             Flags = reader.ReadByte();
             AO = reader.ReadByte();
-            EntityPosition = reader.ReadVector4(true);
+            EntityPosition = reader.ReadVector4();
             Unknown_20h = reader.ReadUInt32();
             Unknown_24h = reader.ReadUInt32();
             PortalOffset = reader.ReadUInt32();
@@ -1167,8 +1167,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader) //sagSectorChild
         {
-            SectorBoundsMin = reader.ReadVector4(true);
-            SectorBoundsMax = reader.ReadVector4(true);
+            SectorBoundsMin = reader.ReadVector4();
+            SectorBoundsMax = reader.ReadVector4();
             Unknown_20h = reader.ReadUInt32();
             SectorName = reader.ReadString();
 
@@ -1237,7 +1237,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 BoundsMin { get; set; } //m_AABBMin
         public Vector4 BoundsMax { get; set; } //m_AABBMax
         public Rsc6Str Name { get; set; } //m_Name
-        public Rsc6CustomArr<Rsc6PlacedLight> Lights { get; set; } //m_Lights
+        public Rsc6ManagedArr<Rsc6PlacedLight> Lights { get; set; } //m_Lights
         public uint Unknown_2Ch { get; set; } //Always 0
         public uint Unknown_30h { get; set; } //Always 0
         public uint Unknown_34h { get; set; } //Always 0
@@ -1325,8 +1325,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader) //rdrPlacedLight
         {
-            Position = reader.ReadVector4(true);
-            ParentPosition = reader.ReadVector4(true);
+            Position = reader.ReadVector4();
+            ParentPosition = reader.ReadVector4();
             Direction = reader.ReadHalf4();
             Color = reader.ReadHalf4();
             EnvInfluence = reader.ReadHalf4();

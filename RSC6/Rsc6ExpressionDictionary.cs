@@ -76,7 +76,7 @@
         public Rsc6Ptr<Rsc6ExpressionOp> ExpressionOp { get; set; } //m_ExpressionOp
         public uint Signature { get; set; } //m_Signature
         public uint PackedSize { get; set; } //m_PackedSize
-        public Rsc6CustomArr<Rsc6ExpressionIODof> InputOutputDofs { get; set; } //m_InputOutputDofs
+        public Rsc6ManagedArr<Rsc6ExpressionIODof> InputOutputDofs { get; set; } //m_InputOutputDofs
         public ushort NumAcceleratedIndices { get; set; } //m_NumAcceleratedIndices
         public uint Unknown_1Ah { get; set; } //Always 0, padding
         public ushort Unknown_1Eh { get; set; } //Always 0, padding

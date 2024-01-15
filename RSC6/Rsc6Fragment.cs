@@ -1,13 +1,8 @@
-﻿using CodeX.Core.Engine;
-using CodeX.Core.Numerics;
-using CodeX.Core.Physics.Vehicles;
+﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -95,7 +90,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint GlassPaneModelInfos { get; set; } //m_GlassPaneModelInfos, rage::bgPaneModelInfoBase, used for windows (p_win), array of pointers using 'NumGlassPaneModelInfos'
         public float GravityFactor { get; set; } = 1.0f; //m_GravityFactor
         public uint Unknown_15Ch { get; set; }
-        public Rsc6PtrToPtrArr<Rsc6AssociationInfo> AssociatedFragments { get; set; } //m_AssociatedFragments, points to an array of pointers of 'AssociationInfo'
+        public Rsc6PtrToPtrArr<Rsc6AssociationInfo> AssociatedFragments { get; set; } //m_AssociatedFragments
         public uint Unknown_164h { get; set; }
         public uint ChildDataSet { get; set; } //m_ChildDataSet, sagFragTypeChildDataSet
         public uint Unknown_16Ch { get; set; }
@@ -136,16 +131,16 @@ namespace CodeX.Games.RDR1.RSC6
 
             SmallestAngInertia = reader.ReadSingle();
             LargestAngInertia = reader.ReadSingle();
-            BoundingSphere = reader.ReadVector4(true);
-            RootCGOffset = reader.ReadVector4(true);
-            OriginalRootCGOffset = reader.ReadVector4(true);
-            UnbrokenCGOffset = reader.ReadVector4(true);
-            DampingLinearC = reader.ReadVector4(true);
-            DampingLinearV = reader.ReadVector4(true);
-            DampingLinearV2 = reader.ReadVector4(true);
-            DampingAngularC = reader.ReadVector4(true);
-            DampingAngularV = reader.ReadVector4(true);
-            DampingAngularV2 = reader.ReadVector4(true);
+            BoundingSphere = reader.ReadVector4();
+            RootCGOffset = reader.ReadVector4();
+            OriginalRootCGOffset = reader.ReadVector4();
+            UnbrokenCGOffset = reader.ReadVector4();
+            DampingLinearC = reader.ReadVector4();
+            DampingLinearV = reader.ReadVector4();
+            DampingLinearV2 = reader.ReadVector4();
+            DampingAngularC = reader.ReadVector4();
+            DampingAngularV = reader.ReadVector4();
+            DampingAngularV2 = reader.ReadVector4();
             NameRef = reader.ReadStr();
             Drawable = reader.ReadPtr<Rsc6FragDrawable>();
             ExtraDrawables = reader.ReadPtr<Rsc6FragDrawable>();
@@ -220,6 +215,8 @@ namespace CodeX.Games.RDR1.RSC6
             InnerSorting = reader.ReadByte();
 
             AssociatedFragments = reader.ReadItems(AssociatedFragments);
+            Groups = reader.ReadRawPtrArrItem(Groups, GroupCount);
+            Children = reader.ReadRawPtrArrItem(Children, ChildCount);
             UndamagedAngInertia = reader.ReadRawArrItems(UndamagedAngInertia, ChildCount);
             DamagedAngInertia = reader.ReadRawArrItems(DamagedAngInertia, ChildCount);
             LinkAttachments = reader.ReadRawArrItems(LinkAttachments, ChildCount);
@@ -365,7 +362,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragDrawable : Rsc6DrawableBase
+    public class Rsc6FragDrawable : Rsc6DrawableBase, MetaNode //rage::fragDrawable
     {
         /*
          * Handles the loading of the drawing and bounds data for each piece of a fragment type
@@ -373,6 +370,215 @@ namespace CodeX.Games.RDR1.RSC6
          * The fragDrawable also loads other data, such as "locators" which are used to indicate the positions of the characters in vehicle seats, the entry
          * and exit positions from every door, the position of particle effects, etc.
          */
+
+        public override ulong BlockLength => base.BlockLength + 120;
+        public uint Unknow_78h { get; set; } //Padding
+        public uint Unknow_7Ch { get; set; } //Padding
+        public Matrix4x4 BoundMatrix { get; set; } = Matrix4x4.Identity; //m_BoundMatrix
+        public Rsc6Ptr<Rsc6Bounds> Bound { get; set; } //m_Bound
+        public Rsc6ManagedSizedArr<Rsc6Bounds> ExtraBounds { get; set; } //m_ExtraBounds
+        public Rsc6RawArr<Matrix4x4> ExtraBoundsMatrices { get; set; } //m_ExtraBoundsMatrices
+        public ushort NumExtraBounds { get; set; } //m_NumExtraBounds
+        public bool LoadSkeleton { get; set; } = true; //m_LoadSkeleton
+        public byte Pad { get; set; } //m_Pad0
+        public Rsc6Ptr<Rsc6FragDrawableLocator> Locators { get; set; } //m_Locators, rage::fragDrawable::LocatorData
+        public int NumLocatorNodes { get; set; } //m_NumNodes
+        public uint NodePool { get; set; } //m_NodePool
+        public Rsc6Str SkeletonTypeName { get; set; } //m_SkeletonTypeName, always NULL
+        public uint BoneOffsets { get; set; } //m_BoneOffsets, rage::crBoneOffsets, always NULL
+        public Rsc6PtrArr<Rsc6FragAnimation> Animations { get; set; } //m_Animations, rage::fragAnimation, used for clocks & vehicles
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader); //rmcDrawable
+            Unknow_78h = reader.ReadUInt32();
+            Unknow_7Ch = reader.ReadUInt32();
+            BoundMatrix = reader.ReadMatrix4x4();
+            Bound = reader.ReadPtr(Rsc6Bounds.Create);
+            ExtraBounds = reader.ReadSizedArrPtr<Rsc6Bounds>();
+            ExtraBoundsMatrices = reader.ReadRawArrPtr<Matrix4x4>();
+            NumExtraBounds = reader.ReadUInt16();
+            LoadSkeleton = reader.ReadBoolean();
+            Pad = reader.ReadByte();
+            Locators = reader.ReadPtr<Rsc6FragDrawableLocator>();
+            NumLocatorNodes = reader.ReadInt32();
+            NodePool = reader.ReadUInt32();
+            SkeletonTypeName = reader.ReadStr();
+            BoneOffsets = reader.ReadUInt32();
+            Animations = reader.ReadPtrArr<Rsc6FragAnimation>();
+
+            ExtraBounds = reader.ReadSizedArrItems(NumExtraBounds, Rsc6Bounds.Create);
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer); //rmcDrawable
+            writer.WriteUInt32(Unknow_78h);
+            writer.WriteUInt32(Unknow_7Ch);
+            writer.WriteMatrix4x4(BoundMatrix);
+            writer.WritePtr(Bound);
+            writer.WriteSizedArr(ExtraBounds);
+            writer.WriteRawArrPtr(ExtraBoundsMatrices);
+            writer.WriteUInt16(NumExtraBounds);
+            writer.WriteBoolean(LoadSkeleton);
+            writer.WriteByte(Pad);
+            writer.WritePtr(Locators);
+            writer.WriteInt32(NumLocatorNodes);
+            writer.WriteUInt32(NodePool);
+            writer.WriteStr(SkeletonTypeName);
+            writer.WriteUInt32(BoneOffsets);
+            writer.WritePtrArr(Animations);
+        }
+
+        public new void Read(MetaNodeReader reader)
+        {
+            BoundMatrix = reader.ReadMatrix4x4("BoundMatrix");
+            Bound = new(reader.ReadNode<Rsc6Bounds>("Bound"));
+            ExtraBounds = new(reader.ReadNodeArray<Rsc6Bounds>("ExtraBounds"));
+            ExtraBoundsMatrices = new(reader.ReadMatrix4x4Array("ExtraBoundsMatrices"));
+            NumExtraBounds = reader.ReadUInt16("NumExtraBounds");
+            LoadSkeleton = reader.ReadBool("LoadSkeleton");
+            Locators = new(reader.ReadNode<Rsc6FragDrawableLocator>("Locators"));
+            NumLocatorNodes = reader.ReadInt32("NumLocatorNodes");
+            NodePool = reader.ReadUInt32("NodePool");
+            SkeletonTypeName = new(reader.ReadString("SkeletonTypeName"));
+            Animations = new(reader.ReadNodeArray<Rsc6FragAnimation>("Animations"));
+        }
+
+        public new void Write(MetaNodeWriter writer)
+        {
+            writer.WriteMatrix4x4("BoundMatrix", BoundMatrix);
+            if (Bound.Item != null) writer.WriteNode("Bound", Bound.Item);
+            if (ExtraBounds.Items != null) writer.WriteNodeArray("ExtraBounds", ExtraBounds.Items);
+            if (ExtraBoundsMatrices.Items != null) writer.WriteMatrix4x4Array("ExtraBoundsMatrices", ExtraBoundsMatrices.Items);
+            writer.WriteUInt16("NumExtraBounds", NumExtraBounds);
+            writer.WriteBool("LoadSkeleton", LoadSkeleton);
+            if (Locators.Item != null) writer.WriteNode("Locators", Locators.Item);
+            writer.WriteInt32("NumLocatorNodes", NumLocatorNodes);
+            writer.WriteUInt32("NodePool", NodePool);
+            if (SkeletonTypeName.Value != null) writer.WriteString("SkeletonTypeName", SkeletonTypeName.Value);
+            if (Animations.Items != null) writer.WriteNodeArray("Animations", Animations.Items);
+        }
+    }
+
+    public class Rsc6FragAnimation : Rsc6Block, MetaNode //rage::fragAnimation
+    {
+        /*
+         * Owns a crAnimation, for handling of animated parts
+         * 
+         * Animated parts can optionally control a bound part
+         * If they do, that part can be broken off if its force limit is exceeded
+         */
+
+        public ulong BlockLength => 24;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public Rsc6Ptr<Rsc6Animation> Animation { get; set; } //Animation
+        public int BoneCount { get; set; } //BoneCount
+        public Rsc6RawArr<int> BoneIndices { get; set; } //BoneIndices
+        public Rsc6Str Name { get; set; } //Name
+        public float PhaseLastFrame { get; set; } //PhaseLastFrame
+        public bool AutoPlay { get; set; } //AutoPlay
+        public bool AffectsOnlyRootNodes { get; set; } //AffectsOnlyRootNodes
+        public byte Pad0 { get; set; } //Padding
+        public byte Pad1 { get; set; } //Padding
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Animation = reader.ReadPtr<Rsc6Animation>();
+            BoneIndices = reader.ReadRawArrPtr<int>();
+            BoneCount = reader.ReadInt32();
+            Name = reader.ReadStr();
+            PhaseLastFrame = reader.ReadSingle();
+            AutoPlay = reader.ReadBoolean();
+            AffectsOnlyRootNodes = reader.ReadBoolean();
+            Pad0 = reader.ReadByte();
+            Pad1 = reader.ReadByte();
+
+            BoneIndices = reader.ReadRawArrItems(BoneIndices, (uint)BoneCount);
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WritePtr(Animation);
+            writer.WriteInt32(BoneCount);
+            writer.WriteRawArrPtr(BoneIndices);
+            writer.WriteStr(Name);
+            writer.WriteSingle(PhaseLastFrame);
+            writer.WriteBoolean(AutoPlay);
+            writer.WriteBoolean(AffectsOnlyRootNodes);
+            writer.WriteByte(Pad0);
+            writer.WriteByte(Pad1);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Animation = new(reader.ReadNode<Rsc6Animation>("Animation"));
+            BoneCount = reader.ReadInt32("BoneCount");
+            BoneIndices = new(reader.ReadInt32Array("BoneIndices"));
+            Name = new(reader.ReadString("Name"));
+            PhaseLastFrame = reader.ReadSingle("PhaseLastFrame");
+            AutoPlay = reader.ReadBool("AutoPlay");
+            AffectsOnlyRootNodes = reader.ReadBool("AffectsOnlyRootNodes");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            //if (Animation.Item != null) writer.WriteNode<Rsc6Animation>("Animation");
+            writer.WriteInt32("BoneCount", BoneCount);
+            if (BoneIndices.Items != null) writer.WriteInt32Array("BoneIndices", BoneIndices.Items);
+            if (Name.Value != null) writer.WriteString("Name", Name.Value);
+            writer.WriteSingle("PhaseLastFrame", PhaseLastFrame);
+            writer.WriteBool("AutoPlay", AutoPlay);
+            writer.WriteBool("AffectsOnlyRootNodes", AffectsOnlyRootNodes);
+        }
+    }
+
+    public class Rsc6FragDrawableLocator : Rsc6Block, MetaNode //rage::fragDrawable::Locator
+    {
+        public ulong FilePosition { get; set; }
+        public ulong BlockLength => 48;
+        public bool IsPhysical => false;
+        public Vector4 Offset { get; set; } //Offset
+        public Vector4 Eulers { get; set; } //Eulers
+        public int BoneIndex { get; set; } //BoneIndex
+        public uint Pad0 { get; set; } //Pad0
+        public uint Pad1 { get; set; } //Pad1
+        public uint Pad2 { get; set; } //Pad2
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Offset = reader.ReadVector4();
+            Eulers = reader.ReadVector4();
+            BoneIndex = reader.ReadInt32();
+            Pad0 = reader.ReadUInt32();
+            Pad1 = reader.ReadUInt32();
+            Pad2 = reader.ReadUInt32();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteVector4(Offset);
+            writer.WriteVector4(Eulers);
+            writer.WriteInt32(BoneIndex);
+            writer.WriteUInt32(Pad0);
+            writer.WriteUInt32(Pad1);
+            writer.WriteUInt32(Pad2);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Offset = reader.ReadVector4("Offset");
+            Eulers = reader.ReadVector4("Eulers");
+            BoneIndex = reader.ReadInt32("BoneIndex");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteVector4("Offset", Offset);
+            writer.WriteVector4("Eulers", Eulers);
+            writer.WriteInt32("BoneIndex", BoneIndex);
+        }
     }
 
     public class Rsc6FragArchetypeDamp : Rsc6FragArchetypePhys, MetaNode //rage::phArchetypeDamp
@@ -395,7 +601,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            DampingConstants = reader.ReadVector4Arr(6, true);
+            DampingConstants = reader.ReadVector4Arr(6);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -405,7 +611,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public new void Read(MetaNodeReader reader)
         {
-
+            base.Read(reader);
+            DampingConstants = reader.ReadVector4Array("DampingConstants");
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -457,8 +664,8 @@ namespace CodeX.Games.RDR1.RSC6
             MaxSpeed = reader.ReadSingle();
             MaxAngSpeed = reader.ReadSingle();
             BuoyancyFactor = reader.ReadSingle();
-            AngleInertia = reader.ReadVector4(true);
-            InverseAngleInertia = reader.ReadVector4(true);
+            AngleInertia = reader.ReadVector4();
+            InverseAngleInertia = reader.ReadVector4();
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -478,7 +685,15 @@ namespace CodeX.Games.RDR1.RSC6
 
         public new void Read(MetaNodeReader reader)
         {
-            
+            base.Read(reader);
+            Mass = reader.ReadSingle("Mass");
+            InvMass = reader.ReadSingle("InvMass");
+            GravityFactor = reader.ReadSingle("GravityFactor");
+            MaxSpeed = reader.ReadSingle("MaxSpeed");
+            MaxAngSpeed = reader.ReadSingle("MaxAngSpeed");
+            BuoyancyFactor = reader.ReadSingle("BuoyancyFactor");
+            AngleInertia = reader.ReadVector4("AngleInertia");
+            InverseAngleInertia = reader.ReadVector4("InverseAngleInertia");
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -553,14 +768,19 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-
+            NameRef = new(reader.ReadString("Name"));
+            //Bounds = new(reader.ReadNode("Bounds"));
+            TypeFlags = (Rsc6ObjectTypeFlags)reader.ReadUInt32("TypeFlags");
+            IncludeFlags = reader.ReadInt32("IncludeFlags");
+            PropertyFlags = reader.ReadUInt16("PropertyFlags");
+            RefCount = reader.ReadUInt16("RefCount");
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteInt32("Type", (int)Type);
             if (NameRef.Value != null) writer.WriteString("Name", NameRef.Value);
-            //if (Bounds.Item != null) writer.WriteNode("Bounds", Bounds.Item); //not yet
+            if (Bounds.Item != null) writer.WriteNode("Bounds", Bounds.Item);
             writer.WriteUInt32("TypeFlags", (uint)TypeFlags);
             writer.WriteInt32("IncludeFlags", IncludeFlags);
             writer.WriteUInt16("PropertyFlags", PropertyFlags);
@@ -573,17 +793,111 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragPhysGroup : Rsc6BlockBase, MetaNode
+    public class Rsc6FragPhysGroup : Rsc6BlockBase, MetaNode //rage::fragTypeGroup
     {
-        public override ulong BlockLength => throw new NotImplementedException();
+        /*
+         * fragTypeGroup's are tied together in a tree structure, and the links between them are the breaking points of the fragment instances
+         * Each fragTypeGroup owns one or more fragTypeChild's, which contain the drawable and physical properties of the breakable piece it controls
+         */
+
+        public override ulong BlockLength => 128;
+        public uint DeathEventset { get; set; } //m_DeathEventset, evtSet, always NULL?
+        public uint DeathEventPlayer { get; set; } //m_DeathEventPlayer, fragCollisionEventPlayer, always NULL?
+        public float Strength { get; set; } //m_Strength, magnitude of force required to separate this group from its parent
+        public float ForceTransmissionScaleUp { get; set; } //m_ForceTransmissionScaleUp, how much of a force applied gets passed on to our parent. Before we send force up the chain, it is first scaled by this value
+        public float ForceTransmissionScaleDown { get; set; } //m_ForceTransmissionScaleDown, how much of a force applied to us from our parent applies to us
+        public float JointStiffness { get; set; } //m_JointStiffness, the articulated stiffness of the joint where this group is attached, if it becomes articulated
+        public float MinSoftAngle1 { get; set; } //m_MinSoftAngle1, the minimum soft angle limit for 1 DOF joints or the first limit for 3 DOF joints
+        public float MaxSoftAngle1 { get; set; } //m_MaxSoftAngle1, the maximum soft angle limit for 1 DOF joints or the first limit for 3 DOF joints
+        public float MaxSoftAngle2 { get; set; } //m_MaxSoftAngle2, the second maximum soft angle limit for 3 DOF joints
+        public float MaxSoftAngle3 { get; set; } //m_MaxSoftAngle3, the third maximum soft angle limit for 3 DOF joints
+        public float RotationSpeed { get; set; } //m_RotationSpeed, the speed this articulated joint attached here will attempt to achieve using a muscle
+        public float RotationStrength { get; set; } //m_RotationStrength, the strength this articulated joint will use to try to match the rotation speed
+        public float RestoringStrength { get; set; } //m_RestoringStrength, the strength with with this articulated joint will try to reach the zero pose
+        public float RestoringMaxTorque { get; set; } //m_RestoringMaxTorque, the maximum torque this articulated joint can use to return to the zero pose
+        public float LatchStrength { get; set; } //m_LatchStrength, the breaking strength of the latch on this joint, if there is one
+        public float TotalUndamagedMass { get; set; } //m_TotalUndamagedMass, the total mass of all child fragments, undamaged
+        public float TotalDamagedMass { get; set; } //m_TotalDamagedMass, the total mass of all child fragments, damaged
+        public byte ChildGroupsPointersIndex { get; set; } = 0xFF; //m_ChildGroupsPointersIndex, index in the fragType to the start of the list of child groups we own - 0xFF if we own no groups
+        public byte ParentGroupPointerIndex { get; set; } = 0xFF; //m_ParentGroupPointerIndex, index in the fragType to the child we own - 0xFF if we don't own one
+        public byte ChildIndex { get; set; } = 0xFF; //m_ChildIndex, index in the fragType to the child we own - 0xFF if we don't own one
+        public byte NumChildren { get; set; } //m_NumChildren, the number of children we own, starting with m_ChildIndex
+        public byte NumChildGroups { get; set; } //m_NumChildGroups, the number of child groups we own, starting with child groups pointers index
+        public byte GlassModelAndType { get; set; } = 0xFF; //m_GlassModelAndType, upper bits are glass type index, lower are geometry index
+        public byte GlassPaneModelInfoIndex { get; set; } //m_GlassPaneModelInfoIndex, geometry index
+        public Rsc6FragTypeGroupFlag Flags { get; set; } //m_Flags
+        public float MinDamageForce { get; set; } //m_MinDamageForce
+        public float DamageHealth { get; set; } //m_DamageHealth
+        public string DebugName { get; set; } //m_DebugName
 
         public override void Read(Rsc6DataReader reader)
         {
+            DeathEventset = reader.ReadUInt32();
+            DeathEventPlayer = reader.ReadUInt32();
+            Strength = reader.ReadSingle();
+            ForceTransmissionScaleUp = reader.ReadSingle();
+            ForceTransmissionScaleDown = reader.ReadSingle();
+            JointStiffness = reader.ReadSingle();
+            MinSoftAngle1 = reader.ReadSingle();
+            MaxSoftAngle1 = reader.ReadSingle();
+            MaxSoftAngle2 = reader.ReadSingle();
+            MaxSoftAngle3 = reader.ReadSingle();
+            RotationSpeed = reader.ReadSingle();
+            RotationStrength = reader.ReadSingle();
+            RestoringStrength = reader.ReadSingle();
+            RestoringMaxTorque = reader.ReadSingle();
+            LatchStrength = reader.ReadSingle();
+            TotalUndamagedMass = reader.ReadSingle();
+            TotalDamagedMass = reader.ReadSingle();
+            ChildGroupsPointersIndex = reader.ReadByte();
+            ParentGroupPointerIndex = reader.ReadByte();
+            ChildIndex = reader.ReadByte();
+            NumChildren = reader.ReadByte();
+            NumChildGroups = reader.ReadByte();
+            GlassModelAndType = reader.ReadByte();
+            GlassPaneModelInfoIndex = reader.ReadByte();
+            Flags = (Rsc6FragTypeGroupFlag)reader.ReadByte();
+            MinDamageForce = reader.ReadSingle();
+            DamageHealth = reader.ReadSingle();
+            DebugName = reader.ReadString();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            throw new NotImplementedException();
+            ulong pos = writer.Position;
+            writer.WriteUInt32(DeathEventset);
+            writer.WriteUInt32(DeathEventPlayer);
+            writer.WriteSingle(Strength);
+            writer.WriteSingle(ForceTransmissionScaleUp);
+            writer.WriteSingle(ForceTransmissionScaleDown);
+            writer.WriteSingle(JointStiffness);
+            writer.WriteSingle(MinSoftAngle1);
+            writer.WriteSingle(MaxSoftAngle1);
+            writer.WriteSingle(MaxSoftAngle2);
+            writer.WriteSingle(MaxSoftAngle3);
+            writer.WriteSingle(RotationSpeed);
+            writer.WriteSingle(RotationStrength);
+            writer.WriteSingle(RestoringStrength);
+            writer.WriteSingle(RestoringMaxTorque);
+            writer.WriteSingle(LatchStrength);
+            writer.WriteSingle(TotalUndamagedMass);
+            writer.WriteSingle(TotalDamagedMass);
+            writer.WriteByte(ChildGroupsPointersIndex);
+            writer.WriteByte(ParentGroupPointerIndex);
+            writer.WriteByte(ChildIndex);
+            writer.WriteByte(NumChildren);
+            writer.WriteByte(NumChildGroups);
+            writer.WriteByte(GlassModelAndType);
+            writer.WriteByte(GlassPaneModelInfoIndex);
+            writer.WriteByte((byte)Flags);
+            writer.WriteSingle(MinDamageForce);
+            writer.WriteSingle(DamageHealth);
+            writer.WriteStringNullTerminated(DebugName);
+
+            while (writer.Position < pos + BlockLength)
+            {
+                writer.WriteByte(0xCD); //Padding
+            }
         }
 
         public void Read(MetaNodeReader reader)
@@ -599,40 +913,111 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class Rsc6FragPhysChild : Rsc6BlockBase, MetaNode
     {
-        public override ulong BlockLength => 156;
-        public uint VFT { get; set; }
-        public byte[] Pad { get; set; } //[140] (juicy stuff)
-        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; }
-        public Rsc6Ptr<Rsc6FragDrawable> Drawable2 { get; set; }
+        /*
+         * Holds type data related to one atomic piece of a fragment type.
+         * Simple fragType's have only one of these, complex fragType's have one of these for each piece they can break into.
+         * fragTypeChild's are linked together in a complex type by fragTypeGroup's
+         */
+
+        public override ulong BlockLength => 192;
+        public uint VFT { get; set; } = 0x00F23A34;
+        public float UndamagedMass { get; set; } //m_UndamagedMass
+        public float DamagedMass { get; set; } //m_DamagedMass
+        public byte OwnerGroupPointerIndex { get; set; } //m_OwnerGroupPointerIndex, index in the fragType to the group that owns us
+        public byte Flags { get; set; } //m_Flags
+        public ushort BoneID { get; set; } //m_BoneID, the bone of the main entity's skeleton this child follows, 0 if it's parented to the entity itself
+        public Matrix4x4 BoneAttachment { get; set; } = Matrix4x4.Identity; //m_BoneAttachment
+        public Matrix4x4 LinkAttachment { get; set; } = Matrix4x4.Identity; //m_LinkAttachment
+        public Rsc6Ptr<Rsc6FragDrawable> UndamagedEntity { get; set; } //m_UndamagedEntity
+        public Rsc6Ptr<Rsc6FragDrawable> DamagedEntity { get; set; } //DamagedEntity
+        public uint ContinuousEventset { get; set; } //m_ContinuousEventset
+        public uint CollisionEventset { get; set; } //m_CollisionEventset
+        public uint BreakEventset { get; set; } //m_BreakEventset
+        public uint BreakFromRootEventset { get; set; } //m_BreakFromRootEventset
+        public uint CollisionEventPlayer { get; set; } //m_CollisionEventPlayer
+        public uint BreakEventPlayer { get; set; } //m_BreakEventPlayer
+        public uint BreakFromRootEventPlayer { get; set; } //m_BreakFromRootEventPlayer
+        public uint Unknown_B4h { get; set; } //Padding
+        public uint Unknown_B8h { get; set; } //Padding
+        public uint Unknown_BCh { get; set; } //Padding
 
         public override void Read(Rsc6DataReader reader)
         {
             VFT = reader.ReadUInt32();
-            Pad = reader.ReadArray<byte>(140);
-            Drawable = reader.ReadPtr<Rsc6FragDrawable>();
-            Drawable2 = reader.ReadPtr<Rsc6FragDrawable>();
+            UndamagedMass = reader.ReadSingle();
+            DamagedMass = reader.ReadSingle();
+            OwnerGroupPointerIndex = reader.ReadByte();
+            Flags = reader.ReadByte();
+            BoneID = reader.ReadUInt16();
+            BoneAttachment = reader.ReadMatrix4x4();
+            LinkAttachment = reader.ReadMatrix4x4();
+            UndamagedEntity = reader.ReadPtr<Rsc6FragDrawable>();
+            DamagedEntity = reader.ReadPtr<Rsc6FragDrawable>();
+            ContinuousEventset = reader.ReadUInt32();
+            CollisionEventset = reader.ReadUInt32();
+            BreakEventset = reader.ReadUInt32();
+            BreakFromRootEventset = reader.ReadUInt32();
+            CollisionEventPlayer = reader.ReadUInt32();
+            BreakEventPlayer = reader.ReadUInt32();
+            BreakFromRootEventPlayer = reader.ReadUInt32();
+            Unknown_B4h = reader.ReadUInt32();
+            Unknown_B8h = reader.ReadUInt32();
+            Unknown_BCh = reader.ReadUInt32();
+
+            if (DamagedEntity.Item != null)
+            {
+                throw new Exception("Rsc6FragPhysChild: Found a damageable fragDrawable!");
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            throw new NotImplementedException();
-        }
-
-        public void WriteXml(StringBuilder sb, int indent, string ddsFolder)
-        {
-            Drawable.Item?.WriteXml(sb, indent, ddsFolder);
-            Drawable2.Item?.WriteXml(sb, indent, ddsFolder);
+            writer.WriteUInt32(VFT);
+            writer.WriteSingle(UndamagedMass);
+            writer.WriteSingle(DamagedMass);
+            writer.WriteByte(OwnerGroupPointerIndex);
+            writer.WriteByte(Flags);
+            writer.WriteUInt16(BoneID);
+            writer.WriteMatrix4x4(BoneAttachment);
+            writer.WriteMatrix4x4(LinkAttachment);
+            writer.WritePtr(UndamagedEntity);
+            writer.WritePtr(DamagedEntity);
+            writer.WriteUInt32(ContinuousEventset);
+            writer.WriteUInt32(CollisionEventset);
+            writer.WriteUInt32(BreakEventset);
+            writer.WriteUInt32(BreakFromRootEventset);
+            writer.WriteUInt32(CollisionEventPlayer);
+            writer.WriteUInt32(BreakEventPlayer);
+            writer.WriteUInt32(BreakFromRootEventPlayer);
+            writer.WriteUInt32(Unknown_B4h);
+            writer.WriteUInt32(Unknown_B8h);
+            writer.WriteUInt32(Unknown_BCh);
         }
 
         public void Read(MetaNodeReader reader)
         {
-
+            //UndamagedEntity = new(reader.ReadNode("UndamagedEntity"));
+            //DamagedEntity = new(reader.ReadNode("DamagedEntity"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            if (Drawable.Item != null) writer.WriteNode("Drawable", Drawable.Item);
-            if (Drawable2.Item != null) writer.WriteNode("Drawable2", Drawable2.Item);
+            writer.WriteSingle("UndamagedMass", UndamagedMass);
+            writer.WriteSingle("DamagedMass", DamagedMass);
+            writer.WriteByte("OwnerGroupPointerIndex", OwnerGroupPointerIndex);
+            writer.WriteByte("Flags", Flags);
+            writer.WriteUInt16("BoneID", BoneID);
+            writer.WriteMatrix4x4("BoneAttachment", BoneAttachment);
+            writer.WriteMatrix4x4("LinkAttachment", LinkAttachment);
+            if (UndamagedEntity.Item != null) writer.WriteNode("UndamagedEntity", UndamagedEntity.Item);
+            if (DamagedEntity.Item != null) writer.WriteNode("DamagedEntity", DamagedEntity.Item);
+            writer.WriteUInt32("ContinuousEventset", ContinuousEventset);
+            writer.WriteUInt32("CollisionEventset", CollisionEventset);
+            writer.WriteUInt32("BreakEventset", BreakEventset);
+            writer.WriteUInt32("BreakFromRootEventset", BreakFromRootEventset);
+            writer.WriteUInt32("CollisionEventPlayer", CollisionEventPlayer);
+            writer.WriteUInt32("BreakEventPlayer", BreakEventPlayer);
+            writer.WriteUInt32("BreakFromRootEventPlayer", BreakFromRootEventPlayer);
         }
     }
 
@@ -676,7 +1061,13 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-
+            FragmentName = new(reader.ReadString("FragmentName"));
+            NonMangledName = new(reader.ReadString("NonMangledName"));
+            LocatorName = new(reader.ReadString("LocatorName"));
+            DesignTagHash = reader.ReadUInt32("DesignTagHash");
+            Default = reader.ReadBool("Default");
+            HardLink = reader.ReadBool("HardLink");
+            Detachable = reader.ReadBool("Detachable");
         }
 
         public void Write(MetaNodeWriter writer)
@@ -727,5 +1118,15 @@ namespace CodeX.Games.RDR1.RSC6
         OBJ_CARS2 = 18350215, //northboxcar01x
         OBJ_WATERTROUGH = 20447237, //p_gen_watertrough01x
         OBJ_CARTS = 1075314695, //cart001x
+    }
+
+    public enum Rsc6FragTypeGroupFlag : byte
+    {
+        DISAPPEARS_WHEN_DEAD = 1 << 0, //When health reaches zero, this group disappears
+        MADE_OF_GLASS = 1 << 1, //This group is made out of glass and will shatter when broken
+        DAMAGE_WHEN_BROKEN = 1 << 2, //When this group breaks off its parent, it will become damaged
+        DOESNT_AFFECT_VEHICLES = 1 << 3, //When colliding with vehicles, the vehicle is treated as infinitely massive
+        DOESNT_PUSH_VEHICLES_DOWN = 1 << 4,
+        HAS_CLOTH = 1 << 5, //This group has the cloth (can't have more than one cloth per fragment)
     }
 }

@@ -953,13 +953,13 @@ namespace CodeX.Games.RDR1.RPF6
                             //try
                             {
                                 var n = fe.NameLower;
-                                if (testycd && n.EndsWith(".wedt"))
+                                if (testycd && n.EndsWith(".wcdt"))
                                 {
                                     Core.Engine.Console.Write("TestAnimations", fe.Path);
                                     var data = EnsureFileData(fe, null);
                                     if (data != null)
                                     {
-                                        var ycd = new WedtFile(fe);
+                                        var ycd = new WcdtFile(fe);
                                         ycd.Load(data);
                                         if (savetest)
                                         {

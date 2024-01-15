@@ -223,18 +223,64 @@ namespace CodeX.Games.RDR1.RPF6
             return BitConverter.ToSingle(data, 0);
         }
 
-        //Swap the axes from XYZ to ZXY
+        //Swap the axis from XYZ to ZXY
+        public static Vector3 ToZXY(Vector3 vec)
+        {
+            return new Vector3(vec.Z, vec.X, vec.Y);
+        }
+
+        //Swap the axis from XYZ to ZXY
+        public static Vector4 ToZXY(Vector4 vec)
+        {
+            return new Vector4(vec.Z, vec.X, vec.Y, vec.W);
+        }
+
+        //Swap the axis from XYZ to ZXY
         public static BoundingBox4 ToZXY(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
             {
-                Minimum = new Vector3(bb.Min.Z, bb.Min.X, bb.Min.Y),
-                Maximum = new Vector3(bb.Max.Z, bb.Max.X, bb.Max.Y)
+                Minimum = ToZXY(bb.Min.XYZ()),
+                Maximum = ToZXY(bb.Max.XYZ())
             };
             return new BoundingBox4(newBB);
         }
 
-        //Swap the axes from XYZ to ZXY
+        //Swap the axis from XYZ to ZXY
+        public static BoundingBox4[] ToZXY(BoundingBox4[] bb)
+        {
+            for (int i = 0; i < bb.Length; i++)
+            {
+                bb[i] = ToZXY(bb[i]);
+            }
+            return bb;
+        }
+
+        //Swap the axis from XYZ to ZXY
+        public static Quaternion ToZXY(Quaternion quat)
+        {
+            return new Quaternion(quat.Z, quat.X, quat.Y, quat.W);
+        }
+
+        //Swap the axis from XYZ to ZXY
+        public static Matrix3x4 ToZXY(Matrix3x4 m)
+        {
+            m.Translation = ToZXY(m.Translation);
+            m.Orientation = ToZXY(m.Orientation);
+            return m;
+        }
+
+        //Swap the axis from XYZ to ZXY
+        public static Matrix3x4[] ToZXY(Matrix3x4[] m)
+        {
+            for (int i = 0; i < m.Length; i++)
+            {
+                m[i] = ToZXY(m[i]);
+            }
+            return m;
+        }
+
+        //Swap the axis from XYZ to ZXY
         public static Matrix4x4 ToZXY(Matrix4x4 m)
         {
             var m44 = float.IsNaN(m.M44) ? 1.0f : m.M44;
@@ -248,18 +294,14 @@ namespace CodeX.Games.RDR1.RPF6
             );
         }
 
-        //Create a Matrix3x4 from a BoundingBox4
-        public static Matrix3x4 ToMatrix3x4(BoundingBox4 bb)
+        //Swap the axis from XYZ to ZXY
+        public static Matrix4x4[] ToZXY(Matrix4x4[] m)
         {
-            var translation = bb.ToBoundingBox().Center;
-            var scale = bb.Max - bb.Min;
-            var rotationMatrix = Matrix3x3.Identity;
-
-            var matrix = new Matrix3x4()
+            for (int i = 0; i < m.Length; i++)
             {
-                Translation = translation,
-            };
-            return matrix;
+                m[i] = ToZXY(m[i]);
+            }
+            return m;
         }
 
         public static Vector3 GetXmlVector3(XmlNode node, string name)

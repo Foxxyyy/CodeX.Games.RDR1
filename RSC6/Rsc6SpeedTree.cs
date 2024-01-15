@@ -18,7 +18,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 GridMin { get; set; }
         public Vector4 GridMax { get; set; }
         public Vector4 BoundSphere { get; set; } //m_BoundSphere
-        public Rsc6CustomArr<Rsc6TreeForestGridCell> GridCells { get; set; } //m_GridCells
+        public Rsc6ManagedArr<Rsc6TreeForestGridCell> GridCells { get; set; } //m_GridCells
         public Rsc6Arr<ushort> IndexList { get; set; }
         public int Left { get; set; } //m_nLeft
         public int Right { get; set; } //m_nRight
@@ -41,9 +41,9 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             TreeForest = reader.ReadBlock<Rsc6TreeForest>();
-            GridMin = reader.ReadVector4(true);
-            GridMax = reader.ReadVector4(true);
-            BoundSphere = reader.ReadVector4(true);
+            GridMin = reader.ReadVector4();
+            GridMax = reader.ReadVector4();
+            BoundSphere = reader.ReadVector4();
             GridCells = reader.ReadArr<Rsc6TreeForestGridCell>(); //Rsc6TreeForestGridCell[CellsWidth][CellsHeight]
             IndexList = reader.ReadArr<ushort>();
             Left = reader.ReadInt32();
@@ -168,15 +168,15 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
         public Vector4 BoundSphere { get; set; } //m_BoundSphere
-        public Rsc6CustomArr<Rsc6PackedInstancePos> CombinedInstanceListPos { get; set; } //m_CombinedInstanceListPos
-        public Rsc6CustomArr<Rsc6InstanceMatrix> CombinedInstanceListMatrix { get; set; } //m_CombinedInstanceListMtx
+        public Rsc6ManagedArr<Rsc6PackedInstancePos> CombinedInstanceListPos { get; set; } //m_CombinedInstanceListPos
+        public Rsc6ManagedArr<Rsc6InstanceMatrix> CombinedInstanceListMatrix { get; set; } //m_CombinedInstanceListMtx
         public Rsc6Arr<short> IndexList { get; set; }
         public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //Padding
 
         public void Read(Rsc6DataReader reader)
         {
-            BoundSphere = reader.ReadVector4(true);
+            BoundSphere = reader.ReadVector4();
             CombinedInstanceListPos = reader.ReadArr<Rsc6PackedInstancePos>();
             CombinedInstanceListMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
             IndexList = reader.ReadArr<short>();
@@ -203,10 +203,10 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Arr<uint> Trees { get; set; } //m_Trees - rage::instanceTreeData
         public Rsc6Arr<JenkHash> TreeHashes { get; set; } //m_TreeSourceHashes
         public Rsc6PtrStr TreeNames { get; set; } //m_TreeDebugNames
-        public Rsc6CustomArr<Rsc6TreeInstancePos> TreeInstancePos { get; set; } //m_TreeInstancesPos
-        public Rsc6CustomArr<Rsc6PackedInstancePos> CombinedVisibleInstancePos { get; set; } //m_CombinedVisibleTreeInstancesPos
-        public Rsc6CustomArr<Rsc6InstanceMatrix> TreeInstanceMatrix { get; set; } //m_TreeInstancesMtx
-        public Rsc6CustomArr<Rsc6InstanceMatrix> CombinedVisibleTreeInstanceMatrix { get; set; } //m_CombinedVisibleTreeInstancesMtx
+        public Rsc6ManagedArr<Rsc6TreeInstancePos> TreeInstancePos { get; set; } //m_TreeInstancesPos
+        public Rsc6ManagedArr<Rsc6PackedInstancePos> CombinedVisibleInstancePos { get; set; } //m_CombinedVisibleTreeInstancesPos
+        public Rsc6ManagedArr<Rsc6InstanceMatrix> TreeInstanceMatrix { get; set; } //m_TreeInstancesMtx
+        public Rsc6ManagedArr<Rsc6InstanceMatrix> CombinedVisibleTreeInstanceMatrix { get; set; } //m_CombinedVisibleTreeInstancesMtx
         public uint Unknown_40h { get; set; }
         public int MaxBillboardsPerFrame { get; set; } //m_MaxBillboardsPerFrame
         public float BillboardBlendRange { get; set; } //m_billboardBlendRange
@@ -449,7 +449,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(Rsc6DataReader reader)
         {
             InstanceBase = reader.ReadBlock<Rsc6TreeInstanceBase>();
-            Position = reader.ReadVector4(true);
+            Position = reader.ReadVector4();
             Tilt = reader.ReadUInt16();
             Width = reader.ReadUInt16();
             Rotation = reader.ReadByte();

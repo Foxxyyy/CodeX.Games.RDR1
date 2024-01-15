@@ -180,6 +180,16 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))]
     public class Rsc6Drawable : Rsc6DrawableBase //rage::rmcDrawable
     {
+        /*
+         * An rmcDrawable contains up to four levels of detail; each level of detail
+         * consists of zero or more models.  Each model within the LOD can be bound to
+         * a different bone, allowing complex objects to render with a single draw call.
+         * It also contains a shader group, which is an array of all shaders used by all
+         * models within the drawable.
+         * 
+         * The only reason it derives from Base is so that the vptr is at a known location for resources.
+         */
+
         public override ulong BlockLength => 208;
 
         public override void Read(Rsc6DataReader reader)
@@ -1163,19 +1173,12 @@ namespace CodeX.Games.RDR1.RSC6
             GeometriesCount3 = reader.ReadUInt16();
 
             var geocount = Geometries.Count;
-            ShaderMapping = reader.ReadRawArrItems(ShaderMapping, geocount, true);
+            ShaderMapping = reader.ReadRawArrItems(ShaderMapping, geocount);
             BoundsData = reader.ReadRawArrItems(BoundsData, geocount > 1 ? geocount + 1u : geocount);
 
             for (int i = 0; i < BoundsData.Items.Length; i++)
             {
-                float zMax = BoundsData.Items[i].Max.Z;
-                float zMin = BoundsData.Items[i].Min.Z;
-                float yMax = BoundsData.Items[i].Max.Y;
-                float yMin = BoundsData.Items[i].Max.Y;
-                float xMax = BoundsData.Items[i].Max.X;
-                float xMin = BoundsData.Items[i].Min.X;
-                BoundsData.Items[i].Min = new Vector4(zMin, xMin, yMin, BoundsData.Items[i].Min.W);
-                BoundsData.Items[i].Max = new Vector4(zMax, xMax, yMax, BoundsData.Items[i].Max.W);
+                BoundsData.Items[i] = Rpf6Crypto.ToZXY(BoundsData.Items[i]);
             }
 
             var geoms = Geometries.Items;
@@ -1726,7 +1729,7 @@ namespace CodeX.Games.RDR1.RSC6
             IndicesCount = reader.ReadUInt32();
             Indices = reader.ReadRawArrPtr<ushort>();
             Unknown_Ch = reader.ReadUInt32();
-            Indices = reader.ReadRawArrItems(Indices, IndicesCount, true);
+            Indices = reader.ReadRawArrItems(Indices, IndicesCount);
             Unknown_10h = reader.ReadUInt32();
             Unknown_14h = reader.ReadUInt32();
             Unknown_18h = reader.ReadUInt32();
@@ -1766,7 +1769,7 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6DrawableBase : Piece, Rsc6Block
+    public class Rsc6DrawableBase : Piece, Rsc6Block //rmcDrawable
     {
         public virtual ulong BlockLength => 120;
         public ulong FilePosition { get; set; }
@@ -1803,11 +1806,11 @@ namespace CodeX.Games.RDR1.RSC6
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             ShaderGroup = reader.ReadPtr<Rsc6ShaderGroup>();
             SkeletonRef = reader.ReadPtr<Rsc6Skeleton>();
-            BoundingCenter = reader.ReadVector3(true);
+            BoundingCenter = reader.ReadVector3();
             Unknown_1Ch = reader.ReadSingle();
-            BoundingBoxMin = reader.ReadVector3(true);
+            BoundingBoxMin = reader.ReadVector3();
             Unknown_2Ch = reader.ReadSingle();
-            BoundingBoxMax = reader.ReadVector3(true);
+            BoundingBoxMax = reader.ReadVector3();
             Unknown_3Ch = reader.ReadSingle();
             LodHigh = reader.ReadPtr<Rsc6DrawableLod>();
             LodMed = reader.ReadPtr<Rsc6DrawableLod>();
@@ -2081,7 +2084,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
         public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9 for .wft or 14
-        public Rsc6CustomArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
+        public Rsc6ManagedArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
         public uint RefCount { get; set; } = 1; //m_RefCount
         public uint Signature { get; set; } = 2135087653; //m_Signature
         public Rsc6Str JointDataFileName { get; set; } //m_JointDataFileName, always NULL?
@@ -2486,17 +2489,17 @@ namespace CodeX.Games.RDR1.RSC6
             NumScaleChannels = reader.ReadByte();
             Unknown_1Dh = reader.ReadUInt16();
             Unknown_1Fh = reader.ReadByte();
-            OrigPosition = reader.ReadVector4(true);
-            OrigRotationEuler = reader.ReadVector4(true);
-            OrigRotation = reader.ReadVector4(true);
-            OrigScale = reader.ReadVector4(true);
-            AbsolutePosition = reader.ReadVector4(true);
-            AbsoluteRotationEuler = reader.ReadVector4(true);
-            ScaleOrient = reader.ReadVector4(true);
-            TranslationMin = reader.ReadVector4(true);
-            TranslationMax = reader.ReadVector4(true);
-            RotationMin = reader.ReadVector4(true);
-            RotationMax = reader.ReadVector4(true);
+            OrigPosition = reader.ReadVector4();
+            OrigRotationEuler = reader.ReadVector4();
+            OrigRotation = reader.ReadVector4();
+            OrigScale = reader.ReadVector4();
+            AbsolutePosition = reader.ReadVector4();
+            AbsoluteRotationEuler = reader.ReadVector4();
+            ScaleOrient = reader.ReadVector4();
+            TranslationMin = reader.ReadVector4();
+            TranslationMax = reader.ReadVector4();
+            RotationMin = reader.ReadVector4();
+            RotationMax = reader.ReadVector4();
             JointData = reader.ReadUInt32();
             NameHash = reader.ReadUInt32();
             Unknown_D8h = reader.ReadUInt32();

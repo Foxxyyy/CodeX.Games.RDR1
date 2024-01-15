@@ -99,13 +99,13 @@ namespace CodeX.Games.RDR1.RSC6
             WorldSpaceUpdatesEnabled = reader.ReadBoolean();
             SphereRadius = reader.ReadSingle();
             WorldRadius = reader.ReadSingle();
-            BoxMax = reader.ReadVector4(true);
-            BoxMin = reader.ReadVector4(true);
-            BoxCenter = reader.ReadVector4(true);
-            CentroidOffsetWorldSpace = reader.ReadVector4(true);
-            SphereCenter = reader.ReadVector4(true);
-            VolumeDistribution = reader.ReadVector4(true);
-            Margin = reader.ReadVector3(true);
+            BoxMax = reader.ReadVector4();
+            BoxMin = reader.ReadVector4();
+            BoxCenter = reader.ReadVector4();
+            CentroidOffsetWorldSpace = reader.ReadVector4();
+            SphereCenter = reader.ReadVector4();
+            VolumeDistribution = reader.ReadVector4();
+            Margin = reader.ReadVector3();
             RefCount = reader.ReadUInt32();
         }
 
@@ -169,7 +169,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Radius = reader.ReadVector3(true);
+            Radius = reader.ReadVector3();
             Unknown5 = reader.ReadUInt32();
             Material = reader.ReadStruct<Rsc6BoundMaterial>();
             _ = reader.ReadUInt32();
@@ -201,17 +201,18 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader); //phBound
-            CapsuleRadius = reader.ReadVector4(true);
-            CapsuleLength = reader.ReadVector4(true);
-            EndPointsWorldSpace0 = reader.ReadVector4(true);
-            EndPointsWorldSpace1 = reader.ReadVector4(true);
-            Axis = reader.ReadVector4(true);
+            CapsuleRadius = reader.ReadVector4();
+            CapsuleLength = reader.ReadVector4();
+            EndPointsWorldSpace0 = reader.ReadVector4();
+            EndPointsWorldSpace1 = reader.ReadVector4();
+            Axis = reader.ReadVector4();
             Material = reader.ReadStruct<Rsc6BoundMaterial>();
             Unknown_54h = reader.ReadUInt32();
             Unknown_58h = reader.ReadUInt32();
             Unknown_5Ch = reader.ReadUInt32();
 
             PartColour = Material.Type.Colour;
+            
             PartSize = new Vector3(CapsuleRadius.X, CapsuleLength.X, 0.0f);
 
             ComputeMass(ColliderType.Capsule, PartSize, 1.0f);
@@ -246,8 +247,8 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader); //phBoundPolyhedron
-            BoxSize = reader.ReadVector4(true);
-            Vertices = reader.ReadVector4Arr(8, true);
+            BoxSize = reader.ReadVector4();
+            Vertices = reader.ReadVector4Arr(8);
             Unknown_170h = reader.ReadUInt32Arr(48);
             Material = reader.ReadStruct<Rsc6BoundMaterial>();
             Unknown_154h = reader.ReadUInt32();
@@ -475,8 +476,8 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(Rsc6DataReader reader)
         {
             Polygons = reader.ReadStruct<Rsc6BoundBoxPolygon>();
-            CurvatureCenter = reader.ReadVector4(true);
-            UnitNormal = reader.ReadVector4(true);
+            CurvatureCenter = reader.ReadVector4();
+            UnitNormal = reader.ReadVector4();
             OuterRadius = reader.ReadSingle();
             InnerRadius = reader.ReadSingle();
             MinCosine = reader.ReadSingle();
@@ -525,8 +526,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            CurvatureCenter = reader.ReadVector4(true);
-            PlaneNormal = reader.ReadVector4(true);
+            CurvatureCenter = reader.ReadVector4();
+            PlaneNormal = reader.ReadVector4();
             Radius = reader.ReadSingle();
             VertexIndices = reader.ReadArray<int>(2);
             UnusedInt = reader.ReadUInt32();
@@ -574,8 +575,8 @@ namespace CodeX.Games.RDR1.RSC6
             VertexColoursPtr = reader.ReadUInt32();
             VerticesWorldSpace = reader.ReadUInt32();
             PolygonsPtr = reader.ReadUInt32();
-            Quantum = reader.ReadVector4(true);
-            CenterGeom = reader.ReadVector4(true);
+            Quantum = reader.ReadVector4();
+            CenterGeom = reader.ReadVector4();
             VerticesPtr = reader.ReadUInt32();
             SmallPolygonsWorldSpace = reader.ReadUInt32();
             UseActiveComponents = reader.ReadBoolean();
@@ -616,19 +617,16 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 144;
         public uint ChildrenPtr { get; set; } //m_Bounds
-        public uint ChildrenTransforms1Ptr { get; set; } //m_CurrentMatrices
-        public uint ChildrenTransforms2Ptr { get; set; } //m_LastMatrices
-        public uint ChildrenBoundingBoxesPtr { get; set; } //m_LocalBoxMinMaxs
+        public Rsc6RawArr<Matrix4x4> CurrentMatrices { get; set; } //m_CurrentMatrices
+        public Rsc6RawArr<Matrix4x4> LastMatrices { get; set; } //m_LastMatrices
+        public Rsc6RawArr<BoundingBox4> LocalBoxMinMaxs { get; set; } //m_LocalBoxMinMaxs
         public uint ChildrenFlags { get; set; } //m_OwnedTypeAndIncludeFlags
-        public Rsc6CustomArr<Rsc6BoundFlags> ChildrenFlags2 { get; set; } //m_Childs, same pointer as m_OwnedTypeAndIncludeFlags but with count/capacity
+        public Rsc6ManagedArr<Rsc6BoundFlags> Childs { get; set; } //m_Childs, same pointer as m_OwnedTypeAndIncludeFlags but with count/capacity
         public bool ContainsBVH { get; set; } //m_ContainsBVH
         public byte Pad { get; set; } //pad, always 0
         public ushort NumActiveBounds { get; set; } //m_NumActiveBounds
 
         public Rsc6Bounds[] Children { get; set; }
-        public Matrix4x4[] ChildrenTransforms1 { get; set; }
-        public Matrix4x4[] ChildrenTransforms2 { get; set; }
-        public BoundingBox4[] ChildrenBoundingBoxes { get; set; }
 
         public Rsc6BoundComposite() : base(Rsc6BoundsType.Composite)
         {
@@ -638,33 +636,33 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Read(reader); //phBounds
             ChildrenPtr = reader.ReadUInt32();
-            ChildrenTransforms1Ptr = reader.ReadUInt32();
-            ChildrenTransforms2Ptr = reader.ReadUInt32();
-            ChildrenBoundingBoxesPtr = reader.ReadUInt32();
+            CurrentMatrices = reader.ReadRawArrPtr<Matrix4x4>();
+            LastMatrices = reader.ReadRawArrPtr<Matrix4x4>();
+            LocalBoxMinMaxs = reader.ReadRawArrPtr<BoundingBox4>();
             ChildrenFlags = reader.ReadUInt32();
-            ChildrenFlags2 = reader.ReadArr<Rsc6BoundFlags>();
+            Childs = reader.ReadArr<Rsc6BoundFlags>();
             ContainsBVH = reader.ReadBoolean();
             Pad = reader.ReadByte();
             NumActiveBounds = reader.ReadUInt16();
 
-            var childptrs = reader.ReadArray<uint>(NumActiveBounds, ChildrenPtr);
-            ChildrenTransforms1 = reader.ReadArray<Matrix4x4>(NumActiveBounds, ChildrenTransforms1Ptr);
-            ChildrenTransforms2 = reader.ReadArray<Matrix4x4>(NumActiveBounds, ChildrenTransforms2Ptr);
-            ChildrenBoundingBoxes = reader.ReadArray<BoundingBox4>(NumActiveBounds, ChildrenBoundingBoxesPtr);
+            var childPtrs = reader.ReadArray<uint>(NumActiveBounds, ChildrenPtr);
+            CurrentMatrices = reader.ReadRawArrItems(CurrentMatrices, NumActiveBounds);
+            LastMatrices = reader.ReadRawArrItems(LastMatrices, NumActiveBounds);
+            LocalBoxMinMaxs = reader.ReadRawArrItems(LocalBoxMinMaxs, NumActiveBounds);
 
-            if (childptrs != null)
+            if (childPtrs != null)
             {
-                var cc = Math.Min(NumActiveBounds, childptrs.Length);
-                Children = new Rsc6Bounds[cc];
-                for (int i = 0; i < cc; i++)
+                var numBounds = Math.Min(NumActiveBounds, childPtrs.Length);
+                Children = new Rsc6Bounds[numBounds];
+                for (int i = 0; i < numBounds; i++)
                 {
-                    Children[i] = reader.ReadBlock(childptrs[i], Create);
+                    Children[i] = reader.ReadBlock(childPtrs[i], Create);
                     if (Children[i] != null)
                     {
                         Children[i].Name = "Child" + i.ToString();
-                        if ((ChildrenTransforms1 != null) && (i < ChildrenTransforms1.Length))
+                        if ((CurrentMatrices.Items != null) && (i < CurrentMatrices.Items.Length))
                         {
-                            var m = new Matrix3x4(ChildrenTransforms1[i]);
+                            var m = new Matrix3x4(CurrentMatrices[i]);
                             m.Translation = new Vector3(m.Translation.Z, m.Translation.X, m.Translation.Y);
                             m.Orientation = new Quaternion(m.Orientation.Z, m.Orientation.X, m.Orientation.Y, m.Orientation.W);
 
@@ -700,11 +698,11 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Nodes = reader.ReadArr<Rsc6BoundGeometryBVHNode>(true);
             Depth = reader.ReadUInt32();
-            BoundingBoxMin = reader.ReadVector4(true);
-            BoundingBoxMax = reader.ReadVector4(true);
-            BoundingBoxCenter = reader.ReadVector4(true);
-            BVHQuantumInverse = reader.ReadVector4(true);
-            BVHQuantum = reader.ReadVector4(true);
+            BoundingBoxMin = reader.ReadVector4();
+            BoundingBoxMax = reader.ReadVector4();
+            BoundingBoxCenter = reader.ReadVector4();
+            BVHQuantumInverse = reader.ReadVector4();
+            BVHQuantum = reader.ReadVector4();
             Trees = reader.ReadArr<Rsc6BoundGeometryBVHTree>();
         }
 

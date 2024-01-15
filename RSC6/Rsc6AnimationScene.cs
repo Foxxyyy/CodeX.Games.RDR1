@@ -10,7 +10,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 12;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public Rsc6CustomArr<Rsc6ClipDictionary> ClipDictionary { get; set; } //m_ClipDict
+        public Rsc6ManagedArr<Rsc6ClipDictionary> ClipDictionary { get; set; } //m_ClipDict
         public uint Unknown_10h { get; set; } = 0x00CDCDCD;
         public Rsc6Ptr<Rsc6Clip> ClipMap { get; set; } //m_ASTtoClipMap
         public uint Unknown_18h { get; set; } = 0xCDCDCD00;
