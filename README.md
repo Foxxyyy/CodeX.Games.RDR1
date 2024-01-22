@@ -1,4 +1,4 @@
-# CodeX (022)
+# CodeX (023)
 
 Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potentially PS4/PS5)
 
@@ -33,8 +33,7 @@ Neos
 
 # Random screenshots
 ![Screenshot](Files/Properties/codex_explorer.png)
-![Screenshot](Files/Properties/codex_game_selector.png)
 ![Screenshot](Files/Properties/codex_scene_preview.png)
-![Screenshot](Files/Properties/map_viewer_1.png)
-![Screenshot](Files/Properties/map_viewer_2.png)
-![Screenshot](Files/Properties/model_viewer.png)
+![Screenshot](Files/Properties/map_viewer.png)
+![Screenshot](Files/Properties/model_viewer_1.png)
+![Screenshot](Files/Properties/model_viewer_2.png)

@@ -10,10 +10,8 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6SectorInfo StreamingItems;
-        public string Name;
         public JenkHash Hash;
-        public BoundingBox BoundingBox;
-        public BoundingBox StreamingBox;
+        public string Name;
 
         public WsiFile(Rpf6FileEntry e)
         {

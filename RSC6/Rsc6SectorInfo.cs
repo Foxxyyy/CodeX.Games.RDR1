@@ -185,7 +185,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1DAh = reader.ReadUInt32();
             Unknown_1DEh = reader.ReadUInt16();
 
-            var scale = new Vector3(600.0f); //LOD distance for the terrain
+            var scale = new Vector3(500.0f);
             Bounds = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
             StreamingBox = new BoundingBox(BoundMin.XYZ() - scale, BoundMax.XYZ() + scale);
 

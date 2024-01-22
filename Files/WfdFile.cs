@@ -1,5 +1,4 @@
 ﻿using CodeX.Core.Engine;
-using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
@@ -44,8 +43,8 @@ namespace CodeX.Games.RDR1.Files
             if (Drawable != null)
             {
                 var d = Drawable.Drawables.Item;
-                d.UpdateBounds();
-                d.BoundingSphere = new BoundingSphere(d.BoundingBox.Center, d.BoundingBox.Size.Length() * 0.5f);
+
+                Rpf6Crypto.ResizeBoundsForPeds(d, false);
 
                 Pieces.Add(e.ShortNameHash, d);
                 Piece = d;

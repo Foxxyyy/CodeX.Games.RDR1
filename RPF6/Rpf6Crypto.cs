@@ -10,6 +10,8 @@ using System.Numerics;
 using System.Xml;
 using CodeX.Core.Numerics;
 using System.Linq;
+using CodeX.Core.Engine;
+using CodeX.Games.RDR1.RSC6;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -403,7 +405,8 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        //Converts a floating point number into a fixed point number, it's simply multiplying the float by a constant value and discarding the extra bits
+        //Converts a floating point number into a fixed point number
+        //It's simply multiplying the float by a constant value and discarding the extra bits
         public static uint PackFixedPoint(float value, uint size, uint shift) //Vector3::Pack1010102
         {
             float scale = ((1u << (int)(size - 1)) - 1);
@@ -419,6 +422,29 @@ namespace CodeX.Games.RDR1.RPF6
                 return new Colour(red, green, blue);
             }
             return Colour.Red;
+        }
+
+        //A hacky function to adjust the bounds correctly for peds (not animals, trees, props, etc)
+        //They seem to always be elevated, or one of the bound meshes consistently has its Z-axis value set to 0.0f
+        public static void ResizeBoundsForPeds(Piece piece, bool fragment, bool prefab = false)
+        {
+            if (piece == null) return;
+            var min = fragment ? ((Rsc6FragDrawable)piece).BoundingBoxMin : ((Rsc6Drawable)piece).BoundingBoxMin;
+            var max = fragment ? ((Rsc6FragDrawable)piece).BoundingBoxMax : ((Rsc6Drawable)piece).BoundingBoxMax;
+
+            if (prefab)
+            {
+                min = new Vector3(min.X, min.Y, min.Z - 2.0f);
+                max = new Vector3(max.X, max.Y, max.Z - 2.0f);
+            }
+            else
+            {
+                min = new Vector3(min.X, min.Y, min.Z + 1.0f);
+                max = new Vector3(max.X, max.Y, max.Z + 1.0f);
+            }
+
+            piece.BoundingBox = new BoundingBox(min, max);
+            piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
         }
     }
 }

@@ -9,7 +9,7 @@ using System.Xml;
 
 namespace CodeX.Games.RDR1.Files
 {
-    class WtdFile : TexturePack
+    public class WtdFile : TexturePack
     {
         public Rsc6TextureDictionary TextureDictionary;
         public Dictionary<uint, Rsc6Texture> Dict { get; set; }

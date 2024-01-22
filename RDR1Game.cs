@@ -45,6 +45,11 @@ namespace CodeX.Games.RDR1
             return new Rpf6FileManager(this);
         }
 
+        public override PrefabManager CreatePrefabManager()
+        {
+            return new RDR1Prefabs(this);
+        }
+
         public override Level GetMapLevel()
         {
             return new RDR1Map(this);
@@ -52,7 +57,7 @@ namespace CodeX.Games.RDR1
 
         public override Setting[] GetMapSettings()
         {
-            return new[] { RDR1Map.StartPositionSetting, RDR1Map.OnlyTerrainSetting, RDR1Map.UseLowestLODSetting };
+            return new[] { RDR1Map.StartPositionSetting, RDR1Map.OnlyTerrainSetting };
         }
 
         private bool AutoDetectFolder(out Dictionary<string, string> matches)

@@ -8,7 +8,7 @@ using System.Numerics;
 
 namespace CodeX.Games.RDR1.Files
 {
-    class WftFile : PiecePack
+    public class WftFile : PiecePack
     {
         public Rsc6Fragment Fragment;
         public JenkHash Hash;
@@ -37,10 +37,11 @@ namespace CodeX.Games.RDR1.Files
             {
                 var d = Fragment.Drawable.Item;
                 var b = Fragment.Bounds.Item;
+                var ped = Fragment.Archetype1.Item?.TypeFlags == Rsc6ObjectTypeFlags.OBJ_SKINNED;
 
-                if (d.BoundingSphere.Center == Vector3.Zero)
+                if (d.IsSkinned() && (Fragment.HasFragLOD || ped))
                 {
-                    d.BoundingSphere = new BoundingSphere(d.BoundingBox.Center, d.BoundingBox.Size.Length() * 0.5f);
+                    Rpf6Crypto.ResizeBoundsForPeds(d, true);
                 }
 
                 Piece = d;

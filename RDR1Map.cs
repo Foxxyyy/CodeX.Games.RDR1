@@ -4,10 +4,8 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using SharpDX.Direct2D1.Effects;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Numerics;
 
@@ -16,6 +14,7 @@ namespace CodeX.Games.RDR1
     class RDR1Map : StreamingLevel<RDR1Game, RDR1MapFileCache>
     {
         public Rpf6FileManager FileManager;
+        public List<LevelBVHItem> MapNodes;
         public Dictionary<JenkHash, Rsc6SectorInfo> WsiFiles;
         public HashSet<Entity> WspFiles;
         public Dictionary<JenkHash, PiecePack> WvdTiles;
@@ -26,7 +25,6 @@ namespace CodeX.Games.RDR1
 
         public static Setting StartPositionSetting = Settings.Register("RDR1Map.Area", SettingType.String, "Blackwater", "Change position", false, false, GetAreas());
         public static Setting OnlyTerrainSetting = Settings.Register("RDR1Map.OnlyTerrain", SettingType.Bool, false);
-        public static Setting UseLowestLODSetting = Settings.Register("RDR1Map.LowLOD", SettingType.Bool, false, true);
         public Statistic NodeCountStat = Statistics.Register("RDR1Map.NodeCount", StatisticType.Counter);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
 
@@ -55,7 +53,7 @@ namespace CodeX.Games.RDR1
                 "Torquemada" => new Vector3(3456.4f, -370.5f, 80.7f),
                 "Tumbleweed" => new Vector3(2950.4f, -3941.5f, 32.6f),
                 "Twin Rocks" => new Vector3(2141.6f, -2430.9f, 28.0f),
-                _ => new Vector3(1315.5f, 735.2f, 80f), //Blackwater
+                _ => new Vector3(1234.6f, 736.2f, 84.7f), //Blackwater by default
             };
 
             Game = game;
@@ -66,14 +64,16 @@ namespace CodeX.Games.RDR1
 
         protected override bool StreamingInit()
         {
+            Core.Engine.Console.Write("RDR1Map", "Initialising " + Game.Name + " terrain...");
             FileManager = Game.GetFileManager() as Rpf6FileManager;
+
             if (FileManager.Init() == false)
             {
-                throw new Exception("Failed to initialize RDR1");
+                throw new Exception("Failed to initialize RDR1.");
             }
+
             FileManager.Clear();
             FileManager.InitArchives();
-            Core.Engine.Console.Write("RDR1Map", "Initialising " + FileManager.Game.Name + " terrain...");
 
             var dfm = FileManager.DataFileMgr;
             Cache = new RDR1MapFileCache(FileManager);
@@ -84,8 +84,21 @@ namespace CodeX.Games.RDR1
             MainStreamingEntry = dfm.WsiFiles.Values.First(item => item.Name == "swall.wsi"); //swAll
             TerrainStreamingEntry = dfm.WsiFiles.Values.First(item => item.Name == "swterrain.wsi"); //swTerrain
 
+            MapNodes = new List<LevelBVHItem>();
+            for (int i = 0; i < MainStreamingEntry.StreamingItems.ItemMapChilds.Count; i++)
+            {
+                var child = MainStreamingEntry.StreamingItems.ItemMapChilds[i];
+                if (child.SectorName.StartsWith("cs") || child.SectorName.StartsWith("sw") || child.SectorName.StartsWith("dlc"))
+                    continue;
+
+                var node = new RDR1MapNode(child);
+                MapNodes.Add(node);
+            }
+
+            BVH = new LevelBVH();
+            BVH.Init(MapNodes);
+
             LoadTiles(dfm);
-            //LoadTrees(dfm);
 
             Core.Engine.Console.Write("RDR1Map", FileManager.Game.Name + " terrain initialised.");
             if (!OnlyTerrainSetting.GetBool())
@@ -109,78 +122,38 @@ namespace CodeX.Games.RDR1
                 || entry.Name.Contains("lod");
         }
 
-        private bool ShouldSkipLOD(GameArchiveDirectory parent)
-        {
-            return (UseLowestLODSetting.GetBool() ? parent.Name.StartsWith("resource_0") : parent.Name.StartsWith("resource_1"))
-                || parent.Name.StartsWith("resource_2")
-                || parent.Name.StartsWith("resource_3")
-                || parent.Name.StartsWith("resource_4");
-        }
-
         private bool IsObjectProp(string obj)
         {
             return obj.Contains("p_gen") || (obj.StartsWith("p_") && obj.EndsWith("x"));
         }
 
-        private void LoadSubsectors(Rpf6DataFileMgr dfm, WsiFile globalSector)
+        private void LoadSubsectors(Rpf6DataFileMgr dfm, LevelBVHItem[] mapNodes)
         {
-            for (int i = 0; i < globalSector.StreamingItems.ItemMapChilds.Count; i++)
+            WsiFiles.Clear();
+            for (int i = 0; i < mapNodes.Length; i++)
             {
-                var child = globalSector.StreamingItems.ItemMapChilds[i];
-                if (child.SectorName.StartsWith("cs") || child.SectorName.StartsWith("sw") || child.SectorName.StartsWith("dlc"))
+                var mc = ((RDR1MapNode)mapNodes[i]).MapNode;
+                if (mc.SectorName.StartsWith("cs") || mc.SectorName.StartsWith("sw") || mc.SectorName.StartsWith("dlc"))
                     continue;
 
-                var wsiConverted = dfm.WsiFiles.Values.First(item => item.Name.Contains(child.SectorName.ToLowerInvariant()));
+                var wsiConverted = dfm.WsiFiles.Values.First(item => item.Name.Contains(mc.SectorName.ToLowerInvariant()));
                 if (wsiConverted == null)
                     continue;
 
-                if (child.SectorBounds.Contains(StreamPosition) == ContainmentType.Contains)
+                var childEntry = dfm.WsiFiles.Values.First(item => item.Name == (mc.SectorName + ".wsi").ToLower());
+                for (int f = 0; f < childEntry.StreamingItems.ItemChilds.Item?.Sectors.Count; f++)
                 {
-                    if (WsiFiles.ContainsValue(wsiConverted.StreamingItems))
-                    {
+                    var sectorItem = childEntry.StreamingItems.ItemChilds.Item?.Sectors[f];
+                    var sectorItemName = sectorItem.Name.Value.ToLower();
+
+                    if (sectorItemName != childEntry.Name.Replace(".wsi", "") || sectorItemName.Contains("flags") || sectorItemName.Contains("props") || sectorItemName.StartsWith("mp_"))
                         continue;
-                    }
 
-                    var childEntry = dfm.WsiFiles.Values.First(item => item.Name == (child.SectorName + ".wsi").ToLower());
-                    if (globalSector.Name == "swall.wsi")
-                    {
-                        for (int f = 0; f < childEntry.StreamingItems.ItemChilds.Item?.Sectors.Count; f++)
-                        {
-                            var sectorItem = childEntry.StreamingItems.ItemChilds.Item?.Sectors[f];
-                            var sectorItemName = sectorItem.Name.Value.ToLower();
+                    var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
+                    if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
+                        continue;
 
-                            if (sectorItemName != childEntry.Name.Replace(".wsi", "") || sectorItemName.Contains("flags") || sectorItemName.Contains("props") || sectorItemName.StartsWith("mp_"))
-                                continue;
-
-                            var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
-                            if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
-                                continue;
-
-                            wsiConverted.BoundingBox = child.SectorBounds;
-                            wsiConverted.StreamingBox = child.SectorBounds;
-                            WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
-                        }
-                    }
-                    else
-                    {
-                        for (int f = 0; f < childEntry.StreamingItems.ChildPtrs.Items.Length; f++)
-                        {
-                            var sectorItem = childEntry.StreamingItems.ChildPtrs.Items[f];
-                            var sectorItemName = sectorItem.Name.Value.ToLower() + "_non-terrain";
-
-                            var fe = dfm.TryGetStreamEntry(JenkHash.GenHash(sectorItemName), Rpf6FileExt.wvd);
-                            if (fe == null || CurNodes.ContainsKey(fe.ShortNameHash))
-                                continue;
-
-                            wsiConverted.BoundingBox = child.SectorBounds;
-                            wsiConverted.StreamingBox = child.SectorBounds;
-                            WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
-                        }
-                    }
-                }
-                else if (WsiFiles.ContainsValue(wsiConverted.StreamingItems))
-                {
-                    Rpf6Crypto.RemoveDictValue(WsiFiles, wsiConverted.StreamingItems);
+                    WsiFiles.Add(fe.NameHash, wsiConverted.StreamingItems);
                 }
             }
         }
@@ -193,7 +166,7 @@ namespace CodeX.Games.RDR1
             foreach (var file in files)
             {
                 var entry = file.Value;
-                if (!file.Key.Str.StartsWith("tile_") || ShouldSkipObject(entry) || ShouldSkipLOD(entry.Parent))
+                if (!entry.Name.StartsWith("tile_") || ShouldSkipObject(entry))
                     continue;
 
                 var piece = Cache.GetPiece(file.Key.Str, file.Key);
@@ -252,57 +225,61 @@ namespace CodeX.Games.RDR1
 
         protected override bool StreamingUpdate()
         {
+            if (StreamNodes == null) return false;
+
             var ents = StreamEntities.CurrentSet;
             var spos = StreamPosition;
             var nodes = StreamNodesPrev;
             StreamNodesPrev = StreamNodes;
-
             nodes.Clear();
             CurNodes.Clear();
-            ents.Clear();
 
-            LoadSubsectors(FileManager.DataFileMgr, MainStreamingEntry);
-            LoadSubsectors(FileManager.DataFileMgr, TerrainStreamingEntry);
+            var curNodes = BVH.GetItems(ref spos);
+            LoadSubsectors(FileManager.DataFileMgr, curNodes.ToArray());
 
             foreach (var kvp in WsiFiles)
             {
                 var wsi = kvp.Value;
-                if (wsi.StreamingBox.Contains(ref spos) == ContainmentType.Contains)
+                nodes[kvp.Key] = wsi;
+            }
+
+            foreach (var tile in WvdTiles)
+            {
+                var v = tile.Value;
+                var joinedTiles = v.Pieces.Values;
+                var highLod = joinedTiles.Count == 4;
+                var lowLod = joinedTiles.Count < 4;
+                var tileCenter = Vector3.Zero;
+                var count = 0;
+
+                foreach (var bb in joinedTiles)
                 {
-                    CurNodes[kvp.Key] = wsi;
+                    if (bb != null)
+                    {
+                        tileCenter += bb.BoundingBox.Center;
+                        count++;
+                    }
                 }
 
-                foreach (var tile in WvdTiles)
-                {
-                    var v = tile.Value;
-                    var joinedTiles = v.Pieces.Values;
-                    var averageX = joinedTiles.Select(bb => bb.BoundingBox.Center.X).Average();
-                    var averageY = joinedTiles.Select(bb => bb.BoundingBox.Center.Y).Average();
-                    var averageZ = joinedTiles.Select(bb => bb.BoundingBox.Center.Z).Average();
+                var listed = ents.Any(i => i.Name == v.Piece.Name);
+                var distance = Vector3.Distance(spos, tileCenter / count);
 
-                    if ((wsi.StreamingBox.Contains(new Vector3(averageX, averageY, averageZ)) == ContainmentType.Contains) && !ents.Any(i => i.Name == tile.Key.Str))
-                    {
-                        foreach (var piece in v.Pieces)
-                        {
-                            if (piece.Value == null) continue;
-                            var entity = new Entity
-                            {
-                                Piece = piece.Value,
-                                StreamingDistance = 1000.0f, //mmh
-                                BoundingSphere = piece.Value.BoundingSphere,
-                                BoundingBox = piece.Value.BoundingBox,
-                                Position = piece.Value.BoundingBox.Center,
-                                Name = tile.Key.Str,
-                            };
-                            ents.Add(entity);
-                        }
-                    }
+                if (!listed)
+                {
+                    if ((distance < 1300.0f) && highLod)
+                        CreateMapEntity(v, ents, v.Piece.Name, 1300.0f);
+                    else if (distance >= 1100.0f && lowLod)
+                        CreateMapEntity(v, ents, v.Piece.Name, 9999.0f);
+                }
+                else
+                {
+                    ents.RemoveWhere(i => i.Name == tile.Key.Str);
                 }
             }
 
             if (!OnlyTerrainSetting.GetBool())
             {
-                foreach (var kvp in CurNodes)
+                foreach (var kvp in nodes)
                 {
                     var node = kvp.Value;
                     if (node.ItemChilds.Item != null) //swAll
@@ -310,43 +287,27 @@ namespace CodeX.Games.RDR1
                         node.RootEntities ??= new List<WsiEntity>();
                         node.RootEntities.Clear();
 
+                        //Sector childs and lights
                         for (int i = 0; i < node.ItemChilds.Item.Sectors.Count; i++)
                         {
                             var child = node.ItemChilds.Item.Sectors[i];
                             var lights = child.PlacedLightsGroup.Item;
+                            var bbCenter = child.Bounds.Center;
 
-                            foreach (var ent in child.Entities.Items) //Sectors childs and props
+                            if (!(child.StreamingBox.Contains(ref spos) == ContainmentType.Contains)) continue;
+                            foreach (var ent in child.Entities.Items)
                             {
                                 var childEntity = new WsiEntity(ent);
                                 node.RootEntities.Add(childEntity);
                             }
 
-                            if (lights != null) //Lights
+                            if (lights != null)
                             {
                                 foreach (var light in lights.Lights.Items)
                                 {
                                     var lightEntity = new WsiEntity(light, lights.Name.Value);
                                     node.RootEntities.Add(lightEntity);
                                 }
-                            }
-
-                            var entity = new WsiEntity(child.Name.Value.ToLower());
-                            if (!node.RootEntities.Any(e => e.Name == entity.Name))
-                            {
-                                node.RootEntities.Add(entity);
-                            }
-                        }
-                    }
-                    else if (node.ChildPtrs.Items != null) //swTerrain childs
-                    {
-                        node.RootEntities ??= new List<WsiEntity>();
-                        for (int i = 0; i < node.ChildPtrs.Items.Length; i++)
-                        {
-                            var child = node.ChildPtrs.Items[i];
-                            foreach (var ent in child.Entities.Items) //Sectors childs and props
-                            {
-                                var childEntity = new WsiEntity(ent);
-                                node.RootEntities.Add(childEntity);
                             }
 
                             var entity = new WsiEntity(child.Name.Value.ToLower());
@@ -389,10 +350,8 @@ namespace CodeX.Games.RDR1
 
             foreach (var ent in ents) //Make sure all assets are loaded
             {
-                var objEntity = ent as WsiEntity;
                 var upd = ent.Piece == null;
-
-                if ((ent.Position == Vector3.Zero || upd) && objEntity != null) //Buildings, props and lights
+                if ((ent.Position == Vector3.Zero || upd) && ent is WsiEntity objEntity) //Buildings, props and lights
                 {
                     JenkHash name = objEntity.ModelName;
                     ent.Piece = Cache.GetPiece(name.Str, name, IsObjectProp(name.Str)).Item1;
@@ -412,19 +371,17 @@ namespace CodeX.Games.RDR1
                     var parent = ents.FirstOrDefault(e => e.Position == objEntity.ParentPosition);
                     if (parent != null && parent.Position != Vector3.Zero && parent.Piece.Name.StartsWith("p_gen"))
                     {
+                        var scale = new Vector3(500.0f);
                         ent.SetPiece(parent.Piece);
-                        ent.BoundingBox = parent.BoundingBox;
-                        ent.BoundingSphere = parent.BoundingSphere;
+                        ent.BoundingBox = new BoundingBox(parent.BoundingBox.Minimum - scale, parent.BoundingBox.Maximum + scale);
+                        ent.BoundingSphere = new BoundingSphere(ent.BoundingBox.Center, ent.BoundingBox.Size.Length() * 0.5f);
                     }
                 }
             }
-            //ents.UnionWith(WspFiles);
 
             NodeCountStat.SetCounter(nodes.Count);
             EntityCountStat.SetCounter(ents.Count);
             StreamNodes = nodes;
-            //StreamUpdateRequest = true;
-            //StreamUpdate = true;
 
             return true;
         }
@@ -432,6 +389,8 @@ namespace CodeX.Games.RDR1
         public override void GetEntities(SceneViewProjection proj)
         {
             proj.Clear();
+
+            base.GetEntities(proj);
             var isScreen = proj.View.Type == SceneViewType.Screen;
             var isShadow = proj.View.Type == SceneViewType.ShadowMap;
             var ents = proj.View.ViewEntities ?? StreamEntities.ActiveSet;
@@ -463,13 +422,57 @@ namespace CodeX.Games.RDR1
                 UpdateStreamingPosition(proj.Params.Position);
             }
         }
+
+        private void CreateMapEntity(PiecePack pack, HashSet<Entity> ents, string name, float lodDist)
+        {
+            foreach (var piece in pack.Pieces)
+            {
+                if (piece.Value == null) continue;
+                var entity = new Entity
+                {
+                    Piece = piece.Value,
+                    LodLevel = (lodDist > 2000.0f) ? 1 : 0,
+                    StreamingDistance = lodDist, //mmh
+                    BoundingSphere = piece.Value.BoundingSphere,
+                    BoundingBox = piece.Value.BoundingBox,
+                    Position = piece.Value.BoundingBox.Center,
+                    Name = name,
+                };
+                ents.Add(entity);
+            }
+        }
+    }
+
+    public class RDR1MapNode : LevelBVHItem
+    {
+        public Rsc6SectorChild MapNode;
+        public JenkHash NameHash;
+
+        public RDR1MapNode(Rsc6SectorChild mapChild)
+        {
+            MapNode = mapChild;
+            NameHash = new(mapChild.SectorName.ToLower());
+            StreamingBox = mapChild.SectorBounds;
+            BoundingBox = mapChild.SectorBounds;
+        }
+
+        public override string ToString()
+        {
+            return NameHash.ToString();
+        }
     }
 
     public class RDR1MapFileCache : StreamingCache
     {
         public Rpf6FileManager FileManager;
-        private Dictionary<Rpf6FileExt, Dictionary<JenkHash, StreamingCacheEntry>> Cache = new Dictionary<Rpf6FileExt, Dictionary<JenkHash, StreamingCacheEntry>>();
-        
+        private readonly Dictionary<Rpf6FileExt, Dictionary<JenkHash, StreamingCacheEntry>> Cache = new();
+        private readonly List<JenkHash> RemoveItems = new();
+
+        public RDR1MapFileCache(Rpf6FileManager fman)
+        {
+            FileManager = fman;
+        }
+
         private Dictionary<JenkHash, StreamingCacheEntry> GetCache(Rpf6FileExt ext)
         {
             if (!Cache.TryGetValue(ext, out Dictionary<JenkHash, StreamingCacheEntry> cache))
@@ -480,45 +483,12 @@ namespace CodeX.Games.RDR1
             return cache;
         }
 
-        private List<JenkHash> RemoveItems = new List<JenkHash>();
-
-        public RDR1MapFileCache(Rpf6FileManager fman)
-        {
-            FileManager = fman;
-        }
-
         public override void BeginFrame()
         {
             base.BeginFrame();
             foreach (var cache in Cache)
             {
-                RemoveItems.Clear();
-                var dict = cache.Value;
-
-                foreach (var kvp in dict)
-                {
-                    var item = kvp.Value;
-                    if ((CurrentFrame - item.LastUseFrame) > CacheFrameCount)
-                    {
-                        RemoveItems.Add(kvp.Key);
-                    }
-                }
-
-                foreach (var remitem in RemoveItems)
-                {
-                    var dr = dict[remitem];
-                    dr.Object = null;
-                    dict.Remove(remitem);
-                }
-            }
-        }
-
-        public void RemoveFromCache(JenkHash hash)
-        {
-            foreach (var cache in Cache)
-            {
-                var dict = cache.Value;
-                dict.Remove(hash);
+                RemoveOldItems(cache.Value, RemoveItems);
             }
         }
 
@@ -534,8 +504,7 @@ namespace CodeX.Games.RDR1
                     Core.Engine.Console.Write("RDR1Map", entry.Name);
                     try
                     {
-                        var piecePack = FileManager.LoadPiecePack(entry);
-                        FileManager.LoadDependencies(piecePack);
+                        var piecePack = FileManager.LoadPiecePack(entry, null, true);
                         cacheItem.Object = piecePack;
                     }
                     catch { }
@@ -552,19 +521,14 @@ namespace CodeX.Games.RDR1
                 return (null, null);
 
             Piece piece = null;
-            var hash = new JenkHash(fragment ? RemoveFileExtension(fileContainer, ".wft") : RemoveFileExtension(fileContainer, ".wvd"));
-            var pack = GetPiecePack(hash, fragment ? Rpf6FileExt.wft : Rpf6FileExt.wvd);
+            //var hash = new JenkHash(fragment ? RemoveFileExtension(fileContainer, ".wft") : RemoveFileExtension(fileContainer, ".wvd"));
+            var pack = GetPiecePack(new JenkHash(fileContainer), fragment ? Rpf6FileExt.wft : Rpf6FileExt.wvd);
 
             if (pack?.Pieces != null)
             {
                 pack.Pieces.TryGetValue(entityHash, out piece);
             }
             return (piece, pack);
-        }
-
-        private string RemoveFileExtension(string fileName, string extension)
-        {
-            return fileName.EndsWith(extension) ? fileName.Replace(extension, "") : fileName;
         }
     }
 }

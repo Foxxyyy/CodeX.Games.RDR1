@@ -407,7 +407,10 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
             VertexData = numArray;
-            Indices = IndexBuffer.Item?.Indices.Items;
+            if (PrimitiveType == 3) //Triangles
+                Indices = IndexBuffer.Item?.Indices.Items;
+            else //Triangles strips
+                Indices = ConvertStripToTriangles(IndexBuffer.Item?.Indices.Items).ToArray();
             BoneIds = new Rsc6RawArr<ushort>();
         }
 
@@ -523,7 +526,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                     if (string.IsNullOrEmpty(name))
                         continue;
-                    if (name == "Binormal") //Skipping some elements
+                    if (name == "Binormal" || (name == "Tangent" && elem.SemanticIndex > 0)) //Skipping some elements
                         continue;
 
                     if (name == "Colour" || name == "TexCoord")
@@ -557,6 +560,29 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        public List<ushort> ConvertStripToTriangles(ushort[] stripIndices)
+        {
+            List<ushort> triangleIndices = new List<ushort>();
+            for (int i = 2; i < stripIndices.Length; i++)
+            {
+                if (i % 2 == 0)
+                {
+                    //Even indices: Add vertices in clockwise order
+                    triangleIndices.Add(stripIndices[i - 2]);
+                    triangleIndices.Add(stripIndices[i - 1]);
+                    triangleIndices.Add(stripIndices[i]);
+                }
+                else
+                {
+                    //Odd indices: Add vertices in counterclockwise order
+                    triangleIndices.Add(stripIndices[i - 1]);
+                    triangleIndices.Add(stripIndices[i - 2]);
+                    triangleIndices.Add(stripIndices[i]);
+                }
+            }
+            return triangleIndices;
+        }
+
         public bool AreTexcoordsNormalizable()
         {
             return VertexBuffer.Item.Layout.Item.Flags == 49369;
@@ -586,7 +612,7 @@ namespace CodeX.Games.RDR1.RSC6
                 var elemsize = VertexElementFormats.GetSizeInBytes(elem.Format);
                 var name = TranslateToSollumz(elem.SemanticName);
 
-                if (name == "Binormal")
+                if (name == "Binormal" || (name == "Tangent" && elem.SemanticIndex > 0))
                 {
                     elemoffset += elemsize;
                     continue;
@@ -754,13 +780,17 @@ namespace CodeX.Games.RDR1.RSC6
                         ShaderInputs.SetUInt32(0x0188ECE8, 1u);  //"DecalMode"
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
+                    case 0xB71272EA: //rdr2_flattenterrain
+                        ShaderInputs.SetFloat(0xDF918855, 0.0f); //BumpScale
+                        Textures[1] = null;
+                        break;
                 }
 
                 switch (bucket)
                 {
                     default: throw new Exception("Unknown RenderBucket");
                     case 0: ShaderBucket = ShaderBucket.Solid; break;  //Opaque
-                    case 1: ShaderBucket = ShaderBucket.SolidB; break; //Double-sided opaque
+                    case 1: ShaderBucket = ShaderBucket.Solid; break; //Double-sided opaque
                     case 2: ShaderBucket = ShaderBucket.Alpha1; break; //Hair
                     case 3: ShaderBucket = ShaderBucket.Alpha1; break; //AlphaMask
                     case 4: ShaderBucket = ShaderBucket.Translucency; break; //Water
@@ -775,16 +805,14 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
             Textures = new Texture[2];
 
-            var sfresnel = 0.96f;
-            var sintensitymult = 0.2f;
             var sfalloffmult = 35.0f;
-
             for (int p = 0; p < parms.Length; p++)
             {
                 var parm = parms[p];
@@ -801,7 +829,7 @@ namespace CodeX.Games.RDR1.RSC6
                                 break;
                             case 0x46B7C64F: //bumpsampler
                             case 0x8AC11CB0: //normalsampler
-                                //Textures[1] = tex;
+                                Textures[1] = tex;
                                 break;
                         }
                     }
@@ -810,14 +838,8 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (parm.Hash)
                     {
-                        case 0xf6712b81: //bumpiness
-                            //ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X); //"BumpScale"
-                            break;
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
-                            sfresnel = parm.Vector.Vector.X;
-                            break;
-                        case 0x484A5EBD: //specularcolorfactor eg 1.8
-                            sintensitymult = parm.Vector.Vector.X;
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X); //BumpScale
                             break;
                         case 0x166E0FD1: //specularfactor eg 30
                             sfalloffmult = parm.Vector.Vector.X;
@@ -825,9 +847,7 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                 }
             }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
             ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
-            ShaderInputs.SetFloat(0x92176B1A, 0.3f); //MeshSmoothness
         }
 
         private void SetupBlendTerrainShader(Rsc6ShaderFX s)
@@ -882,7 +902,7 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0xf6712b81://"bumpiness"
+                        case 0xf6712b81://bumpiness
                             //ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(prm.Vector.Vector.X)); //"BumpScales"
                             break;
                         case 0x66C79BD6: //megatilerepetitions, how many times, across the 0-1 of the UV channel map, do the tiles repeat
@@ -928,7 +948,7 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (prm.Hash)
                     {
-                        case 0x2B5170FD: //"texturesampler"
+                        case 0x2B5170FD: //texturesampler
                             Textures[0] = prm.Texture;
                             break;
                         case 0x0ED966D5: //terrainblendmap1
@@ -1193,7 +1213,8 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         geom.ShaderID = ((shaderMapping != null) && (i < shaderMapping.Length)) ? shaderMapping[i] : (ushort)0;
                         geom.AABB = (boundsData != null) ? ((boundsData.Length > 1) && ((i + 1) < boundsData.Length)) ? boundsData[i + 1] : boundsData[0] : new BoundingBox4();
-                        geom.BoundingBox = geom.AABB.ToBoundingBox();
+                        geom.BoundingBox = new BoundingBox(geom.AABB.Min.XYZ(), geom.AABB.Max.XYZ());
+                        geom.BoundingSphere = new BoundingSphere(geom.BoundingBox.Center, geom.BoundingBox.Size.Length() * 0.5f);
                     }
                 }
             }
@@ -1841,11 +1862,11 @@ namespace CodeX.Games.RDR1.RSC6
             if (LodVlow.Item != null) LodVlow.Item.LodDist = LodDistVlow;
 
             UpdateAllModels();
-            AssignShaders();
             SetSkeleton(SkeletonRef.Item);
+            AssignShaders();
             CreateTexturePack(reader.FileEntry);
 
-            BoundingBox = new BoundingBox(BoundingBoxMin, BoundingBoxMax);
+            UpdateBounds();
             BoundingSphere = new BoundingSphere(BoundingBox.Center, BoundingSphereRadius);
         }
 
@@ -1930,8 +1951,8 @@ namespace CodeX.Games.RDR1.RSC6
             };
 
             UpdateAllModels();
-            AssignShaders();
             SetSkeleton(SkeletonRef.Item);
+            AssignShaders();
         }
 
         public virtual void WriteXml(StringBuilder sb, int indent, string ddsfolder)
@@ -1997,6 +2018,15 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        public bool IsSkinned()
+        {
+            foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
+            {
+                if (model.SkinFlag == 1) return true;
+            }
+            return false;
+        }
+
         public void AssignShaders()
         {
             //Assign embedded textures to mesh for rendering
@@ -2029,7 +2059,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (AllModels != null)
             {
                 var bones = skel?.Bones;
-                foreach (Rsc6DrawableModel model in AllModels)
+                foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
                 {
                     var boneidx = model.MatrixIndex;
                     if ((model.SkinFlag == 0) && (bones != null) && (boneidx < bones.Length))
@@ -2083,7 +2113,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
-        public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9 for .wft or 14
+        public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9/11/14 for .wft
         public Rsc6ManagedArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
         public uint RefCount { get; set; } = 1; //m_RefCount
         public uint Signature { get; set; } = 2135087653; //m_Signature
@@ -2167,7 +2197,7 @@ namespace CodeX.Games.RDR1.RSC6
             BuildBoneTags();
 
             ///////////////////// Tests /////////////////
-            if ((Flags != 9 && Flags != 10 && Flags != 14) || Unknown6 != 0 || Unknown7 != 0)
+            if ((Flags != 9 && Flags != 10 && Flags != 11 && Flags != 14) || Unknown6 != 0 || Unknown7 != 0)
             {
                 throw new Exception($"Unknown values, flags : {Flags}");
             }

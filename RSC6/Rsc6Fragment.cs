@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    class Rsc6Fragment : Rsc6Block, MetaNode
+    public class Rsc6Fragment : Rsc6Block, MetaNode
     {
         /*
          * These will not do anything unless the game utilizes m_UnbrokenElasticity :

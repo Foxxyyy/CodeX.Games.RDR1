@@ -704,7 +704,7 @@ namespace CodeX.Games.RDR1.RPF6
 
                         foreach (string s in result)
                         {
-                            if (string.IsNullOrEmpty(s) || s.Contains(":"))
+                            if (string.IsNullOrEmpty(s) || s.Contains(':'))
                                 continue;
 
                             string child = s.Substring(s.StartsWith("$") ? 1 : 0, s.IndexOf(" ") - 1).ToLowerInvariant();
@@ -764,7 +764,7 @@ namespace CodeX.Games.RDR1.RPF6
                         string smic = s[s.LastIndexOf("smic_")..].ToLowerInvariant();
                         dfm.StreamEntries[Rpf6FileExt.wtd].TryGetValue(JenkHash.GenHash(smic), out Rpf6FileEntry smicFile);
 
-                        if (smicFile != null)
+                        if (smicFile != null && !smicFile.Name.Contains("blur"))
                         {
                             var r = LoadTexturePack(smicFile);
                             if (r == null)
@@ -995,6 +995,7 @@ namespace CodeX.Games.RDR1.RPF6
     public class Rpf6DataFileMgr
     {
         public Rpf6FileManager FileManager;
+        public List<Rpf6FileEntry> AllEntries;
         public Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>> StreamEntries;
         public Dictionary<JenkHash, WsiFile> WsiFiles;
         public Dictionary<JenkHash, WspFile> WspFiles;
@@ -1019,6 +1020,7 @@ namespace CodeX.Games.RDR1.RPF6
             if (StreamEntries != null)
                 return;
 
+            AllEntries = new List<Rpf6FileEntry>();
             StreamEntries = new Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>>();
             WsiFiles = new Dictionary<JenkHash, WsiFile>();
             WspFiles = new Dictionary<JenkHash, WspFile>();
@@ -1030,25 +1032,37 @@ namespace CodeX.Games.RDR1.RPF6
 
         private void LoadFiles()
         {
-            var lowLod = RDR1Map.UseLowestLODSetting.GetBool();
             foreach (var archive in FileManager.AllArchives)
             {
                 foreach (var file in archive.AllEntries)
                 {
                     if (file is not Rpf6FileEntry fe) continue;
-                    if (lowLod && fe.Parent.Name == "resource_0") continue;
-                    if (!lowLod && fe.Parent.Name == "resource_1") continue;
+                    AllEntries.Add((Rpf6FileEntry)file);
 
                     if (fe.FlagInfos.IsResource)
                     {
+                        var hash = fe.ShortNameHash;
+
+                        //Many tiles share the same name, but StreamEntries won't store a same key multiple times.
+                        //We're simply using a different key for each of them.
+                        if (fe.ResourceType == Rpf6FileExt.wvd)
+                        {
+                            if (fe.Parent.Name == "resource_1")
+                                continue;
+                            else if (fe.Parent.Name == "resource_2")
+                                hash = new JenkHash(fe.Name + "_lod2");
+                            else if (fe.Parent.Name == "resource_3")
+                                hash = new JenkHash(fe.Name + "_lod3");
+                        }
+
                         if (!StreamEntries.TryGetValue(fe.ResourceType, out var entries))
                         {
                             entries = new Dictionary<JenkHash, Rpf6FileEntry>();
                             StreamEntries[fe.ResourceType] = entries;
                         }
-                        entries[fe.ShortNameHash] = fe;
+                        entries[hash] = fe;
                     }
-                    else if (file.Name.EndsWith(".txt"))
+                    else if (file.Name.EndsWith(".txt") || file.Name.EndsWith(".vehsim"))
                     {
                         if (!StreamEntries.TryGetValue(Rpf6FileExt.binary, out var entries))
                         {
