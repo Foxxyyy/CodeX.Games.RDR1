@@ -376,7 +376,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknow_7Ch { get; set; } //Padding
         public Matrix4x4 BoundMatrix { get; set; } = Matrix4x4.Identity; //m_BoundMatrix
         public Rsc6Ptr<Rsc6Bounds> Bound { get; set; } //m_Bound
-        public Rsc6ManagedSizedArr<Rsc6Bounds> ExtraBounds { get; set; } //m_ExtraBounds
+        public Rsc6Arr<uint> ExtraBounds { get; set; } //m_ExtraBounds
         public Rsc6RawArr<Matrix4x4> ExtraBoundsMatrices { get; set; } //m_ExtraBoundsMatrices
         public ushort NumExtraBounds { get; set; } //m_NumExtraBounds
         public bool LoadSkeleton { get; set; } = true; //m_LoadSkeleton
@@ -395,7 +395,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknow_7Ch = reader.ReadUInt32();
             BoundMatrix = reader.ReadMatrix4x4();
             Bound = reader.ReadPtr(Rsc6Bounds.Create);
-            ExtraBounds = reader.ReadSizedArrPtr<Rsc6Bounds>();
+            ExtraBounds = reader.ReadArr<uint>();
             ExtraBoundsMatrices = reader.ReadRawArrPtr<Matrix4x4>();
             NumExtraBounds = reader.ReadUInt16();
             LoadSkeleton = reader.ReadBoolean();
@@ -406,8 +406,6 @@ namespace CodeX.Games.RDR1.RSC6
             SkeletonTypeName = reader.ReadStr();
             BoneOffsets = reader.ReadUInt32();
             Animations = reader.ReadPtrArr<Rsc6FragAnimation>();
-
-            ExtraBounds = reader.ReadSizedArrItems(NumExtraBounds, Rsc6Bounds.Create);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -417,7 +415,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknow_7Ch);
             writer.WriteMatrix4x4(BoundMatrix);
             writer.WritePtr(Bound);
-            writer.WriteSizedArr(ExtraBounds);
+            writer.WriteArr(ExtraBounds);
             writer.WriteRawArrPtr(ExtraBoundsMatrices);
             writer.WriteUInt16(NumExtraBounds);
             writer.WriteBoolean(LoadSkeleton);
@@ -434,7 +432,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             BoundMatrix = reader.ReadMatrix4x4("BoundMatrix");
             Bound = new(reader.ReadNode<Rsc6Bounds>("Bound"));
-            ExtraBounds = new(reader.ReadNodeArray<Rsc6Bounds>("ExtraBounds"));
+            ExtraBounds = new(reader.ReadUInt32Array("ExtraBounds"));
             ExtraBoundsMatrices = new(reader.ReadMatrix4x4Array("ExtraBoundsMatrices"));
             NumExtraBounds = reader.ReadUInt16("NumExtraBounds");
             LoadSkeleton = reader.ReadBool("LoadSkeleton");
@@ -449,7 +447,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteMatrix4x4("BoundMatrix", BoundMatrix);
             if (Bound.Item != null) writer.WriteNode("Bound", Bound.Item);
-            if (ExtraBounds.Items != null) writer.WriteNodeArray("ExtraBounds", ExtraBounds.Items);
+            if (ExtraBounds.Items != null) writer.WriteUInt32Array("ExtraBounds", ExtraBounds.Items);
             if (ExtraBoundsMatrices.Items != null) writer.WriteMatrix4x4Array("ExtraBoundsMatrices", ExtraBoundsMatrices.Items);
             writer.WriteUInt16("NumExtraBounds", NumExtraBounds);
             writer.WriteBool("LoadSkeleton", LoadSkeleton);
@@ -902,12 +900,66 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-
+            DeathEventset = reader.ReadUInt32("DeathEventset");
+            DeathEventPlayer = reader.ReadUInt32("DeathEventPlayer");
+            Strength = reader.ReadSingle("Strength");
+            ForceTransmissionScaleUp = reader.ReadSingle("ForceTransmissionScaleUp");
+            ForceTransmissionScaleDown = reader.ReadSingle("ForceTransmissionScaleDown");
+            JointStiffness = reader.ReadSingle("JointStiffness");
+            MinSoftAngle1 = reader.ReadSingle("MinSoftAngle1");
+            MaxSoftAngle1 = reader.ReadSingle("MaxSoftAngle1");
+            MaxSoftAngle2 = reader.ReadSingle("MaxSoftAngle2");
+            MaxSoftAngle3 = reader.ReadSingle("MaxSoftAngle3");
+            RotationSpeed = reader.ReadSingle("RotationSpeed");
+            RotationStrength = reader.ReadSingle("RotationStrength");
+            RestoringStrength = reader.ReadSingle("RestoringStrength");
+            RestoringMaxTorque = reader.ReadSingle("RestoringMaxTorque");
+            LatchStrength = reader.ReadSingle("LatchStrength");
+            TotalUndamagedMass = reader.ReadSingle("TotalUndamagedMass");
+            TotalDamagedMass = reader.ReadSingle("TotalDamagedMass");
+            ChildGroupsPointersIndex = reader.ReadByte("ChildGroupsPointersIndex");
+            ParentGroupPointerIndex = reader.ReadByte("ParentGroupPointerIndex");
+            ChildIndex = reader.ReadByte("ChildIndex");
+            NumChildren = reader.ReadByte("NumChildren");
+            NumChildGroups = reader.ReadByte("NumChildGroups");
+            GlassModelAndType = reader.ReadByte("GlassModelAndType");
+            GlassPaneModelInfoIndex = reader.ReadByte("GlassPaneModelInfoIndex");
+            Flags = (Rsc6FragTypeGroupFlag)reader.ReadByte("Flags");
+            MinDamageForce = reader.ReadSingle("MinDamageForce");
+            DamageHealth = reader.ReadSingle("DamageHealth");
+            DebugName = reader.ReadString("DebugName");
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            
+            writer.WriteUInt32("DeathEventset", DeathEventset);
+            writer.WriteUInt32("DeathEventPlayer", DeathEventPlayer);
+            writer.WriteSingle("Strength", Strength);
+            writer.WriteSingle("ForceTransmissionScaleUp", ForceTransmissionScaleUp);
+            writer.WriteSingle("ForceTransmissionScaleDown", ForceTransmissionScaleDown);
+            writer.WriteSingle("JointStiffness", JointStiffness);
+            writer.WriteSingle("MinSoftAngle1", MinSoftAngle1);
+            writer.WriteSingle("MaxSoftAngle1", MaxSoftAngle1);
+            writer.WriteSingle("MaxSoftAngle2", MaxSoftAngle2);
+            writer.WriteSingle("MaxSoftAngle3", MaxSoftAngle3);
+            writer.WriteSingle("RotationSpeed", RotationSpeed);
+            writer.WriteSingle("RotationStrength", RotationStrength);
+            writer.WriteSingle("RestoringStrength", RestoringStrength);
+            writer.WriteSingle("RestoringMaxTorque", RestoringMaxTorque);
+            writer.WriteSingle("DeathEventset", LatchStrength);
+            writer.WriteSingle("TotalUndamagedMass", TotalUndamagedMass);
+            writer.WriteSingle("TotalDamagedMass", TotalDamagedMass);
+            writer.WriteByte("ChildGroupsPointersIndex", ChildGroupsPointersIndex);
+            writer.WriteByte("ParentGroupPointerIndex", ParentGroupPointerIndex);
+            writer.WriteByte("ChildIndex", ChildIndex);
+            writer.WriteByte("NumChildren", NumChildren);
+            writer.WriteByte("NumChildGroups", NumChildGroups);
+            writer.WriteByte("GlassModelAndType", GlassModelAndType);
+            writer.WriteByte("GlassPaneModelInfoIndex", GlassPaneModelInfoIndex);
+            writer.WriteByte("Flags", (byte)Flags);
+            writer.WriteSingle("MinDamageForce", MinDamageForce);
+            writer.WriteSingle("DamageHealth", DamageHealth);
+            writer.WriteString("DebugName", DebugName);
         }
     }
 

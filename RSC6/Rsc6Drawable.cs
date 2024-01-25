@@ -119,7 +119,7 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6FragDrawable<T> : Rsc6FileBase where T : Rsc6DrawableBase, new()
+    public class Rsc6FragDrawable<T> : Rsc6FileBase, MetaNode where T : Rsc6DrawableBase, new()
     {
         public override ulong BlockLength => 16;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
@@ -137,6 +137,11 @@ namespace CodeX.Games.RDR1.RSC6
             WfdFile.TextureDictionary = TextureDictionary;
             reader.Position -= 8;
             Drawables = reader.ReadPtr<Rsc6Drawable>();
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            throw new NotImplementedException();
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -171,9 +176,10 @@ namespace CodeX.Games.RDR1.RSC6
             Drawables = new Rsc6Ptr<Rsc6Drawable>(drawable);
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsFolder)
+        public void Write(MetaNodeWriter writer)
         {
-            Drawables.Item?.WriteXml(sb, indent + 1, ddsFolder);
+            writer.WriteUInt32("@version", 0);
+            writer.WriteNode("Drawables", Drawables.Item);
         }
     }
 
@@ -182,7 +188,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         /*
          * An rmcDrawable contains up to four levels of detail; each level of detail
-         * consists of zero or more models.  Each model within the LOD can be bound to
+         * consists of zero or more models. Each model within the LOD can be bound to
          * a different bone, allowing complex objects to render with a single draw call.
          * It also contains a shader group, which is an array of all shaders used by all
          * models within the drawable.

@@ -1,10 +1,9 @@
 ﻿using CodeX.Core.Engine;
-using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Text;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -54,6 +53,18 @@ namespace CodeX.Games.RDR1.Files
         public override byte[] Save()
         {
             return null;
+        }
+
+        //Temporary method
+        public string WriteXml(string ddsFolder)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            Xml.OpenTag(sb, 0, "Drawable", true, "");
+            Xml.StringTag(sb, 1, "Name", Name.Replace(".wft", ""), "");
+            Fragment.Drawable.Item.WriteXml(sb, 1, ddsFolder);
+            Xml.CloseTag(sb, 0, "Drawable", true);
+            return sb.ToString();
         }
     }
 }

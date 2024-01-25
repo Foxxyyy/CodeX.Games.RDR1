@@ -68,16 +68,5 @@ namespace CodeX.Games.RDR1.Files
             dictionary.ReadXml(node, ddsfolder);
             return dictionary;
         }
-
-        public string WriteXml(string ddsFolder)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            Xml.OpenTag(sb, 0, "Drawable", true, "");
-            Xml.StringTag(sb, 1, "Name", Name.Replace(".wfd", ""), "");
-            Drawable.WriteXml(sb, 1, ddsFolder);
-            Xml.CloseTag(sb, 0, "Drawable", true);
-            return sb.ToString();
-        }
     }
 }

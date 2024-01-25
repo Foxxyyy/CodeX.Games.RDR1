@@ -330,19 +330,19 @@ namespace CodeX.Games.RDR1.RPF6
                 folder = string.IsNullOrEmpty(folder) ? "" : Path.Combine(folder, Path.GetFileNameWithoutExtension(file.Name));
                 if (isResFilepack)
                 {
-                    if (fileext == ".wvd" || fileext == ".wfd")
+                    if (fileext == ".wvd" /*|| fileext == ".wft"*/)
                     {
                         ConvertXML = true;
                         newfilename = file.Name + ".xml";
-                        PiecePack piecePack = LoadPiecePack(file, data, true);
+                        var piecePack = LoadPiecePack(file, data, true);
                         ConvertXML = false;
 
                         if (data != null)
                         {
                             if (piecePack is WvdFile wvdFile)
                                 return wvdFile.WriteXml(folder);
-                            else if (piecePack is WfdFile wfdFile)
-                                return wfdFile.WriteXml(folder);
+                            else if (piecePack is WftFile wftFile)
+                                return wftFile.WriteXml(folder);
                         }
                     }
                     else //Waiting for Sollumz to support dexy's new xmls
@@ -350,6 +350,7 @@ namespace CodeX.Games.RDR1.RPF6
                         newfilename = file.Name + ".xml";
                         var fp = LoadFilePack(re, data, false);
                         //if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.DrawableDictionary);
+                        if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.Drawable);
                         if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
                         throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
                     }

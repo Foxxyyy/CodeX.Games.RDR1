@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -111,7 +112,60 @@ namespace CodeX.Games.RDR1.RSC6
 
         public virtual void Write(Rsc6DataWriter writer)
         {
-            throw new NotImplementedException();
+            writer.WriteUInt32Array(UserData);
+            writer.WriteUInt32(VFT);
+            writer.WriteByte((byte)Type);
+            writer.WriteBoolean(HasCentroidOffset);
+            writer.WriteBoolean(HasCGOffset);
+            writer.WriteBoolean(WorldSpaceUpdatesEnabled);
+            writer.WriteSingle(SphereRadius);
+            writer.WriteSingle(WorldRadius);
+            writer.WriteVector4(BoxMax);
+            writer.WriteVector4(BoxMin);
+            writer.WriteVector4(BoxCenter);
+            writer.WriteVector4(CentroidOffsetWorldSpace);
+            writer.WriteVector4(SphereCenter);
+            writer.WriteVector4(VolumeDistribution);
+            writer.WriteVector3(Margin);
+            writer.WriteUInt32(RefCount);
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            UserData = reader.ReadUInt32Array("UserData");
+            Type = (Rsc6BoundsType)reader.ReadByte("Type");
+            HasCentroidOffset = reader.ReadBool("HasCentroidOffset");
+            HasCGOffset = reader.ReadBool("HasCGOffset");
+            WorldSpaceUpdatesEnabled = reader.ReadBool("WorldSpaceUpdatesEnabled");
+            SphereRadius = reader.ReadSingle("SphereRadius");
+            WorldRadius = reader.ReadSingle("WorldRadius");
+            BoxMax = reader.ReadVector4("BoxMax");
+            BoxMin = reader.ReadVector4("BoxMin");
+            BoxCenter = reader.ReadVector4("BoxCenter");
+            CentroidOffsetWorldSpace = reader.ReadVector4("CentroidOffsetWorldSpace");
+            SphereCenter = reader.ReadVector4("SphereCenter");
+            VolumeDistribution = reader.ReadVector4("VolumeDistribution");
+            Margin = reader.ReadVector3("Margin");
+            RefCount = reader.ReadUInt32("RefCount");
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32Array("UserData", UserData);
+            writer.WriteByte("Type", (byte)Type);
+            writer.WriteBool("HasCentroidOffset", HasCentroidOffset);
+            writer.WriteBool("HasCGOffset", HasCGOffset);
+            writer.WriteBool("WorldSpaceUpdatesEnabled", WorldSpaceUpdatesEnabled);
+            writer.WriteSingle("SphereRadius", SphereRadius);
+            writer.WriteSingle("WorldRadius", WorldRadius);
+            writer.WriteVector4("BoxMax", BoxMax);
+            writer.WriteVector4("BoxMin", BoxMin);
+            writer.WriteVector4("BoxCenter", BoxCenter);
+            writer.WriteVector4("CentroidOffsetWorldSpace", CentroidOffsetWorldSpace);
+            writer.WriteVector4("SphereCenter", SphereCenter);
+            writer.WriteVector4("VolumeDistribution", VolumeDistribution);
+            writer.WriteVector3("Margin", Margin);
+            writer.WriteUInt32("RefCount", RefCount);
         }
 
         public static Rsc6Bounds Create(Rsc6DataReader r)
@@ -120,33 +174,33 @@ namespace CodeX.Games.RDR1.RSC6
             var type = (Rsc6BoundsType)r.ReadByte();
             r.Position -= 21;
 
-            switch (type)
+            return type switch
             {
-                case Rsc6BoundsType.Sphere: return new Rsc6BoundSphere();
-                case Rsc6BoundsType.Capsule: return new Rsc6BoundCapsule();
-                case Rsc6BoundsType.Box: return new Rsc6BoundBox();
-                case Rsc6BoundsType.Geometry: return new Rsc6BoundGeometry();
-                case Rsc6BoundsType.GeometryBVH: return new Rsc6BoundGeometryBVH();
-                case Rsc6BoundsType.Composite: return new Rsc6BoundComposite();
-                case Rsc6BoundsType.CurvedGeometry: return new Rsc6BoundCurvedGeometry();
-                default: throw new Exception("Unknown bounds type");
-            }
+                Rsc6BoundsType.Sphere => new Rsc6BoundSphere(),
+                Rsc6BoundsType.Capsule => new Rsc6BoundCapsule(),
+                Rsc6BoundsType.Box => new Rsc6BoundBox(),
+                Rsc6BoundsType.Geometry => new Rsc6BoundGeometry(),
+                Rsc6BoundsType.GeometryBVH => new Rsc6BoundGeometryBVH(),
+                Rsc6BoundsType.Composite => new Rsc6BoundComposite(),
+                Rsc6BoundsType.CurvedGeometry => new Rsc6BoundCurvedGeometry(),
+                _ => throw new Exception("Unknown bounds type"),
+            };
         }
 
         public static ColliderType GetEngineType(Rsc6BoundsType t)
         {
-            switch (t)
+            return t switch
             {
-                case Rsc6BoundsType.Sphere: return ColliderType.Sphere;
-                case Rsc6BoundsType.Capsule: return ColliderType.Capsule;
-                case Rsc6BoundsType.TaperedCapsule: return ColliderType.Capsule2;
-                case Rsc6BoundsType.Box: return ColliderType.Box;
-                case Rsc6BoundsType.Geometry: return ColliderType.Mesh;
-                case Rsc6BoundsType.GeometryBVH: return ColliderType.Mesh;
-                case Rsc6BoundsType.Composite: return ColliderType.None;
-                case Rsc6BoundsType.Triangle: return ColliderType.Triangle;
-                default: return ColliderType.None;
-            }
+                Rsc6BoundsType.Sphere => ColliderType.Sphere,
+                Rsc6BoundsType.Capsule => ColliderType.Capsule,
+                Rsc6BoundsType.TaperedCapsule => ColliderType.Capsule2,
+                Rsc6BoundsType.Box => ColliderType.Box,
+                Rsc6BoundsType.Geometry => ColliderType.Mesh,
+                Rsc6BoundsType.GeometryBVH => ColliderType.Mesh,
+                Rsc6BoundsType.Composite => ColliderType.None,
+                Rsc6BoundsType.Triangle => ColliderType.Triangle,
+                _ => ColliderType.None,
+            };
         }
 
         public override string ToString()
@@ -178,6 +232,22 @@ namespace CodeX.Games.RDR1.RSC6
             PartSize = new Vector3(SphereRadius, 0.0f, 0.0f);
             ComputeMass(ColliderType.Sphere, PartSize, 1.0f);
             ComputeBodyInertia();
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            Radius = reader.ReadVector3("Radius");
+            Unknown5 = reader.ReadUInt32("Unknown5");
+            Material = new Rsc6BoundMaterial(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteVector3("Radius", Radius);
+            writer.WriteUInt32("Unknown5", Unknown5);
+            Material.Write(writer);
         }
     }
 
@@ -212,11 +282,29 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_5Ch = reader.ReadUInt32();
 
             PartColour = Material.Type.Colour;
-            
             PartSize = new Vector3(CapsuleRadius.X, CapsuleLength.X, 0.0f);
-
             ComputeMass(ColliderType.Capsule, PartSize, 1.0f);
             ComputeBodyInertia();
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            CapsuleRadius = reader.ReadVector4("CapsuleRadius");
+            CapsuleLength = reader.ReadVector4("CapsuleLength");
+            EndPointsWorldSpace0 = reader.ReadVector4("EndPointsWorldSpace0");
+            EndPointsWorldSpace1 = reader.ReadVector4("EndPointsWorldSpace1");
+            Material = new Rsc6BoundMaterial(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteVector4("CapsuleRadius", CapsuleRadius);
+            writer.WriteVector4("CapsuleLength", CapsuleLength);
+            writer.WriteVector4("EndPointsWorldSpace0", EndPointsWorldSpace0);
+            writer.WriteVector4("EndPointsWorldSpace1", EndPointsWorldSpace1);
+            Material.Write(writer);
         }
     }
 
@@ -229,16 +317,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override ulong BlockLength => base.BlockLength + 352;
         public Vector4 BoxSize { get; set; } //m_BoxSize
-        public Vector4[] Vertices { get; set; } //Vec3V[8] equal to (VerticesData[i] * Quantum) + CenterGeom;
+        public new Vector4[] Vertices { get; set; } //Vec3V[8] equal to (VerticesData[i] * Quantum) + CenterGeom;
         public uint[] Unknown_170h { get; set; } //(0xCDCDCDCD + 0x00000000 + 0x0000 0xFFFFFFFF + 0xFFFF) x 12 -> 16 bytes * 12
         public Rsc6BoundMaterial Material { get; set; }
         public uint Unknown_154h { get; set; } //Padding
         public uint Unknown_158h { get; set; } //Padding
         public uint Unknown_15Ch { get; set; } //Padding
-
-        public Colour[] VertexColours { get; set; }
-        public Vector3S[] VerticesData { get; set; }
-        public Rsc6BoundBoxPolygon[] Polygons { get; set; }
 
         public Rsc6BoundBox(Rsc6BoundsType type = Rsc6BoundsType.Box) : base(type)
         {
@@ -249,7 +333,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader); //phBoundPolyhedron
             BoxSize = reader.ReadVector4();
             Vertices = reader.ReadVector4Arr(8);
-            Unknown_170h = reader.ReadUInt32Arr(48);
+            Unknown_170h = reader.ReadUInt32Arr(48); //TODO: research this
             Material = reader.ReadStruct<Rsc6BoundMaterial>();
             Unknown_154h = reader.ReadUInt32();
             Unknown_158h = reader.ReadUInt32();
@@ -265,6 +349,22 @@ namespace CodeX.Games.RDR1.RSC6
             PartSize = BoxSize.XYZ();
             ComputeMass(ColliderType.Box, PartSize, 1.0f);
             ComputeBodyInertia();
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            BoxSize = reader.ReadVector4("BoxSize");
+            Vertices = reader.ReadVector4Array("Vertices");
+            Material = new Rsc6BoundMaterial(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteVector4("BoxSize", BoxSize);
+            writer.WriteVector4Array("Vertices", Vertices);
+            Material.Write(writer);
         }
 
         private void CreateMesh()
@@ -316,12 +416,6 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Pad2 { get; set; } //Always 0
         public byte Pad3 { get; set; }  //Always 0
 
-        public Vector3[] Vertices { get; set; }
-        public Colour[] VertexColours { get; set; }
-        public Vector3S[] VerticesData { get; set; }
-        public Rsc6BoundBoxPolygon[] Polygons { get; set; }
-        public Rsc6BoundMaterial[] Materials { get; set; }
-
         public Rsc6BoundGeometry(Rsc6BoundsType type = Rsc6BoundsType.Geometry) : base(type)
         {
         }
@@ -336,28 +430,21 @@ namespace CodeX.Games.RDR1.RSC6
             Pad1 = reader.ReadByte();
             Pad2 = reader.ReadByte();
             Pad3 = reader.ReadByte();
+        }
 
-            VertexColours = reader.ReadArray<Colour>(VerticesCount, VertexColoursPtr);
-            VerticesData = reader.ReadArray<Vector3S>(VerticesCount, VerticesPtr);
-            Polygons = reader.ReadArray<Rsc6BoundBoxPolygon>(PolygonsCount, PolygonsPtr);
-            Materials = reader.ReadArray<Rsc6BoundMaterial>(MaterialsCount, MaterialsPtr);
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            Materials = reader.ReadNodeArray<Rsc6BoundMaterial>("Materials");
+            VertexMaterial = reader.ReadUInt32("VertexMaterial");
+            MaterialsCount = (byte)Materials.Length;
+        }
 
-            if (VerticesData != null)
-            {
-                Vertices = new Vector3[VerticesData.Length];
-                for (int i = 0; i < VerticesData.Length; i++)
-                {
-                    var bv = VerticesData[i];
-                    bv = new Vector3S(bv.Z, bv.X, bv.Y);
-                    Vertices[i] = bv.ToVector3(Quantum.XYZ()) + CenterGeom.XYZ();
-                }
-            }
-
-            CreateMesh();
-
-            PartSize = BoxMax.XYZ() - BoxMin.XYZ();
-            ComputeMass(ColliderType.Box, PartSize, 1.0f); //just an approximation to work with
-            ComputeBasicBodyInertia(ColliderType.Box, PartSize); //just an approximation to work with
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            if (Materials != null) writer.WriteNodeArray("Materials", Materials);
+            writer.WriteUInt32("VertexMaterial", VertexMaterial);
         }
 
         private void CreateMesh()
@@ -447,9 +534,29 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_18h);
             writer.WriteUInt32(Unknown_1Ch);
         }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            CurvedFaces = new(reader.ReadNode<Rsc6BoundCurvedFace>("CurvedFaces"));
+            CurvedEdges = new(reader.ReadNode<Rsc6BoundCurvedEdge>("CurvedEdges"));
+            CurvedFaceMatIndexList = new(reader.ReadByteArray("CurvedFaceMatIndexList"));
+            NumCurvedFaces = reader.ReadInt32("NumCurvedFaces");
+            NumCurvedEdges = reader.ReadInt32("NumCurvedEdges");
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            if (CurvedFaces.Item != null) writer.WriteNode("CurvedFaces", CurvedFaces.Item);
+            if (CurvedEdges.Item != null) writer.WriteNode("CurvedEdges", CurvedEdges.Item);
+            if (CurvedFaceMatIndexList.Items != null) writer.WriteByteArray("CurvedFaceMatIndexList", CurvedFaceMatIndexList.Items);
+            writer.WriteInt32("NumCurvedFaces", NumCurvedFaces);
+            writer.WriteInt32("NumCurvedEdges", NumCurvedEdges);
+        }
     }
 
-    public class Rsc6BoundCurvedFace : Rsc6Block
+    public class Rsc6BoundCurvedFace : Rsc6Block, MetaNode
     {
         //Curved face for a curved geometry bound
 
@@ -510,9 +617,38 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_58h);
             writer.WriteUInt32(Unknown_5Ch);
         }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Polygons = reader.ReadStruct<Rsc6BoundBoxPolygon>("Polygons");
+            CurvatureCenter = reader.ReadVector4("CurvatureCenter");
+            UnitNormal = reader.ReadVector4("UnitNormal");
+            OuterRadius = reader.ReadSingle("OuterRadius");
+            InnerRadius = reader.ReadSingle("InnerRadius");
+            MinCosine = reader.ReadSingle("MinCosine");
+            CurvedEdgeIndices = reader.ReadUInt16Array("CurvedEdgeIndices");
+            CurvedEdgePolyIndices = reader.ReadUInt16Array("CurvedEdgePolyIndices");
+            FourthVertex = reader.ReadUInt16("FourthVertex");
+            IsCircularFace = reader.ReadBool("IsCircularFace");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteStruct("Polygons", Polygons);
+            writer.WriteVector4("CurvatureCenter", CurvatureCenter);
+            writer.WriteVector4("UnitNormal", UnitNormal);
+            writer.WriteSingle("OuterRadius", OuterRadius);
+            writer.WriteSingle("InnerRadius", InnerRadius);
+            writer.WriteSingle("MinCosine", MinCosine);
+            writer.WriteUInt16Array("CurvedEdgeIndices", CurvedEdgeIndices);
+            writer.WriteUInt16Array("CurvedEdgePolyIndices", CurvedEdgePolyIndices);
+            writer.WriteInt32("NumCurvedEdges", NumCurvedEdges);
+            writer.WriteUInt16("FourthVertex", FourthVertex);
+            writer.WriteBool("IsCircularFace", IsCircularFace);
+        }
     }
 
-    public class Rsc6BoundCurvedEdge : Rsc6Block
+    public class Rsc6BoundCurvedEdge : Rsc6Block, MetaNode
     {
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 48;
@@ -538,12 +674,28 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4(CurvatureCenter);
             writer.WriteVector4(PlaneNormal);
             writer.WriteSingle(Radius);
-            writer.WriteArray(VertexIndices);
+            writer.WriteInt32Array(VertexIndices);
             writer.WriteUInt32(UnusedInt);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            CurvatureCenter = reader.ReadVector4("CurvatureCenter");
+            PlaneNormal = reader.ReadVector4("PlaneNormal");
+            Radius = reader.ReadSingle("Radius");
+            VertexIndices = reader.ReadInt32Array("VertexIndices");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteVector4("CurvatureCenter", CurvatureCenter);
+            writer.WriteVector4("PlaneNormal", PlaneNormal);
+            writer.WriteSingle("Radius", Radius);
+            writer.WriteInt32Array("VertexIndices", VertexIndices);
         }
     }
 
-    public class Rsc6BoundPolyhedron : Rsc6Bounds
+    public class Rsc6BoundPolyhedron : Rsc6Bounds //rage::phBoundPolyhedron
     {
         public override ulong BlockLength => 224;
         public uint VerticesPad { get; set; } //m_VerticesPad
@@ -563,6 +715,12 @@ namespace CodeX.Games.RDR1.RSC6
         public uint ActiveVertexIndices { get; set; } //m_ActiveVertexIndices
         public uint VerticesCount { get; set; } //m_NumVertices
         public uint PolygonsCount { get; set; } //m_NumPolygons
+
+        public Vector3[] Vertices { get; set; }
+        public Colour[] VertexColours { get; set; }
+        public Vector3S[] VerticesData { get; set; }
+        public Rsc6BoundBoxPolygon[] Polygons { get; set; }
+        public Rsc6BoundMaterial[] Materials { get; set; }
 
         public Rsc6BoundPolyhedron(Rsc6BoundsType type)
         {
@@ -588,6 +746,76 @@ namespace CodeX.Games.RDR1.RSC6
             ActiveVertexIndices = reader.ReadUInt32();
             VerticesCount = reader.ReadUInt32();
             PolygonsCount = reader.ReadUInt32();
+
+            VertexColours = reader.ReadArray<Colour>(VerticesCount, VertexColoursPtr);
+            VerticesData = reader.ReadArray<Vector3S>(VerticesCount, VerticesPtr);
+            Polygons = reader.ReadArray<Rsc6BoundBoxPolygon>(PolygonsCount, PolygonsPtr);
+
+            if (VerticesData != null)
+            {
+                Vertices = new Vector3[VerticesData.Length];
+                for (int i = 0; i < VerticesData.Length; i++)
+                {
+                    var bv = VerticesData[i];
+                    bv = new Vector3S(bv.Z, bv.X, bv.Y);
+                    Vertices[i] = bv.ToVector3(Quantum.XYZ()) + CenterGeom.XYZ();
+                }
+            }
+
+            CreateMesh();
+
+            PartSize = BoxMax.XYZ() - BoxMin.XYZ();
+            ComputeMass(ColliderType.Box, PartSize, 1.0f); //just an approximation to work with
+            ComputeBasicBodyInertia(ColliderType.Box, PartSize); //just an approximation to work with
+        }
+
+        public override void Read(MetaNodeReader reader) //TODO: finish this
+        {
+            base.Read(reader);
+            throw new NotImplementedException("phBoundPolyhedron : 'Read' method not implemented");
+        }
+
+        public override void Write(MetaNodeWriter writer) //TODO: finish this
+        {
+            base.Write(writer);
+            throw new NotImplementedException("phBoundPolyhedron : 'Write' method not implemented");
+        }
+
+        private void CreateMesh()
+        {
+            bool usevertexcolours = false;
+            var verts = new List<ShapeVertex>();
+            var indsl = new List<ushort>();
+
+            int addVertex(int index, Vector3 norm)
+            {
+                var matcol = Colour.White;
+                var c = verts.Count;
+
+                verts.Add(new ShapeVertex()
+                {
+                    Position = new Vector4(Vertices[index], 1),
+                    Normal = norm,
+                    Colour = (usevertexcolours && (VertexColours != null)) ? VertexColours[index] : matcol,
+                    Texcoord = Vector2.Zero,
+                    Tangent = Vector3.Zero
+                });
+                return c;
+            }
+
+            for (int i = 0; i < PolygonsCount; i++)
+            {
+                var p = Polygons[i];
+                var i1 = (ushort)addVertex(p.TriIndex1, Vector3.One);
+                var i2 = (ushort)addVertex(p.TriIndex2, Vector3.One);
+                var i3 = (ushort)addVertex(p.TriIndex3, Vector3.One);
+                indsl.Add(i1);
+                indsl.Add(i2);
+                indsl.Add(i3);
+            }
+
+            PartMesh = Shape.Create("BoundPolyhedron", verts.ToArray(), indsl.ToArray());
+            UpdateBounds();
         }
     }
 
@@ -610,6 +838,20 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_F4h = reader.ReadUInt32();
             Unknown_F8h = reader.ReadUInt32();
             Unknown_FCh = reader.ReadUInt32();
+
+            Debug.Assert(false);
+        }
+
+        public override void Read(MetaNodeReader reader) //TODO: finish this
+        {
+            base.Read(reader);
+            throw new NotImplementedException("phBoundBVH : 'Read' method not implemented");
+        }
+
+        public override void Write(MetaNodeWriter writer) //TODO: finish this
+        {
+            base.Write(writer);
+            throw new NotImplementedException("phBoundBVH : 'Write' method not implemented");
         }
     }
 
@@ -680,6 +922,18 @@ namespace CodeX.Games.RDR1.RSC6
             PartChildren = Children;
             UpdateBounds();
         }
+
+        public override void Read(MetaNodeReader reader) //TODO: finish this
+        {
+            base.Read(reader);
+            throw new NotImplementedException("phBoundBVH : 'Read' method not implemented");
+        }
+
+        public override void Write(MetaNodeWriter writer) //TODO: finish this
+        {
+            base.Write(writer);
+            throw new NotImplementedException("phBoundBVH : 'Write' method not implemented");
+        }
     }
 
     public class Rsc6BoundGeometryBVHRoot : Rsc6BlockBase
@@ -704,6 +958,8 @@ namespace CodeX.Games.RDR1.RSC6
             BVHQuantumInverse = reader.ReadVector4();
             BVHQuantum = reader.ReadVector4();
             Trees = reader.ReadArr<Rsc6BoundGeometryBVHTree>();
+
+            Debug.Assert(false);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -716,14 +972,15 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public byte Index { get; set; }
 
-        public Rsc6BoundsMaterialData MaterialData
+        public readonly Rsc6BoundsMaterialData MaterialData
         {
             get
             {
                 return Rsc6BoundsMaterialTypes.GetMaterial(this);
             }
         }
-        public Colour Colour
+
+        public readonly Colour Colour
         {
             get
             {
@@ -736,7 +993,12 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public override string ToString()
+        public Rsc6BoundsMaterialType(byte index)
+        {
+            this.Index = index;
+        }
+
+        public override readonly string ToString()
         {
             return Rsc6BoundsMaterialTypes.GetMaterialName(this);
         }
@@ -1024,37 +1286,63 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6BoundMaterial
+    public struct Rsc6BoundMaterial : MetaNode
     {
-        public uint Data1 { get; set; }
+        public uint Data { get; set; }
 
         public Rsc6BoundsMaterialType Type
         {
-            get => (Rsc6BoundsMaterialType)(Data1 & 0xFFu);
-            set => Data1 = ((Data1 & 0xFFFFFF00u) | ((byte)value & 0xFFu));
+            readonly get => (Rsc6BoundsMaterialType)(this.Data & 0xFFu);
+            set => this.Data = (this.Data & 0xFFFFFF00u) | ((byte)value & 0xFFu);
         }
 
         public byte ProceduralId
         {
-            get => (byte)((Data1 >> 8) & 0xFFu);
-            set => Data1 = (Data1 & 0xFFFF00FFu) | ((value & 0xFFu) << 8);
+            readonly get => (byte)((this.Data >> 8) & 0xFFu);
+            set => this.Data = (this.Data & 0xFFFF00FFu) | ((value & 0xFFu) << 8);
         }
 
         public byte RoomId
         {
-            get => (byte)((Data1 >> 16) & 0x1Fu);
-            set => Data1 = (Data1 & 0xFFE0FFFFu) | ((value & 0x1Fu) << 16);
+            readonly get => (byte)((this.Data >> 16) & 0x1Fu);
+            set => this.Data = (this.Data & 0xFFE0FFFFu) | ((value & 0x1Fu) << 16);
         }
 
         public byte PedDensity
         {
-            get => (byte)((Data1 >> 21) & 0x7u);
-            set => Data1 = (Data1 & 0xFF1FFFFFu) | ((value & 0x7u) << 21);
+            readonly get => (byte)((this.Data >> 21) & 0x7u);
+            set => this.Data = (this.Data & 0xFF1FFFFFu) | ((value & 0x7u) << 21);
+        }
+
+        public Rsc6BoundMaterial(uint value)
+        {
+            this.Data = value;
+        }
+
+        public Rsc6BoundMaterial(MetaNodeReader reader, string prefix = "")
+        {
+            this.Read(reader);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            this.Type = new(reader.ReadByte("Type"));
+            this.ProceduralId = reader.ReadByte("ProcID");
+            this.RoomId = reader.ReadByte("RoomID");
+            this.PedDensity = reader.ReadByte("PedDens");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteByte("Index", this.Type.Index);
+            if (this.ProceduralId != 0) writer.WriteByte("ProcID", this.ProceduralId);
+            if (this.RoomId != 0) writer.WriteByte("RoomID", this.RoomId);
+            if (this.PedDensity != 0) writer.WriteByte("PedDens", this.PedDensity);
         }
 
         public override string ToString()
         {
-            return Data1.ToString() + ", " + Type.ToString();
+            return this.Type.ToString() + ", " + this.ProceduralId.ToString() + ", " + this.RoomId.ToString() + ", " + this.PedDensity.ToString();
         }
     }
 }

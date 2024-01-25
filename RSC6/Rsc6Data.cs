@@ -319,9 +319,8 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6ManagedSizedArr<T> ReadSizedArrItems<T>(ushort size, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6ManagedSizedArr<T> ReadSizedArrItems<T>(Rsc6ManagedSizedArr<T> arr, ushort size, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
         {
-            var arr = new Rsc6ManagedSizedArr<T>();
             arr.ReadItems(this, size, createFunc);
             return arr;
         }
@@ -362,7 +361,6 @@ namespace CodeX.Games.RDR1.RSC6
             arr.ReadItems(this, count);
             return arr;
         }
-
 
         public Rsc6RawPtrArr<T> ReadRawPtrArrPtr<T>() where T : Rsc6Block, new()
         {
@@ -418,7 +416,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             if (block == null) return 0;
             if (block.Block == null) return 0;
-            if (PhysicalBlocks.Contains(block.Block))
+            if (this.PhysicalBlocks.Contains(block.Block))
             {
                 return 0x60000000 + block.Position;
             }
@@ -430,12 +428,10 @@ namespace CodeX.Games.RDR1.RSC6
             var blocks = new Dictionary<object, BuilderBlock>();
             var vblocks = new List<BuilderBlock>();
             var pblocks = new List<BuilderBlock>();
-            var blockmap = (Rsc6BlockMap)null;
-            var blockmapdata = (byte[])null;
 
             foreach (var block in BlockList)
             {
-                BlockDataDict.TryGetValue(block, out var bdata);
+                this.BlockDataDict.TryGetValue(block, out var bdata);
 
                 if (bdata == null)
                     continue;
@@ -443,7 +439,7 @@ namespace CodeX.Games.RDR1.RSC6
                 var bblock = new BuilderBlock(block, (ulong)bdata.Length);
                 blocks[block] = bblock;
 
-                if (PhysicalBlocks.Contains(block))
+                if (this.PhysicalBlocks.Contains(block))
                     pblocks.Add(bblock);
                 else
                     vblocks.Add(bblock);
@@ -451,12 +447,6 @@ namespace CodeX.Games.RDR1.RSC6
                 if ((block is Rsc6Block) || (block is Array))
                 {
                     bblock.Align = 16;
-                }
-
-                if (block is Rsc6BlockMap)
-                {
-                    blockmap = block as Rsc6BlockMap;
-                    blockmapdata = bdata;
                 }
             }
             if (vblocks.Count > 0)
@@ -500,7 +490,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         private new void BuildPointers(Dictionary<object, BuilderBlock> blocks)
         {
-            foreach (var pref in PointerRefs)
+            foreach (var pref in this.PointerRefs)
             {
                 if (pref.Data == null || pref.Object == null) continue;
                 if (blocks.TryGetValue(pref.Object, out var bblock) == false)
@@ -528,18 +518,18 @@ namespace CodeX.Games.RDR1.RSC6
             var expos = Position;
             var size = block.BlockLength;
 
-            Data = new byte[size];
-            Position = 0;
+            this.Data = new byte[size];
+            this.Position = 0;
 
             AddBlock(block, Data);
             block.Write(this);
 
             if (block.IsPhysical)
             {
-                PhysicalBlocks.Add(block);
+                this.PhysicalBlocks.Add(block);
             }
-            Data = exdata;
-            Position = expos;
+            this.Data = exdata;
+            this.Position = expos;
         }
 
         public void WriteBlocks<T>(T[] blocks) where T : Rsc6Block, new()
@@ -559,50 +549,66 @@ namespace CodeX.Games.RDR1.RSC6
             var expos = Position;
             var size = blocks.Length * bs;
 
-            Data = new byte[size];
-            Position = 0;
-            AddBlock(blocks, Data);
+            this.Data = new byte[size];
+            this.Position = 0;
+            this.AddBlock(blocks, Data);
 
             if (b0.IsPhysical)
             {
-                PhysicalBlocks.Add(blocks);
+                this.PhysicalBlocks.Add(blocks);
             }
 
             for (int i = 0; i < blocks.Length; i++)
             {
                 var block = blocks[i];
                 if (block == null) continue;
-                Position = (ulong)(i * bs);
+                this.Position = (ulong)(i * bs);
                 block.Write(this);
             }
-            Data = exdata;
-            Position = expos;
+            this.Data = exdata;
+            this.Position = expos;
         }
 
         public void WriteBoolean(bool value)
         {
-            WriteByte(value ? (byte)1 : (byte)0);
+            this.WriteByte(value ? (byte)1 : (byte)0);
         }
 
         public void WriteHalf(Half value)
         {
             byte[] buffer = new byte[2];
             BufferUtil.WriteStruct(buffer, 0, ref value);
-            WriteBytes(buffer);
+            this.WriteBytes(buffer);
         }
 
         public void WriteHalf2(Half2 value)
         {
             byte[] buffer = new byte[4];
             BufferUtil.WriteStruct(buffer, 0, ref value);
-            WriteBytes(buffer);
+            this.WriteBytes(buffer);
         }
 
         public void WriteHalf4(Half4 value)
         {
             byte[] buffer = new byte[8];
             BufferUtil.WriteStruct(buffer, 0, ref value);
-            WriteBytes(buffer);
+            this.WriteBytes(buffer);
+        }
+
+        public void WriteInt32Array(int[] arr)
+        {
+            for (int i = 0; i < arr.Length; i++)
+            {
+                this.WriteInt32(arr[i]);
+            }
+        }
+
+        public void WriteUInt32Array(uint[] arr)
+        {
+            for (int i = 0; i < arr.Length; i++)
+            {
+                this.WriteUInt32(arr[i]);
+            }
         }
 
         public void WriteArr<T>(Rsc6ManagedArr<T> arr) where T : Rsc6Block, new()
