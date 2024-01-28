@@ -5,7 +5,6 @@ using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -23,6 +22,20 @@ namespace CodeX.Games.RDR1.Files
         public WtdFile(Rpf6FileEntry file) : base(file)
         {
 
+        }
+
+        public WtdFile(List<Rsc6Texture> textures)
+        {
+            var list = new List<Texture>();
+            foreach (var texture in textures)
+            {
+                texture.TextureSize = texture.CalcDataSize();
+                if (texture is Texture tex)
+                {
+                    list.Add(tex);
+                }
+            }
+            BuildFromTextureList(list);
         }
 
         public override void Load(byte[] data)
@@ -53,31 +66,10 @@ namespace CodeX.Games.RDR1.Files
             return data;
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
-        {
-            var textures = new List<Texture>();
-            var inodes = node.SelectNodes("Item");
-
-            if (inodes != null)
-            {
-                foreach (XmlNode inode in inodes)
-                {
-                    var tex = new Rsc6Texture();
-                    tex.ReadXml(inode, ddsfolder);
-                    tex.TextureSize = tex.CalcDataSize();
-                    textures.Add(tex);
-                }
-            }
-            BuildFromTextureList(textures);
-        }
-
         public Rsc6Texture Lookup(uint hash)
         {
             Rsc6Texture tex = null;
-            if (Dict != null)
-            {
-                Dict.TryGetValue(hash, out tex);
-            }
+            Dict?.TryGetValue(hash, out tex);
             return tex;
         }
 
@@ -98,8 +90,10 @@ namespace CodeX.Games.RDR1.Files
 
         public override void BuildFromTextureList(List<Texture> textures)
         {
+            TextureDictionary ??= new Rsc6TextureDictionary();
             var newtexs = new List<Rsc6Texture>();
             var hashes = new List<JenkHash>();
+
             var sortedNames = (TextureDictionary.Textures.Count > 0)
                 ? TextureDictionary.Textures.Items.Select(texture => texture.Name).ToList()
                 : textures.Select(texture => texture.Name).ToList();
@@ -136,7 +130,6 @@ namespace CodeX.Games.RDR1.Files
                 hashes.Add(JenkHash.GenHash(Path.GetFileNameWithoutExtension(textures[i].Name.ToLowerInvariant())));
             }
 
-            TextureDictionary ??= new Rsc6TextureDictionary();
             TextureDictionary.Textures = new Rsc6PtrArr<Rsc6Texture>(newtexs.ToArray());
             TextureDictionary.Hashes = new Rsc6Arr<JenkHash>(hashes.ToArray());
 

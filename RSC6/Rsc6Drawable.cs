@@ -4,19 +4,18 @@ using CodeX.Core.Shaders;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
+using ICSharpCode.SharpZipLib.Checksum;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Xml;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))]
-    public class Rsc6VisualDictionary<T> : Rsc6FileBase where T : Rsc6DrawableBase, new()
+    [TC(typeof(EXP))] public class Rsc6VisualDictionary<T> : Rsc6FileBase, MetaNode where T : Rsc6Drawable, new()
     {
         public override ulong BlockLength => 60;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
@@ -91,35 +90,20 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_38h);
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
+        public void Read(MetaNodeReader reader)
         {
-            var drawables = new List<Rsc6Drawable>();
-            var hashes = new List<JenkHash>();
-
-            var drawable = new Rsc6Drawable();
-            drawable.ReadXml(node, ddsfolder);
-            drawables.Add(drawable);
-            hashes.Add(JenkHash.GenHash(drawable.Name));
-
-            Hashes = new Rsc6Arr<JenkHash>(hashes.ToArray());
-            Drawables = new Rsc6PtrArr<Rsc6Drawable>(drawables.ToArray());
+            Drawables = new(reader.ReadNodeArray<Rsc6Drawable>("Drawables"));
+            Hashes = new(Drawables.Items.Select(d => new JenkHash(d.Name)).ToArray());
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsFolder)
+        public void Write(MetaNodeWriter writer)
         {
-            if (Drawables.Items != null)
-            {
-                for (int i = 0; i < Drawables.Items.Length; i++)
-                {
-                    var d = Drawables.Items[i];
-                    d.WriteXml(sb, indent + 1, ddsFolder);
-                }
-            }
+            writer.WriteUInt32("@version", 0);
+            writer.WriteNodeArray("Drawables", Drawables.Items);
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6FragDrawable<T> : Rsc6FileBase, MetaNode where T : Rsc6DrawableBase, new()
+    [TC(typeof(EXP))] public class Rsc6FragDrawable<T> : Rsc6FileBase, MetaNode where T : Rsc6Drawable, new()
     {
         public override ulong BlockLength => 16;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
@@ -139,11 +123,6 @@ namespace CodeX.Games.RDR1.RSC6
             Drawables = reader.ReadPtr<Rsc6Drawable>();
         }
 
-        public void Read(MetaNodeReader reader)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void Write(Rsc6DataWriter writer)
         {
             var textures = new List<Rsc6Texture>();
@@ -154,7 +133,7 @@ namespace CodeX.Games.RDR1.RSC6
                 textures.Add(tex);
                 hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't have the extension
             }
-            
+
 
             var dict = new Rsc6TextureDictionary
             {
@@ -163,17 +142,15 @@ namespace CodeX.Games.RDR1.RSC6
             };
             TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
 
-            writer.WriteUInt32(0x00DDC0A0);
+            writer.WriteUInt32(0x00F9C0A0);
             writer.WritePtr(BlockMap);
             writer.WritePtr(Drawables);
             writer.WritePtr(TextureDictionary);
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
+        public void Read(MetaNodeReader reader)
         {
-            var drawable = new Rsc6Drawable();
-            drawable.ReadXml(node, ddsfolder);
-            Drawables = new Rsc6Ptr<Rsc6Drawable>(drawable);
+            Drawables = new(reader.ReadNode<Rsc6Drawable>("Drawables"));
         }
 
         public void Write(MetaNodeWriter writer)
@@ -183,46 +160,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6Drawable : Rsc6DrawableBase //rage::rmcDrawable
-    {
-        /*
-         * An rmcDrawable contains up to four levels of detail; each level of detail
-         * consists of zero or more models. Each model within the LOD can be bound to
-         * a different bone, allowing complex objects to render with a single draw call.
-         * It also contains a shader group, which is an array of all shaders used by all
-         * models within the drawable.
-         * 
-         * The only reason it derives from Base is so that the vptr is at a known location for resources.
-         */
-
-        public override ulong BlockLength => 208;
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            base.Read(reader);
-            Name = reader.FileEntry.Name;
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            base.Write(writer);
-        }
-
-        public new void ReadXml(XmlNode node, string ddsfolder)
-        {
-            Name = Xml.GetChildInnerText(node, "Name");
-            base.ReadXml(node, ddsfolder);
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
-    }
-
-    [TC(typeof(EXP))]
-    public class Rsc6DrawableLod : PieceLod, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6DrawableLod : PieceLod, Rsc6Block
     {
         public ulong BlockLength => 8;
         public ulong FilePosition { get; set; }
@@ -240,40 +178,24 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtrArr(ModelsData);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            if (node != null)
-            {
-                var iNodes = node.SelectNodes("Item");
-                if (iNodes?.Count > 0)
-                {
-                    var listDrawable = new List<Rsc6DrawableModel>();
-                    foreach (XmlNode iNode in iNodes)
-                    {
-                        var drawable = new Rsc6DrawableModel();
-                        drawable.ReadXml(iNode);
-                        listDrawable.Add(drawable);
-                    }
-                    ModelsData = new Rsc6PtrArr<Rsc6DrawableModel>(listDrawable.ToArray());
-                    Models = ModelsData.Items;
-                }
-            }
+            ModelsData = new(reader.ReadNodeArray<Rsc6DrawableModel>("Models"));
+            Models = ModelsData.Items;
         }
-
-        public void WriteXml(StringBuilder sb, int indent, Vector3 center)
+        public override void Write(MetaNodeWriter writer)
         {
-            foreach (var m in ModelsData.Items)
-            {
-                Xml.OpenTag(sb, indent, "Item");
-                m.WriteXml(sb, indent + 1, center);
-                Xml.CloseTag(sb, indent, "Item");
-            }
+            writer.WriteNodeArray("Models", Models);
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6DrawableGeometry : Mesh, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6DrawableGeometry : Mesh, Rsc6Block //rage::grmGeometry + rage::grmGeometryQB
     {
+        /*
+         * grmGeometryQB represents a "packet" of vertex data, which is the data sent down to the hardware for rendering.
+         * This is VERY platform specific, but grmGeometry represents a platform independent version interface
+         */
+
         public ulong BlockLength => 80;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
@@ -282,19 +204,19 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_4h { get; set; }
         public uint Unknown_8h { get; set; }
         public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer { get; set; } //m_VB[4] - rage::grcVertexBuffer
-        public uint VertexBuffer2 { get; set; }
-        public uint VertexBuffer3 { get; set; }
-        public uint VertexBuffer4 { get; set; }
+        public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer2 { get; set; }
+        public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer3 { get; set; }
+        public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer4 { get; set; }
         public Rsc6Ptr<Rsc6IndexBuffer> IndexBuffer { get; set; } //m_IB[4] - rage::grcIndexBuffer
-        public uint IndexBuffer2 { get; set; }
-        public uint IndexBuffer3 { get; set; }
-        public uint IndexBuffer4 { get; set; }
+        public Rsc6Ptr<Rsc6IndexBuffer> IndexBuffer2 { get; set; }
+        public Rsc6Ptr<Rsc6IndexBuffer> IndexBuffer3 { get; set; }
+        public Rsc6Ptr<Rsc6IndexBuffer> IndexBuffer4 { get; set; }
         public uint IndicesCount { get; set; } //m_IndexCount
         public uint TrianglesCount { get; set; } //m_PrimCount
-        public byte PrimitiveType { get; set; } = 3; //m_PrimType, indices per primitive (triangle)
+        public byte PrimitiveType { get; set; } = 3; //m_PrimType, rendering primitive type
         public bool DoubleBuffered { get; set; } //m_DoubleBuffered
-        public Rsc6RawArr<ushort> BoneIds { get; set; } //m_MtxPalette, data is embedded at the end of this struct (m_boneMapping)
-        public ushort BoneIdsCount { get; set; } //m_MtxCount
+        public Rsc6RawArr<ushort> BoneIds { get; set; } //m_MtxPalette, matrix palette for this geometry
+        public ushort BoneIdsCount { get; set; } //m_MtxCount, the number of matrices in the matrix paletter
         public Rsc6RawArr<byte> VertexDataRef { get; set; } //m_VtxDeclOffset, always 0xCDCDCDCD
         public uint OffsetBuffer { get; set; } //m_OffsetBuffer
         public uint IndexOffset { get; set; } //m_IndexOffset
@@ -310,17 +232,17 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32(); //rage::grmGeometry
+            VFT = reader.ReadUInt32();
             Unknown_4h = reader.ReadUInt32();
             Unknown_8h = reader.ReadUInt32();
             VertexBuffer = reader.ReadPtr<Rsc6VertexBuffer>();
-            VertexBuffer2 = reader.ReadUInt32();
-            VertexBuffer3 = reader.ReadUInt32();
-            VertexBuffer4 = reader.ReadUInt32();
+            VertexBuffer2 = reader.ReadPtr<Rsc6VertexBuffer>();
+            VertexBuffer3 = reader.ReadPtr<Rsc6VertexBuffer>();
+            VertexBuffer4 = reader.ReadPtr<Rsc6VertexBuffer>();
             IndexBuffer = reader.ReadPtr<Rsc6IndexBuffer>();
-            IndexBuffer2 = reader.ReadUInt32();
-            IndexBuffer3 = reader.ReadUInt32();
-            IndexBuffer4 = reader.ReadUInt32();
+            IndexBuffer2 = reader.ReadPtr<Rsc6IndexBuffer>();
+            IndexBuffer3 = reader.ReadPtr<Rsc6IndexBuffer>();
+            IndexBuffer4 = reader.ReadPtr<Rsc6IndexBuffer>();
             IndicesCount = reader.ReadUInt32();
             TrianglesCount = reader.ReadUInt32();
             VertexCount = reader.ReadUInt16();
@@ -334,10 +256,12 @@ namespace CodeX.Games.RDR1.RSC6
             IndexOffset = reader.ReadUInt32();
             Unknown_3Ch = reader.ReadUInt32();
 
+            BoneIds = reader.ReadRawArrItems(BoneIds, BoneIdsCount);
+
             if (VertexBuffer.Item != null) //hack to fix stupid "locked" things
             {
                 VertexLayout = VertexBuffer.Item?.Layout.Item?.VertexLayout;
-                VertexData = VertexBuffer.Item.LockedData.Items ?? VertexBuffer.Item.Data2.Items;
+                VertexData = VertexBuffer.Item.LockedData.Items ?? VertexBuffer.Item.VertexData.Items;
 
                 if (VertexCount == 0)
                 {
@@ -397,7 +321,7 @@ namespace CodeX.Games.RDR1.RSC6
                                 uvX1.Add(tUv[0]);
                                 uvY1.Add(tUv[1]);
                                 uvOffset1.Add(index + elemoffset);
-                            }             
+                            }
                             break;
                         default:
                             break;
@@ -409,31 +333,32 @@ namespace CodeX.Games.RDR1.RSC6
             if (AreTexcoordsNormalizable() && highLOD)
             {
                 Rpf6Crypto.NormalizeUVs(uvX, uvY, uvOffset, ref numArray);
-                Rpf6Crypto.NormalizeUVs(uvX1, uvY1, uvOffset1, ref numArray);      
+                Rpf6Crypto.NormalizeUVs(uvX1, uvY1, uvOffset1, ref numArray);
             }
 
-            VertexData = numArray;
-            if (PrimitiveType == 3) //Triangles
+            //Triangles or strips
+            if (PrimitiveType == 3)
                 Indices = IndexBuffer.Item?.Indices.Items;
-            else //Triangles strips
+            else
                 Indices = ConvertStripToTriangles(IndexBuffer.Item?.Indices.Items).ToArray();
-            BoneIds = new Rsc6RawArr<ushort>();
+
+            VertexData = numArray;
         }
 
         public void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x00D3397C : VFT);
+            writer.WriteUInt32(wfd ? 0x00EF397C : VFT);
             writer.WriteUInt32(Unknown_4h);
             writer.WriteUInt32(Unknown_8h);
             writer.WritePtr(VertexBuffer);
-            writer.WriteUInt32(VertexBuffer2);
-            writer.WriteUInt32(VertexBuffer3);
-            writer.WriteUInt32(VertexBuffer4);
+            writer.WritePtr(VertexBuffer2);
+            writer.WritePtr(VertexBuffer3);
+            writer.WritePtr(VertexBuffer4);
             writer.WritePtr(IndexBuffer);
-            writer.WriteUInt32(IndexBuffer2);
-            writer.WriteUInt32(IndexBuffer3);
-            writer.WriteUInt32(IndexBuffer4);
+            writer.WritePtr(IndexBuffer2);
+            writer.WritePtr(IndexBuffer3);
+            writer.WritePtr(IndexBuffer4);
             writer.WriteUInt32(IndicesCount);
             writer.WriteUInt32(TrianglesCount);
             writer.WriteUInt16((ushort)VertexCount);
@@ -442,128 +367,79 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteRawArrPtr(BoneIds);
             writer.WriteUInt16((ushort)VertexStride);
             writer.WriteUInt16(BoneIdsCount);
-            writer.WriteUInt32(0xCDCDCDCD);
+            writer.WriteUInt32(0xCDCDCDCD); //VertexDataRef
             writer.WriteUInt32(OffsetBuffer);
             writer.WriteUInt32(IndexOffset);
             writer.WriteUInt32(Unknown_3Ch);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            ShaderID = (ushort)Xml.GetChildUIntAttribute(node, "ShaderIndex", "value");
-            BoneIdsCount = (ushort)Xml.GetChildUIntAttribute(node, "BoneIdsCount", "value");
-            Unknown_3Ch = Xml.GetChildUIntAttribute(node, "Unknown_3Ch", "value");
+            ShaderID = reader.ReadUInt16("ShaderID");
+            var min = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
+            var max = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            BoundingBox = new BoundingBox(min, max);
+            AABB = new BoundingBox4(BoundingBox);
+            BoneIdsCount = reader.ReadUInt16("BonesCount");
+            BoneIds = new(reader.ReadUInt16Array("BoneIDs"));
 
-            var aabb = new BoundingBox4()
+            var vbuf = reader.ReadNode<Rsc6VertexBuffer>("VertexBuffer");
+            base.Read(reader);
+
+            var elems = VertexLayout.Elements;
+            var elemcount = elems.Length;
+            for (int index = 0; index < VertexData.Length; index += VertexStride)
             {
-                Min = Rpf6Crypto.GetXmlVector4(node, "BoundingBoxMin"),
-                Max = Rpf6Crypto.GetXmlVector4(node, "BoundingBoxMax")
-            };
-            AABB = aabb;
-
-            var bnode = node.SelectSingleNode("BoneIDs");
-            if (bnode != null)
-            {
-                var astr = bnode.InnerText;
-                var arr = astr.Split(',');
-                var blist = new List<ushort>();
-
-                foreach (var bstr in arr)
-                {
-                    var tstr = bstr?.Trim();
-                    if (string.IsNullOrEmpty(tstr))
-                        continue;
-
-                    if (ushort.TryParse(tstr, out ushort u))
-                    {
-                        blist.Add(u);
-                    }
-                }
-                BoneIds = (blist.Count > 0) ? new Rsc6RawArr<ushort>(blist.ToArray()) : new Rsc6RawArr<ushort>(null);
-            }
-
-            var vnode = node.SelectSingleNode("VertexBuffer");
-            if (vnode != null)
-            {
-                var vertexBuffer = new Rsc6VertexBuffer();
-                vertexBuffer.ReadXml(vnode);
-                VertexBuffer = new Rsc6Ptr<Rsc6VertexBuffer>(vertexBuffer);
-                VertexData = VertexBuffer.Item.LockedData.Items ?? VertexBuffer.Item.Data2.Items;
-            }
-
-            var inode = node.SelectSingleNode("IndexBuffer");
-            if (inode != null)
-            {
-                var indexBuffer = new Rsc6IndexBuffer();
-                indexBuffer.ReadXml(inode);
-                IndexBuffer = new Rsc6Ptr<Rsc6IndexBuffer>(indexBuffer);
-            }
-
-            //Update data
-            VertexCount = (ushort)(VertexData != null ? VertexBuffer.Item.VertexCount : 0);
-            VertexStride = (ushort)(VertexBuffer.Item != null ? VertexBuffer.Item.VertexStride : 0);
-            IndicesCount = (IndexBuffer.Item != null ? IndexBuffer.Item.IndicesCount : 0);
-            TrianglesCount = IndicesCount / 3;
-        }
-
-        public void WriteXml(StringBuilder sb, int indent, Vector3 center)
-        {
-            var aabbMin = AABB.Min;
-            var aabbMax = AABB.Max;
-
-            Xml.ValueTag(sb, indent, "ShaderIndex", ShaderID.ToString());
-            Xml.ValueTag(sb, indent, "BoneIdsCount", BoneIdsCount.ToString());
-            Xml.ValueTag(sb, indent, "Unknown_3Ch", Unknown_3Ch.ToString());
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMin " + FloatUtil.GetVector4XmlString(aabbMin));
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMax " + FloatUtil.GetVector4XmlString(aabbMax));
-
-            if (VertexLayout != null)
-            {
-                Xml.OpenTag(sb, indent, "VertexBuffer");
-                Xml.ValueTag(sb, indent, "Flags", "0");
-                Xml.OpenTag(sb, indent, string.Format("Layout type=\"{0}\"", VertexBuffer.Item.Layout.Item.Types.ToString()).Replace("RDR1_1", "GTAV1").Replace("RDR1_2", "GTAV1"));
-                var elems = VertexLayout.Elements;
-                var elemcount = elems.Length;
-
                 for (int i = 0; i < elemcount; i++)
                 {
                     var elem = elems[i];
-                    var name = TranslateToSollumz(elem.SemanticName);
+                    int elemoffset = elem.Offset;
 
-                    if (string.IsNullOrEmpty(name))
-                        continue;
-                    if (name == "Binormal" || (name == "Tangent" && elem.SemanticIndex > 0)) //Skipping some elements
-                        continue;
-
-                    if (name == "Colour" || name == "TexCoord")
-                        Xml.SelfClosingTag(sb, indent + 1, name + elem.SemanticIndex);
-                    else if ((name == "Tangent" || name == "BlendWeights" || name == "BlendIndices") && elem.SemanticIndex > 0)
-                        Xml.SelfClosingTag(sb, indent + 1, name + elem.SemanticIndex);
-                    else
-                        Xml.SelfClosingTag(sb, indent + 1, name);
+                    switch (elem.Format)
+                    {
+                        case VertexElementFormat.Float3:
+                            var newVert = BufferUtil.ReadVector3(VertexData, index + elemoffset);
+                            Rpf6Crypto.WriteVector3AtIndex(newVert, VertexData, index + elemoffset, false);
+                            break;
+                        case VertexElementFormat.Dec3N:
+                            var packed = BufferUtil.ReadUint(VertexData, index + elemoffset);
+                            var packedVec = FloatUtil.Dec3NToVector3(packed);
+                            packed = Rpf6Crypto.GetDec3N(new Vector3(packedVec.Y, packedVec.Z, packedVec.X));
+                            BufferUtil.WriteUint(VertexData, index + elemoffset, packed);
+                            break;
+                        default:
+                            break;
+                    }
                 }
-
-                Xml.CloseTag(sb, indent, "Layout");
-                Xml.OpenTag(sb, indent, "Data");
-
-                var elemoffset = 0;
-                for (int v = 0; v < VertexCount; v++)
-                {
-                    Xml.Indent(sb, indent + 1);
-                    var formatedOutput = GenerateVertexData(v, center, ref elemoffset);
-                    sb.Append(formatedOutput);
-                    sb.AppendLine();
-                }
-                Xml.CloseTag(sb, indent, "Data");
-                Xml.CloseTag(sb, indent, "VertexBuffer");
             }
 
-            if (IndexBuffer.Item != null)
+            var ibuf = new Rsc6IndexBuffer
             {
-                Xml.OpenTag(sb, indent, "IndexBuffer");
-                Xml.WriteRawArray(sb, indent, "Data", Indices);
-                Xml.CloseTag(sb, indent, "IndexBuffer");
-            }
+                IndicesCount = (uint)(Indices?.Length ?? 0),
+                Indices = new(Indices)
+            };
+
+            vbuf.VertexCount = (ushort)VertexCount;
+            vbuf.VertexStride = (uint)VertexStride;
+            vbuf.VertexData = new(VertexData);
+
+            VertexBuffer = new(vbuf);
+            IndexBuffer = new(ibuf);
+
+            IndicesCount = (IndexBuffer.Item != null) ? IndexBuffer.Item.IndicesCount : 0;
+            TrianglesCount = IndicesCount / 3;
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt16("ShaderID", ShaderID);
+            if (AABB.Min.XYZ() != default) writer.WriteVector3("BoundingBoxMin", AABB.Min.XYZ());
+            if (AABB.Max.XYZ() != default) writer.WriteVector3("BoundingBoxMax", AABB.Max.XYZ());
+            if (BoneIdsCount != 0) writer.WriteUInt16("BonesCount", BoneIdsCount);
+            if (BoneIds.Items != null) writer.WriteUInt16Array("BoneIDs", BoneIds.Items);
+            if (VertexBuffer.Item != null) writer.WriteNode("VertexBuffer", VertexBuffer.Item);
+
+            base.Write(writer);
         }
 
         public List<ushort> ConvertStripToTriangles(ushort[] stripIndices)
@@ -591,136 +467,17 @@ namespace CodeX.Games.RDR1.RSC6
 
         public bool AreTexcoordsNormalizable()
         {
-            return VertexBuffer.Item.Layout.Item.Flags == 49369;
+            return VertexBuffer.Item.Layout.Item.FVF == 49369;
         }
 
-        public string GenerateVertexData(int v, Vector3 center, ref int elemoffset)
+        public int GetBufferIndex()
         {
-            if (VertexLayout == null)
-                return "";
-
-            var elems = VertexLayout.Elements;
-            var elemcount = elems.Length;
-            var sb = new StringBuilder();
-
-            var vertexPositions = new List<Vector3>();
-            var vertexColors = new List<Colour>();
-            var vertexNormals = new List<Vector4>();
-            var vertexTangents = new List<Vector4>();
-            var texCoords = new List<Vector2>();
-            var blendWeights = new List<Colour>();
-            var blendIndices = new List<Colour>();
-
-            for (int i = 0; i < elemcount; i++)
-            {
-                var elem = elems[i];
-                var index = elem.SemanticIndex;
-                var elemsize = VertexElementFormats.GetSizeInBytes(elem.Format);
-                var name = TranslateToSollumz(elem.SemanticName);
-
-                if (name == "Binormal" || (name == "Tangent" && elem.SemanticIndex > 0))
-                {
-                    elemoffset += elemsize;
-                    continue;
-                }
-
-                switch (elem.Format)
-                {
-                    case VertexElementFormat.UShort2N:
-                        var xUnk4 = BitConverter.ToUInt16(VertexData, elemoffset);
-                        var yUnk4 = BitConverter.ToUInt16(VertexData, elemoffset + 2);
-                        texCoords.Add(new Vector2(xUnk4 * (float)3.05185094e-005, yUnk4 * (float)3.05185094e-005));
-                        break;
-                    case VertexElementFormat.Half2:
-                        var h2 = BufferUtil.ReadStruct<Half2>(VertexData, elemoffset);
-                        texCoords.Add(new Vector2((float)h2.X, (float)h2.Y));
-                        break;
-                    case VertexElementFormat.Float2:
-                        var xy = BufferUtil.ReadVector2(VertexData, elemoffset);
-                        texCoords.Add(xy);
-                        break;
-
-                    case VertexElementFormat.Float3:
-                        var pos = BufferUtil.ReadVector3(VertexData, elemoffset);
-                        //pos = Vector3.Subtract(pos, center);
-                        vertexPositions.Add(pos);
-                        break;
-
-                    case VertexElementFormat.Colour:
-                        var color = BufferUtil.ReadColour(VertexData, elemoffset);
-                        switch (elem.SemanticName)
-                        {
-                            case "BLENDINDICES": blendIndices.Add(color); break;
-                            case "BLENDWEIGHTS": blendWeights.Add(color); break;
-                            case "COLOR": vertexColors.Add(color); break;
-                            default: continue;
-                        }
-                        break;
-
-                    case VertexElementFormat.UByte4:
-                        var bi = BufferUtil.ReadColour(VertexData, elemoffset);
-                        blendIndices.Add(bi);
-                        break;
-
-                    case VertexElementFormat.Dec3N:
-                        uint value = BufferUtil.ReadUint(VertexData, elemoffset);
-                        uint ux = (value >> 0) & 0x3FF;
-                        uint uy = (value >> 10) & 0x3FF;
-                        uint uz = (value >> 20) & 0x3FF;
-                        uint uw = (value >> 30);
-
-                        bool posX = (ux & 0x200) > 0;
-                        bool posY = (uy & 0x200) > 0;
-                        bool posZ = (uz & 0x200) > 0;
-                        bool posW = (uw & 0x200) > 0;
-
-                        var valueX = ((posX ? ~ux : ux) & 0x1FF) / (posX ? -511.0f : 511.0f);
-                        var valueY = ((posY ? ~uy : uy) & 0x1FF) / (posY ? -511.0f : 511.0f);
-                        var valueZ = ((posZ ? ~uz : uz) & 0x1FF) / (posZ ? -511.0f : 511.0f);
-                        var valueW = ((posW ? ~uw : uw) & 0x1FF) / (posW ? -511.0f : 511.0f);
-
-                        switch (elem.SemanticName)
-                        {
-                            case "NORMAL": vertexNormals.Add(new Vector4(valueX, valueY, valueZ, valueW)); break;
-                            case "TANGENT": vertexTangents.Add(new Vector4(valueX, valueY, valueZ, valueW)); break;
-                            default: continue;
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
-                elemoffset += elemsize;
-
-                switch (elem.SemanticName)
-                {
-                    case "POSITION": sb.Append(string.Format("{0} {1} {2}   ", vertexPositions[index].X, vertexPositions[index].Y, vertexPositions[index].Z).Replace(",", ".")); break;
-                    case "BLENDWEIGHTS": var bw = blendWeights[index].ToArray(); sb.Append(string.Format("{0} {1} {2} {3}   ", bw[0], bw[1], bw[2], bw[3])); break;
-                    case "BLENDINDICES": var bi = blendIndices[index].ToArray(); sb.Append(string.Format("{0} {1} {2} {3}   ", bi[0], bi[1], bi[2], bi[3])); break;
-                    case "NORMAL": sb.Append(string.Format("{0} {1} {2}   ", vertexNormals[index].X, vertexNormals[index].Y, vertexNormals[index].Z).Replace(",", ".")); break;
-                    case "COLOR": var color = vertexColors[index].ToArray(); sb.Append(string.Format("{0} {1} {2} {3}   ", color[0], color[1], color[2], color[3])); break;
-                    case "TEXCOORD": sb.Append(string.Format("{0} {1}   ", texCoords[index].X, texCoords[index].Y).Replace(",", ".")); break;
-                    case "TANGENT": sb.Append(string.Format("{0} {1} {2} {3}   ", vertexTangents[index].X, vertexTangents[index].Y, vertexTangents[index].Z, vertexTangents[index].W).Replace(",", ".")); break;
-                    default: break;
-                }
-            }
-            return sb.ToString();
+            return ((DoubleBuffered ? 1 : 0) & (int)Rsc6VertexBufferType.USE_SECONDARY_BUFFER_INDICES) >> 2;
         }
 
-        public string TranslateToSollumz(string name)
+        public int GetDoubleBuffered()
         {
-            switch (name)
-            {
-                case "POSITION": return "Position";
-                case "BLENDWEIGHTS": return "BlendWeights";
-                case "BLENDINDICES": return "BlendIndices";
-                case "NORMAL": return "Normal";
-                case "COLOR": return "Colour";
-                case "TEXCOORD": return "TexCoord";
-                case "TANGENT": return "Tangent";
-                case "BINORMAL": return "Binormal";
-                default: return "";
-            }
+            return (DoubleBuffered ? 1 : 0) & ~(int)Rsc6VertexBufferType.USE_SECONDARY_BUFFER_INDICES;
         }
 
         public void SetShader(Rsc6ShaderFX shader)
@@ -752,7 +509,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal
                     case 0x5A170205: //rdr2_layer_2_nospec_ambocc
-                        SetDiffuse2Shader(shader); 
+                        SetDiffuse2Shader(shader);
                         break;
                     case 0x24982D70: //rdr2_layer_3_nospec_normal_ambocc
                         SetDiffuse3Shader(shader);
@@ -1165,24 +922,40 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6DrawableModel : Model, Rsc6Block //rage::grmModel
+    [TC(typeof(EXP))] public class Rsc6DrawableModel : Model, Rsc6Block //rage::grmModel
     {
+        /*
+         * Base class for all new model code rendered by RAGE.
+         * It maintains information about shaders, matrices (i.e. for skinning) and other "generic" model information
+         */
+
         public ulong BlockLength => 28;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
         public ulong VFT { get; set; } = 0x01854414;
         public Rsc6PtrArr<Rsc6DrawableGeometry> Geometries { get; set; } //m_Geometries
-        public Rsc6RawArr<BoundingBox4> BoundsData { get; set; } //m_AABBs
-        public Rsc6RawArr<ushort> ShaderMapping { get; set; } //m_ShaderIndex
+        public Rsc6RawArr<BoundingBox4> BoundsData { get; set; } //m_AABBs, one for each geometry + one for the whole model (unless there's only one model)
+        public Rsc6RawArr<ushort> ShaderMapping { get; set; } //m_ShaderIndex, requires that for dynamic arrays, the pointer comes before its count in the structure
         public byte MatrixCount { get; set; } //m_MatrixCount, bone count
         public byte Flags { get; set; } //m_Flags
-        public byte Type { get; set; } = 0xCD; //m_Type
+        public byte Type { get; set; } = 0xCD; //m_Type, always 0xCD?
         public byte MatrixIndex { get; set; } //m_MatrixIndex
-        public byte Stride { get; set; } //m_Stride
-        public byte SkinFlag { get; set; } //m_SkinFlag
-        public ushort GeometriesCount3 { get; set; } //m_shaderMappingCount?
+        public byte Stride { get; set; } //m_Stride, always 0?
+        public byte SkinFlag { get; set; } //m_SkinFlag, determine whether to render with the skinned draw path or not
+        public ushort GeometriesCount { get; set; } //m_Count
+
+        public BoundingBox BoundingBox { get; set; } //Created from first GeometryBounds item
+
+        public bool IsModelRelative() //Returns true if model is skinned
+        {
+            return (Flags & (byte)Rsc6ModelFlags.MODEL_RELATIVE) != 0;
+        }
+
+        public bool IsResourced() //Returns true if model is resourced
+        {
+            return (Flags & (byte)Rsc6ModelFlags.MODEL_RELATIVE) != 0;
+        }
 
         public void Read(Rsc6DataReader reader)
         {
@@ -1196,7 +969,7 @@ namespace CodeX.Games.RDR1.RSC6
             MatrixIndex = reader.ReadByte();
             Stride = reader.ReadByte();
             SkinFlag = reader.ReadByte();
-            GeometriesCount3 = reader.ReadUInt16();
+            GeometriesCount = reader.ReadUInt16();
 
             var geocount = Geometries.Count;
             ShaderMapping = reader.ReadRawArrItems(ShaderMapping, geocount);
@@ -1223,6 +996,12 @@ namespace CodeX.Games.RDR1.RSC6
                         geom.BoundingSphere = new BoundingSphere(geom.BoundingBox.Center, geom.BoundingBox.Size.Length() * 0.5f);
                     }
                 }
+
+                if ((boundsData != null) && (boundsData.Length > 0))
+                {
+                    ref var bb = ref boundsData[0];
+                    BoundingBox = new BoundingBox(bb.Min.XYZ(), bb.Max.XYZ());
+                }
             }
             Meshes = Geometries.Items;
             RenderInMainView = true;
@@ -1233,7 +1012,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x00D30B04 : (uint)VFT);
+            writer.WriteUInt32(wfd ? 0x00EF0B04 : (uint)VFT);
             writer.WritePtrArr(Geometries);
             writer.WriteRawArrPtr(BoundsData);
             writer.WriteRawArrPtr(ShaderMapping);
@@ -1243,125 +1022,61 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(MatrixIndex);
             writer.WriteByte(Stride);
             writer.WriteByte(SkinFlag);
-            writer.WriteUInt16(GeometriesCount3);
+            writer.WriteUInt16(GeometriesCount);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            Type = (byte)Xml.GetChildUIntAttribute(node, "RenderMask", "value");
-            Flags = (byte)Xml.GetChildUIntAttribute(node, "Flags", "value");
-            SkinFlag = (byte)Xml.GetChildUIntAttribute(node, "HasSkin", "value");
-            MatrixIndex = (byte)Xml.GetChildUIntAttribute(node, "BoneIndex", "value");
-            MatrixCount = (byte)Xml.GetChildUIntAttribute(node, "MatrixCount", "value");
+            Type = reader.ReadByte("Mask", 0xCD);
+            Flags = reader.ReadByte("Flags");
+            SkinFlag = reader.ReadBool("HasSkin") ? (byte)1 : (byte)0;
+            MatrixIndex = reader.ReadByte("BoneIndex");
+            MatrixCount = reader.ReadByte("MatrixCount");
+            ShaderMapping = new(reader.ReadUInt16Array("BoneMapping"));
 
-            var geoms = new List<Rsc6DrawableGeometry>();
-            var aabbs = new List<BoundingBox4>();
-            var shids = new List<ushort>();
-            var min = new Vector4(float.MaxValue);
-            var max = new Vector4(float.MinValue);
+            var min = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
+            var max = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            BoundingBox = new BoundingBox(min, max);
+            Geometries = new(reader.ReadNodeArray<Rsc6DrawableGeometry>("Geometries"));
 
-            var geoNodes = node.SelectSingleNode("Geometries");
-            if (geoNodes != null)
+            var geoms = Geometries.Items;
+            var gcnt = geoms?.Length ?? 0;
+            var smaps = (gcnt > 0) ? new ushort[gcnt] : null;
+            var boundsCount = (uint)(gcnt > 1 ? gcnt + 1 : gcnt);
+            var bndoff = (gcnt > 1) ? 1 : 0;
+
+            var gbnds = new BoundingBox4[boundsCount];
+            gbnds[0] = new BoundingBox4(BoundingBox);
+
+            for (int i = 0; i < gcnt; i++)
             {
-                var itemNodes = geoNodes.SelectNodes("Item");
-                if (itemNodes != null)
-                {
-                    if (itemNodes?.Count > 0)
-                    {
-                        foreach (XmlNode gNode in itemNodes)
-                        {
-                            var geometry = new Rsc6DrawableGeometry();
-                            geometry.ReadXml(gNode);
-                            geoms.Add(geometry);
-                        }
-                    }
-                }
+                smaps[i] = geoms[i].ShaderID;
+                gbnds[i + bndoff] = geoms[i].AABB;
             }
 
-            if (geoms != null)
-            {
-                Geometries = new Rsc6PtrArr<Rsc6DrawableGeometry>(geoms.ToArray());
-                foreach (var geom in geoms)
-                {
-                    aabbs.Add(geom.AABB);
-                    shids.Add(geom.ShaderID);
-                    min = Vector4.Min(min, geom.AABB.Min);
-                    max = Vector4.Max(max, geom.AABB.Max);
-                }
-                GeometriesCount3 = (ushort)geoms.Count;
-            }
-            if (aabbs.Count > 1)
-            {
-                var outeraabb = new BoundingBox4() { Min = min, Max = max };
-                aabbs.Insert(0, outeraabb);
-            }
-
-            BoundsData = (aabbs.Count > 0) ? new Rsc6RawArr<BoundingBox4>(aabbs.ToArray()) : new Rsc6RawArr<BoundingBox4>(null);
-            ShaderMapping = (shids.Count > 0) ? new Rsc6RawArr<ushort>(shids.ToArray()) : new Rsc6RawArr<ushort>(null);
+            BoundsData = new(gbnds);
+            ShaderMapping = new(smaps);
+            GeometriesCount = (ushort)gcnt;
         }
 
-        public void WriteXml(StringBuilder sb, int indent, Vector3 center)
+        public override void Write(MetaNodeWriter writer)
         {
-            Xml.ValueTag(sb, indent, "RenderMask", Type.ToString());
-            Xml.ValueTag(sb, indent, "Flags", Flags.ToString());
-            Xml.ValueTag(sb, indent, "HasSkin", SkinFlag.ToString());
-            Xml.ValueTag(sb, indent, "BoneIndex", MatrixIndex.ToString());
-            Xml.ValueTag(sb, indent, "MatrixCount", MatrixCount.ToString());
-
-            if (Geometries.Items != null)
-            {
-                Xml.OpenTag(sb, indent, "Geometries");
-                foreach (var m in Geometries.Items)
-                {
-                    Xml.OpenTag(sb, indent + 1, "Item");
-                    m.WriteXml(sb, indent + 2, center);
-                    Xml.CloseTag(sb, indent + 1, "Item");
-                }
-                Xml.CloseTag(sb, indent, "Geometries");
-            }
+            if (Type != 0xCD) writer.WriteByte("Mask", Type);
+            if (Flags != 0) writer.WriteByte("Flags", Flags);
+            if (SkinFlag == 1) writer.WriteBool("HasSkin", true);
+            if (MatrixIndex != 0) writer.WriteByte("BoneIndex", MatrixIndex);
+            writer.WriteByte("MatrixCount", MatrixCount);
+            writer.WriteUInt16Array("BoneMapping", ShaderMapping.Items);
+            writer.WriteVector3("BoundingBoxMin", BoundingBox.Minimum);
+            writer.WriteVector3("BoundingBoxMax", BoundingBox.Maximum);
+            writer.WriteNodeArray("Geometries", Geometries.Items);
         }
 
-        public long MemoryUsage
+        public enum Rsc6ModelFlags : byte
         {
-            get
-            {
-                long val = 0;
-                var geoms = Geometries.Items;
-                if (geoms != null)
-                {
-                    foreach (var geom in geoms)
-                    {
-                        if (geom == null) continue;
-                        if (geom.VertexData != null)
-                        {
-                            val += geom.VertexData.Length;
-                        }
-                        var ibi = geom.IndexBuffer.Item;
-                        if (ibi != null)
-                        {
-                            val += ibi.IndicesCount * 4;
-                        }
-                        var vbi = geom.VertexBuffer.Item;
-                        if (vbi != null)
-                        {
-                            if ((vbi.LockedData.Items != null) && (vbi.LockedData.Items != geom.VertexData))
-                            {
-                                val += vbi.LockedData.Items.Length;
-                            }
-                            if ((vbi.Data2.Items != null) && (vbi.Data2.Items != geom.VertexData))
-                            {
-                                val += vbi.Data2.Items.Length;
-                            }
-                        }
-                    }
-                }
-                if (BoundsData.Items != null)
-                {
-                    val += BoundsData.Items.Length * 32;
-                }
-                return val;
-            }
-        }
+            MODEL_RELATIVE = 0x01,
+            RESOURCED = 0x02
+        };
 
         public override string ToString()
         {
@@ -1370,18 +1085,17 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6VertexBuffer : Rsc6BlockBase //rage::grcVertexBuffer
+    [TC(typeof(EXP))] public class Rsc6VertexBuffer : Rsc6BlockBase, MetaNode //rage::grcVertexBuffer
     {
         public override ulong BlockLength => 64;
         public uint VFT { get; set; } = 0x01858684;
         public ushort VertexCount { get; set; } //m_VertCount
-        public byte Locked { get; set; } //m_Locked
-        public byte Flags { get; set; } //m_Flags
+        public byte Locked { get; set; } //m_Locked, always 0?
+        public byte Flags { get; set; } //m_Flags, mostly 0, sometimes 1 with 'p_gen_ropesm'
         public Rsc6RawArr<byte> LockedData { get; set; } //m_pLockedData, pointer to buffer obtained by grcVertexBufferD11::Lock, in file, same as m_pVertexData
         public uint VertexStride { get; set; } //m_Stride
-        public Rsc6RawArr<byte> Data2 { get; set; } //m_pVertexData
-        public uint LockThreadID { get; set; } //m_dwLockThreadId
+        public Rsc6RawArr<byte> VertexData { get; set; } //m_pVertexData
+        public uint LockThreadID { get; set; } //m_dwLockThreadId, always 0?
         public Rsc6Ptr<Rsc6VertexDeclaration> Layout { get; set; } //m_Fvf
         public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD;
         public uint Unknown_20h { get; set; } = 0xCDCDCDCD;
@@ -1401,7 +1115,7 @@ namespace CodeX.Games.RDR1.RSC6
             Flags = reader.ReadByte();
             LockedData = reader.ReadRawArrPtr<byte>();
             VertexStride = reader.ReadUInt32();
-            Data2 = reader.ReadRawArrPtr<byte>();
+            VertexData = reader.ReadRawArrPtr<byte>();
             LockThreadID = reader.ReadUInt32();
             Layout = reader.ReadPtr<Rsc6VertexDeclaration>();
             Unknown_1Ch = reader.ReadUInt32();
@@ -1414,8 +1128,8 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_38h = reader.ReadUInt32();
             Unknown_3Ch = reader.ReadUInt32();
 
-            LockedData = reader.ReadRawArrItems(LockedData, (uint)(VertexCount * Layout.Item.Stride));
-            Data2 = reader.ReadRawArrItems(Data2, (uint)(VertexCount * Layout.Item.Stride));
+            LockedData = reader.ReadRawArrItems(LockedData, (uint)(VertexCount * Layout.Item.FVFSize));
+            VertexData = reader.ReadRawArrItems(VertexData, (uint)(VertexCount * Layout.Item.FVFSize));
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -1425,9 +1139,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt16(VertexCount);
             writer.WriteByte(Locked);
             writer.WriteByte(Flags);
-            writer.WriteUInt32(0);
+            writer.WriteRawArrPtr(LockedData); //Should be NULL
             writer.WriteUInt32(VertexStride);
-            writer.WriteRawArrPtr(Data2);
+            writer.WriteRawArrPtr(VertexData);
             writer.WriteUInt32(LockThreadID);
             writer.WritePtr(Layout);
             writer.WriteUInt32(Unknown_1Ch);
@@ -1441,314 +1155,60 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_3Ch);
         }
 
-        public void ReadXml(XmlNode node)
+        public void Read(MetaNodeReader reader)
         {
-            Flags = (byte)Xml.GetChildUIntAttribute(node, "Flags", "value");
-
-            var inode = node.SelectSingleNode("Layout");
-            if (inode != null)
-            {
-                var layout = new Rsc6VertexDeclaration();
-                layout.ReadXml(inode);
-                Layout = new Rsc6Ptr<Rsc6VertexDeclaration>(layout);
-                VertexStride = Layout.Item.Stride;
-            }
-
-            var dnode = node.SelectSingleNode("Data");
-            dnode ??= node.SelectSingleNode("Data2");
-
-            if (dnode != null)
-            {
-                if (Layout.Item != null)
-                {
-                    var flags = Layout.Item.Flags;
-                    var stride = Layout.Item.Stride;
-                    var vstrs = new List<string[]>();
-                    var coldelim = new[] { ' ', '\t' };
-                    var rowdelim = new[] { '\n' };
-                    var rows = node?.InnerText?.Trim()?.Split(rowdelim, StringSplitOptions.RemoveEmptyEntries);
-
-                    if (rows != null)
-                    {
-                        foreach (var row in rows)
-                        {
-                            var rowt = row.Trim();
-                            if (string.IsNullOrEmpty(rowt)) continue;
-                            var cols = row.Split(coldelim, StringSplitOptions.RemoveEmptyEntries);
-                            vstrs.Add(cols);
-                        }
-                    }
-
-                    if (vstrs.Count > 0)
-                    {
-                        AllocateData(vstrs.Count);
-                        for (int v = 0; v < vstrs.Count; v++)
-                        {
-                            var vstr = vstrs[v];
-                            var sind = 0;
-
-                            for (int k = 0; k < 16; k++)
-                            {
-                                if (((flags >> k) & 0x1) == 1)
-                                {
-                                    SetString(v, k, vstr, ref sind);
-                                }
-                            }
-                        }
-                    }
-                }
-                Data2 = LockedData;
-            }
+            Locked = reader.ReadByte("Locked");
+            Flags = reader.ReadByte("Flags");
+            LockThreadID = reader.ReadUInt32("LockThreadID");
+            Layout = new(reader.ReadNode<Rsc6VertexDeclaration>("Layout"));
         }
 
-        public void AllocateData(int vertexCount)
+        public void Write(MetaNodeWriter writer)
         {
-            if (Layout.Item != null)
-            {
-                var stride = Layout.Item.Stride;
-                var byteCount = vertexCount * stride;
-                LockedData = new Rsc6RawArr<byte>(new byte[byteCount]);
-                VertexCount = (ushort)vertexCount;
-            }
+            if (Locked != 0) writer.WriteByte("Locked", Locked);
+            if (Flags != 0) writer.WriteByte("Flags", Flags);
+            if (LockThreadID != 0) writer.WriteUInt32("LockThreadID", LockThreadID);
+            writer.WriteNode("Layout", Layout.Item);
         }
 
-        public void SetString(int v, int c, string[] strs, ref int sind)
+        public bool IsReadWrite()
         {
-            if ((Layout.Item != null) && (LockedData.Items != null) && (strs != null))
-            {
-                var ind = sind;
-                float f(int i) => FloatUtil.Parse(strs[ind + i].Trim());
-                byte b(int i)
-                {
-                    if (byte.TryParse(strs[ind + i].Trim(), out byte x))
-                        return x;
-                    else
-                        return 0;
-                }
-
-                var ct = Layout.Item.GetComponentType(c);
-                var cc = Rsc6VertexComponentTypes.GetComponentCount(ct);
-
-                switch (ct)
-                {
-                    case Rsc6VertexComponentType.Float: SetFloat(v, c, f(0)); break;
-                    case Rsc6VertexComponentType.Float2: SetVector2(v, c, new Vector2(f(0), f(1))); break;
-                    case Rsc6VertexComponentType.Float3: SetVector3(v, c, new Vector3(f(1), f(2), f(0))); break;
-                    case Rsc6VertexComponentType.Float4: SetVector4(v, c, new Vector4(f(0), f(1), f(2), f(3))); break;
-                    case Rsc6VertexComponentType.Dec3N: SetDec3N(v, c, new Vector3(f(0), f(1), f(2))); break;
-                    case Rsc6VertexComponentType.Half2: SetHalf2(v, c, new Half2(f(0), f(1))); break;
-                    case Rsc6VertexComponentType.Half4: SetHalf4(v, c, new Half4(f(0), f(1), f(2), f(3))); break;
-                    case Rsc6VertexComponentType.Colour: SetColour(v, c, new Colour(b(0), b(1), b(2), b(3))); break;
-                    case Rsc6VertexComponentType.UByte4: SetUByte4(v, c, new Colour(b(0), b(1), b(2), b(3))); break;
-                    default:
-                        break;
-                }
-                sind += cc;
-            }
+            return (Flags & ((byte)Rsc6VertexBufferFlags.ReadWrite | (byte)Rsc6VertexBufferFlags.Dynamic)) != 0;
         }
 
-        public void SetFloat(int v, int c, float val)
+        public bool IsDynamic()
         {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 4;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var b = BitConverter.GetBytes(val);
-                    Buffer.BlockCopy(b, 0, LockedData.Items, o, 4);
-                }
-            }
+            return (Flags & (byte)Rsc6VertexBufferFlags.Dynamic) != 0;
         }
 
-        public void SetVector2(int v, int c, Vector2 val)
+        public bool IsPreallocatedMemory()
         {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 8;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var x = BitConverter.GetBytes(val.X);
-                    var y = BitConverter.GetBytes(val.Y);
-                    Buffer.BlockCopy(x, 0, LockedData.Items, o + 0, 4);
-                    Buffer.BlockCopy(y, 0, LockedData.Items, o + 4, 4);
-                }
-            }
-        }
-
-        public void SetVector3(int v, int c, Vector3 val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 12;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var x = BitConverter.GetBytes(val.X);
-                    var y = BitConverter.GetBytes(val.Y);
-                    var z = BitConverter.GetBytes(val.Z);
-                    Buffer.BlockCopy(x, 0, LockedData.Items, o + 0, 4);
-                    Buffer.BlockCopy(y, 0, LockedData.Items, o + 4, 4);
-                    Buffer.BlockCopy(z, 0, LockedData.Items, o + 8, 4);
-                }
-            }
-        }
-
-        public void SetVector4(int v, int c, Vector4 val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 16;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var x = BitConverter.GetBytes(val.X);
-                    var y = BitConverter.GetBytes(val.Y);
-                    var z = BitConverter.GetBytes(val.Z);
-                    var w = BitConverter.GetBytes(val.W);
-                    Buffer.BlockCopy(x, 0, LockedData.Items, o + 0, 4);
-                    Buffer.BlockCopy(y, 0, LockedData.Items, o + 4, 4);
-                    Buffer.BlockCopy(z, 0, LockedData.Items, o + 8, 4);
-                    Buffer.BlockCopy(w, 0, LockedData.Items, o + 12, 4);
-                }
-            }
-        }
-
-        public void SetDec3N(int v, int c, Vector3 val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 4;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var u = Rpf6Crypto.PackFixedPoint(val.X, 10, 0) | Rpf6Crypto.PackFixedPoint(val.Y, 10, 10) | Rpf6Crypto.PackFixedPoint(val.Z, 10, 20);
-                    var b = BitConverter.GetBytes(u);
-                    Buffer.BlockCopy(b, 0, LockedData.Items, o, 4);
-                }
-            }
-        }
-
-        public void SetHalf2(int v, int c, Half2 val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 4;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var hx = BitConverter.ToUInt16(BitConverter.GetBytes(val.X)); //a simple cast doesn't work for half->ushort
-                    var hy = BitConverter.ToUInt16(BitConverter.GetBytes(val.Y));
-                    var x = BitConverter.GetBytes(hx);
-                    var y = BitConverter.GetBytes(hy);
-                    Buffer.BlockCopy(x, 0, LockedData.Items, o + 0, 2);
-                    Buffer.BlockCopy(y, 0, LockedData.Items, o + 2, 2);
-                }
-            }
-        }
-
-        public void SetHalf4(int v, int c, Half4 val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 8;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var x = BitConverter.GetBytes((ushort)val.X);
-                    var y = BitConverter.GetBytes((ushort)val.Y);
-                    var z = BitConverter.GetBytes((ushort)val.Z);
-                    var w = BitConverter.GetBytes((ushort)val.W);
-                    Buffer.BlockCopy(x, 0, LockedData.Items, o + 0, 2);
-                    Buffer.BlockCopy(y, 0, LockedData.Items, o + 2, 2);
-                    Buffer.BlockCopy(z, 0, LockedData.Items, o + 4, 2);
-                    Buffer.BlockCopy(w, 0, LockedData.Items, o + 6, 2);
-                }
-            }
-        }
-
-        public void SetColour(int v, int c, Colour val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 4;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var u = val.ToRgba();
-                    var b = BitConverter.GetBytes(u);
-                    Buffer.BlockCopy(b, 0, LockedData.Items, o, 4);
-                }
-            }
-        }
-
-        public void SetUByte4(int v, int c, Colour val)
-        {
-            if ((Layout.Item != null) && (LockedData.Items != null))
-            {
-                var s = Layout.Item.Stride;
-                var co = Layout.Item.GetComponentOffset(c);
-                var o = (v * s) + co;
-                var e = o + 4;
-
-                if (e <= LockedData.Items.Length)
-                {
-                    var u = val.ToRgba();
-                    var b = BitConverter.GetBytes(u);
-                    Buffer.BlockCopy(b, 0, LockedData.Items, o, 4);
-                }
-            }
+            return (Flags & (byte)Rsc6VertexBufferFlags.PreallocatedMemory) != 0;
         }
 
         public override string ToString()
         {
             var cstr = "Count: " + VertexCount.ToString();
             if (Layout.Item == null) return "!NULL LAYOUT! - " + cstr;
-            return "Type: " + Layout.Item.Flags.ToString() + ", " + cstr;
+            return "Type: " + Layout.Item.FVF.ToString() + ", " + cstr;
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6IndexBuffer : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6IndexBuffer : Rsc6BlockBase
     {
         public override ulong BlockLength => 48;
         public uint VFT { get; set; } = 0x01858D60;
         public uint IndicesCount { get; set; }
-        public uint Unknown_Ch { get; set; }
+        public uint Unknown_Ch { get; set; } //Always 0?
         public Rsc6RawArr<ushort> Indices { get; set; }
-        public uint Unknown_10h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_14h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_18h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_20h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_24h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_28h { get; set; } = 0xCDCDCDCD;
-        public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD;
+        public uint Unknown_10h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_14h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_18h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_20h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_24h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //Padding
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1782,30 +1242,28 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_28h);
             writer.WriteUInt32(Unknown_2Ch);
         }
-
-        public void ReadXml(XmlNode node)
-        {
-            var inode = node.SelectSingleNode("Data");
-            if (inode != null)
-            {
-                var ushorts = Xml.GetRawUshortArray(node);
-                Indices = new Rsc6RawArr<ushort>(ushorts);
-                IndicesCount = (uint)(ushorts?.Length ?? 0);
-            }
-        }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6DrawableBase : Piece, Rsc6Block //rmcDrawable
+    [TC(typeof(EXP))] public class Rsc6Drawable : Piece, Rsc6Block //rmcDrawable (grmShaderGroup + crSkeletonData + rmcLodGroup)
     {
-        public virtual ulong BlockLength => 120;
+        /*
+         * An rmcDrawable contains up to four levels of detail; each level of detail
+         * consists of zero or more models. Each model within the LOD can be bound to
+         * a different bone, allowing complex objects to render with a single draw call.
+         * It also contains a shader group, which is an array of all shaders used by all
+         * models within the drawable.
+         * 
+         * The only reason it derives from Base is so that the vptr is at a known location for resources.
+         */
+
+        public ulong BlockLength => 120;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
         public ulong VFT { get; set; } = 0x01908F7C;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6Ptr<Rsc6ShaderGroup> ShaderGroup { get; set; } //rage::grmShaderGroup
-        public Rsc6Ptr<Rsc6Skeleton> SkeletonRef { get; set; } //rage::crSkeletonData
+        public Rsc6Ptr<Rsc6SkeletonData> SkeletonRef { get; set; } //rage::crSkeletonData
         public Vector3 BoundingCenter { get; set; } //m_CullSphere
         public float Unknown_1Ch { get; set; } = float.NaN;
         public Vector3 BoundingBoxMin { get; set; } //m_BoxMin
@@ -1825,14 +1283,14 @@ namespace CodeX.Games.RDR1.RSC6
         public uint DrawBucketMaskLow { get; set; } //m_BucketMask[2]
         public uint DrawBucketMaskVlow { get; set; } //m_BucketMask[3]
         public float BoundingSphereRadius { get; set; } //m_CullRadius
-        public uint PpuOnly { get; set; } //m_PpuOnly
+        public uint PpuOnly { get; set; } = 1; //m_PpuOnly, 0 or 1 if PPU is set as default processor for entity to come due to its complexity
 
         public virtual void Read(Rsc6DataReader reader)
         {
             VFT = reader.ReadUInt32();
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             ShaderGroup = reader.ReadPtr<Rsc6ShaderGroup>();
-            SkeletonRef = reader.ReadPtr<Rsc6Skeleton>();
+            SkeletonRef = reader.ReadPtr<Rsc6SkeletonData>();
             BoundingCenter = reader.ReadVector3();
             Unknown_1Ch = reader.ReadSingle();
             BoundingBoxMin = reader.ReadVector3();
@@ -1854,6 +1312,7 @@ namespace CodeX.Games.RDR1.RSC6
             BoundingSphereRadius = reader.ReadSingle();
             PpuOnly = reader.ReadUInt32();
 
+            Name = Path.GetFileNameWithoutExtension(reader.FileEntry.Name);
             Lods = new[]
             {
                 LodHigh.Item,
@@ -1879,7 +1338,7 @@ namespace CodeX.Games.RDR1.RSC6
         public virtual void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x00E63DF0 : (uint)VFT);
+            writer.WriteUInt32(wfd ? 0x01023DF0 : (uint)VFT);
             writer.WritePtr(BlockMap);
             writer.WritePtr(ShaderGroup);
             writer.WritePtr(SkeletonRef);
@@ -1905,49 +1364,30 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(PpuOnly);
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
+        public override void Read(MetaNodeReader reader)
         {
-            BoundingCenter = Rpf6Crypto.GetXmlVector3(node, "BoundingSphereCenter");
-            BoundingBoxMin = Rpf6Crypto.GetXmlVector3(node, "BoundingBoxMin");
-            BoundingBoxMax = Rpf6Crypto.GetXmlVector3(node, "BoundingBoxMax");
-            BoundingSphereRadius = Xml.GetChildFloatAttribute(node, "BoundingSphereRadius", "value");
-            LodDistHigh = Xml.GetChildFloatAttribute(node, "LodDistHigh", "value");
-            LodDistMed = Xml.GetChildFloatAttribute(node, "LodDistMed", "value");
-            LodDistLow = Xml.GetChildFloatAttribute(node, "LodDistLow", "value");
-            LodDistVlow = Xml.GetChildFloatAttribute(node, "LodDistVlow", "value");
-            DrawBucketMaskHigh = Xml.GetChildUIntAttribute(node, "FlagsHigh", "value");
-            DrawBucketMaskMed = Xml.GetChildUIntAttribute(node, "FlagsMed", "value");
-            DrawBucketMaskLow = Xml.GetChildUIntAttribute(node, "FlagsLow", "value");
-            DrawBucketMaskVlow = Xml.GetChildUIntAttribute(node, "FlagsVlow", "value");
+            Name = reader.ReadString("Name");
+            BoundingCenter = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingSphereCenter"));
+            BoundingSphereRadius = reader.ReadSingle("BoundingSphereRadius");
+            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            LodDistHigh = reader.ReadSingle("LodDistHigh");
+            LodDistMed = reader.ReadSingle("LodDistMed");
+            LodDistLow = reader.ReadSingle("LodDistLow");
+            LodDistVlow = reader.ReadSingle("LodDistVlow");
+            DrawBucketMaskHigh = reader.ReadUInt32("FlagsHigh");
+            DrawBucketMaskMed = reader.ReadUInt32("FlagsMed");
+            DrawBucketMaskLow = reader.ReadUInt32("FlagsLow");
+            DrawBucketMaskVlow = reader.ReadUInt32("FlagsVlow");
+            ShaderGroup = new(reader.ReadNode<Rsc6ShaderGroup>("ShaderGroup"));
+            SkeletonRef = new(reader.ReadNode<Rsc6SkeletonData>("Skeleton"));
+            LodHigh = new(reader.ReadNode<Rsc6DrawableLod>("LodHigh"));
+            LodMed = new(reader.ReadNode<Rsc6DrawableLod>("LodMed"));
+            LodLow = new(reader.ReadNode<Rsc6DrawableLod>("LodLow"));
+            LodVlow = new(reader.ReadNode<Rsc6DrawableLod>("LodVlow"));
+            PpuOnly = reader.ReadUInt32("PpuOnly");
 
-            BoundingBoxMin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y + 1.0f, BoundingBoxMin.Z);
-            BoundingBoxMax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y + 1.0f, BoundingBoxMax.Z);
-            BoundingCenter = new Vector3(BoundingCenter.X, BoundingCenter.Y + 1.0f, BoundingCenter.Z);
-
-            var sgnode = node.SelectSingleNode("ShaderGroup");
-            if (sgnode != null)
-            {
-                var group = new Rsc6ShaderGroup();
-                group.ReadXml(sgnode, ddsfolder);
-                ShaderGroup = new Rsc6Ptr<Rsc6ShaderGroup>(group);
-            }
-
-            var sknode = node.SelectSingleNode("Skeleton");
-            if (sknode != null)
-            {
-                var skeleton = new Rsc6Skeleton();
-                skeleton.ReadXml(sknode);
-                SkeletonRef = new Rsc6Ptr<Rsc6Skeleton>(skeleton);
-            }
-
-            var highNode = node.SelectSingleNode("DrawableModelsHigh");
-            if (highNode != null)
-            {
-                var hlod = new Rsc6DrawableLod();
-                hlod.ReadXml(highNode);
-                LodHigh = new Rsc6Ptr<Rsc6DrawableLod>(hlod);
-            }
-
+            Skeleton = SkeletonRef.Item;
             Lods = new[]
             {
                 LodHigh.Item,
@@ -1961,67 +1401,28 @@ namespace CodeX.Games.RDR1.RSC6
             AssignShaders();
         }
 
-        public virtual void WriteXml(StringBuilder sb, int indent, string ddsfolder)
+        public override void Write(MetaNodeWriter writer)
         {
-            var bbmin = new Vector3(BoundingBoxMin.X, BoundingBoxMin.Y, BoundingBoxMin.Z - 1.0f);
-            var bbmax = new Vector3(BoundingBoxMax.X, BoundingBoxMax.Y, BoundingBoxMax.Z - 1.0f);
-            var center = new Vector3(BoundingCenter.X, BoundingCenter.Y, BoundingCenter.Z - 1.0f);
-
-            Xml.SelfClosingTag(sb, indent, "BoundingSphereCenter " + FloatUtil.GetVector3XmlString(center));
-            Xml.ValueTag(sb, indent, "BoundingSphereRadius", FloatUtil.ToString(BoundingSphereRadius));
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMin " + FloatUtil.GetVector3XmlString(bbmin));
-            Xml.SelfClosingTag(sb, indent, "BoundingBoxMax " + FloatUtil.GetVector3XmlString(bbmax));
-            Xml.ValueTag(sb, indent, "LodDistHigh", FloatUtil.ToString(LodDistHigh));
-            Xml.ValueTag(sb, indent, "LodDistMed", FloatUtil.ToString(LodDistMed));
-            Xml.ValueTag(sb, indent, "LodDistLow", FloatUtil.ToString(LodDistLow));
-            Xml.ValueTag(sb, indent, "LodDistVlow", FloatUtil.ToString(LodDistVlow));
-            Xml.ValueTag(sb, indent, "FlagsHigh", DrawBucketMaskHigh.ToString());
-            Xml.ValueTag(sb, indent, "FlagsMed", DrawBucketMaskMed.ToString());
-            Xml.ValueTag(sb, indent, "FlagsLow", DrawBucketMaskLow.ToString());
-            Xml.ValueTag(sb, indent, "FlagsVlow", DrawBucketMaskVlow.ToString());
-            Xml.ValueTag(sb, indent, "PpuOnly", PpuOnly.ToString());
-
-            if (ShaderGroup.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "ShaderGroup");
-                ShaderGroup.Item.WriteXml(sb, indent + 1, ddsfolder);
-                Xml.CloseTag(sb, indent, "ShaderGroup");
-            }
-
-            if (SkeletonRef.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "Skeleton");
-                SkeletonRef.Item.WriteXml(sb, indent + 1);
-                Xml.CloseTag(sb, indent, "Skeleton");
-            }
-
-            if (LodHigh.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "DrawableModelsHigh");
-                LodHigh.Item.WriteXml(sb, indent + 1, BoundingCenter);
-                Xml.CloseTag(sb, indent, "DrawableModelsHigh");
-            }
-
-            if (LodMed.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "DrawableModelsMedium");
-                LodMed.Item.WriteXml(sb, indent + 1, BoundingCenter);
-                Xml.CloseTag(sb, indent, "DrawableModelsMedium");
-            }
-
-            if (LodLow.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "DrawableModelsLow");
-                LodLow.Item.WriteXml(sb, indent + 1, BoundingCenter);
-                Xml.CloseTag(sb, indent, "DrawableModelsLow");
-            }
-
-            if (LodVlow.Item != null)
-            {
-                Xml.OpenTag(sb, indent, "DrawableModelsVeryLow");
-                LodVlow.Item.WriteXml(sb, indent + 1, BoundingCenter);
-                Xml.CloseTag(sb, indent, "DrawableModelsVeryLow");
-            }
+            if (Name != null) writer.WriteString("Name", Name);
+            if (BoundingCenter != default) writer.WriteVector3("BoundingSphereCenter", BoundingCenter);
+            if (BoundingSphereRadius != default) writer.WriteSingle("BoundingSphereRadius", BoundingSphereRadius);
+            if (BoundingBoxMin != default) writer.WriteVector3("BoundingBoxMin", BoundingBoxMin);
+            if (BoundingBoxMax != default) writer.WriteVector3("BoundingBoxMax", BoundingBoxMax);
+            if (LodDistHigh != 0) writer.WriteSingle("LodDistHigh", LodDistHigh);
+            if (LodDistMed != 0) writer.WriteSingle("LodDistMed", LodDistMed);
+            if (LodDistLow != 0) writer.WriteSingle("LodDistLow", LodDistLow);
+            if (LodDistVlow != 0) writer.WriteSingle("LodDistVlow", LodDistVlow);
+            if (DrawBucketMaskHigh != 0) writer.WriteUInt32("FlagsHigh", DrawBucketMaskHigh);
+            if (DrawBucketMaskMed != 0) writer.WriteUInt32("FlagsMed", DrawBucketMaskMed);
+            if (DrawBucketMaskLow != 0) writer.WriteUInt32("FlagsLow", DrawBucketMaskLow);
+            if (DrawBucketMaskVlow != 0) writer.WriteUInt32("FlagsVlow", DrawBucketMaskVlow);
+            writer.WriteNode("ShaderGroup", ShaderGroup.Item);
+            writer.WriteNode("Skeleton", SkeletonRef.Item);
+            writer.WriteNode("LodHigh", LodHigh.Item);
+            writer.WriteNode("LodMed", LodMed.Item);
+            writer.WriteNode("LodLow", LodLow.Item);
+            writer.WriteNode("LodVlow", LodVlow.Item);
+            writer.WriteUInt32("PpuOnly", PpuOnly);
         }
 
         public bool IsSkinned()
@@ -2046,8 +1447,7 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         for (int j = 0; j < model.Meshes.Length; j++)
                         {
-                            var mesh = model.Meshes[j] as Rsc6DrawableGeometry;
-                            if (mesh != null)
+                            if (model.Meshes[j] is Rsc6DrawableGeometry mesh)
                             {
                                 var shader = (mesh.ShaderID < shaders.Length) ? shaders[mesh.ShaderID] : null;
                                 mesh.SetShader(shader);
@@ -2059,7 +1459,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         }
 
-        public void SetSkeleton(Rsc6Skeleton skel)
+        public void SetSkeleton(Rsc6SkeletonData skel)
         {
             Skeleton = skel;
             if (AllModels != null)
@@ -2084,11 +1484,15 @@ namespace CodeX.Games.RDR1.RSC6
 
         private void CreateTexturePack(GameArchiveEntry e)
         {
-            var txd = WfdFile.TextureDictionary.Item;
+            var txd = WfdFile.TextureDictionary.Item; //TODO: only include embedded textures
             if (txd == null) return;
 
-            var txp = new TexturePack(e) { Textures = new Dictionary<string, Texture>() };
             var texs = txd.Textures.Items;
+            var txp = new TexturePack(e)
+            {
+                Textures = new Dictionary<string, Texture>()
+            };
+
             if (texs != null)
             {
                 for (int i = 0; i < texs.Length; i++)
@@ -2101,36 +1505,72 @@ namespace CodeX.Games.RDR1.RSC6
             }
             TexturePack = txp;
         }
+
+        public void BuildMasks() //TODO: make sure this works
+        {
+            var hmask = (LodDistHigh > 0) ? BuildMask(LodHigh.Item?.ModelsData.Items) : (byte)0;
+            var mmask = (LodDistMed > 0) ? BuildMask(LodMed.Item?.ModelsData.Items) : (byte)0;
+            var lmask = (LodDistLow > 0) ? BuildMask(LodLow.Item?.ModelsData.Items) : (byte)0;
+            var vmask = (LodDistVlow > 0) ? BuildMask(LodVlow.Item?.ModelsData.Items) : (byte)0;
+
+            DrawBucketMaskHigh = hmask;
+            DrawBucketMaskMed = mmask;
+            DrawBucketMaskLow = lmask;
+            DrawBucketMaskVlow = vmask;
+        }
+
+        private byte BuildMask(Rsc6DrawableModel[] models) //TODO: make sure this works
+        {
+            byte mask = 0;
+            if (models != null)
+            {
+                foreach (var model in models)
+                {
+                    mask = (byte)(mask | model.Stride);
+                }
+            }
+            return mask;
+        }
+
+        public override string ToString()
+        {
+            return Name.ToString();
+        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Skeleton : Skeleton, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6SkeletonData : Skeleton, Rsc6Block //rage::crSkeletonData
     {
+        /*
+         * Holds data that applies to all crSkeleton's of a particular type.
+         * Most of its actual data is in the crBoneData it owns, and in the structure they describe.
+         */
+
         public ulong BlockLength => 68;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
-        public Rsc6RawLst<Rsc6Bone> BoneData { get; set; } //m_Bones, rage::crBoneData
-        public Rsc6RawArr<int> ParentIndices { get; set; } //m_ParentIndices
+        public Rsc6RawLst<Rsc6BoneData> BoneData { get; set; } //m_Bones, pointer to bone data, can't be NULL
+        public Rsc6RawArr<int> ParentIndices { get; set; } //m_ParentIndices, pointer to parent indices table, NULL if none calculated
         public Rsc6RawArr<Matrix4x4> JointScaleOrients { get; set; } //m_CumulativeJointScaleOrients, mostly NULL
-        public Rsc6RawArr<Matrix4x4> InverseJointScaleOrients { get; set; } //m_CumulativeInverseJointScaleOrients, mostly NULL
-        public Rsc6RawArr<Matrix4x4> DefaultTransforms { get; set; } //m_DefaultTransforms
+        public Rsc6RawArr<Matrix4x4> InverseJointScaleOrients { get; set; } //m_CumulativeInverseJointScaleOrients, inverse cumulative joint scale orient matrices
+        public Rsc6RawArr<Matrix4x4> DefaultTransforms { get; set; } //m_DefaultTransforms, default transform matrices
         public Rsc6RawArr<Matrix4x4> CumulativeDefaultTransforms { get; set; } //m_CumulativeDefaultTransforms
-        public ushort BoneCount { get; set; } // m_NumBones
+        public ushort BoneCount { get; set; } // m_NumBones, number of bones in skeleton
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
         public uint Flags { get; set; } = 10; //m_Flags, seems to be mostly 10, sometimes 9/11/14 for .wft
         public Rsc6ManagedArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
         public uint RefCount { get; set; } = 1; //m_RefCount
-        public uint Signature { get; set; } = 2135087653; //m_Signature
+        public uint Signature { get; set; } //m_Signature, skeleton signature (a hash value that identifies the skeleton's structure, the order of the branches of child bones matter)
         public Rsc6Str JointDataFileName { get; set; } //m_JointDataFileName, always NULL?
-        public uint JointData { get; set; } = 15649020; //m_JointData, rage::crJointDataFile, no idea? 15649020 is the most common value with 13814012 and 16435452
-        public uint Unknown6 { get; set; } //Always 0
-        public uint Unknown7 { get; set; } //Always 0
+        public uint JointData { get; set; } = 13814012; //m_JointData, 13814012/16435452/15649020/10595580
+        public uint Unknown6 { get; set; } //Padding
+        public uint Unknown7 { get; set; } //Padding
 
         public void Read(Rsc6DataReader reader)
         {
-            BoneData = reader.ReadRawLstPtr<Rsc6Bone>();
+            BoneData = reader.ReadRawLstPtr<Rsc6BoneData>();
             ParentIndices = reader.ReadRawArrPtr<int>();
             JointScaleOrients = reader.ReadRawArrPtr<Matrix4x4>();
             InverseJointScaleOrients = reader.ReadRawArrPtr<Matrix4x4>();
@@ -2159,7 +1599,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (uint i = 0; i < BoneCount; i++)
             {
-                var b = (Rsc6Bone)Bones[i];
+                var b = (Rsc6BoneData)Bones[i];
                 b.ParentIndex = (ParentIndices.Items != null) ? ParentIndices.Items[i] : 0;
                 b.JointScaleOrients = (JointScaleOrients.Items != null) ? JointScaleOrients.Items[i] : Matrix4x4.Identity;
                 b.InverseJointScaleOrients = (InverseJointScaleOrients.Items != null) ? InverseJointScaleOrients.Items[i] : Matrix4x4.Identity;
@@ -2169,17 +1609,17 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (uint i = 0; i < BoneCount; i++)
             {
-                var bone = (Rsc6Bone)Bones[i];
+                var bone = (Rsc6BoneData)Bones[i];
                 var ns = bone.NextSibling;
                 var fc = bone.FirstChild;
                 var pr = bone.ParentRef;
 
                 if (reader.BlockPool.TryGetValue(ns.Position, out var nsi))
-                    ns.Item = nsi as Rsc6Bone;
+                    ns.Item = nsi as Rsc6BoneData;
                 if (reader.BlockPool.TryGetValue(fc.Position, out var fci))
-                    fc.Item = fci as Rsc6Bone;
+                    fc.Item = fci as Rsc6BoneData;
                 if (reader.BlockPool.TryGetValue(pr.Position, out var pri))
-                    pr.Item = pri as Rsc6Bone;
+                    pr.Item = pri as Rsc6BoneData;
 
                 bone.NextSibling = ns;
                 bone.FirstChild = fc;
@@ -2233,61 +1673,126 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown7);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            NumTranslationDofs = (ushort)Xml.GetChildIntAttribute(node, "NumTranslationDofs", "value");
-            NumRotationDofs = (ushort)Xml.GetChildIntAttribute(node, "NumRotationDofs", "value");
-            NumScaleDofs = (ushort)Xml.GetChildIntAttribute(node, "NumScaleDofs", "value");
-            Flags = Xml.GetChildUIntAttribute(node, "Flags", "value");
-            Signature = Xml.GetChildUIntAttribute(node, "Signature", "value");
-            JointData = Xml.GetChildUIntAttribute(node, "JointData", "value");
+            NumTranslationDofs = reader.ReadUInt16("NumTranslationDofs");
+            NumRotationDofs = reader.ReadUInt16("NumRotationDofs");
+            NumScaleDofs = reader.ReadUInt16("NumScaleDofs");
+            Flags = reader.ReadUInt32("Flags");
+            Signature = reader.ReadUInt32("Signature");
+            JointData = reader.ReadUInt32("JointData");
+            BoneData = new(reader.ReadNodeArray<Rsc6BoneData>("Bones"));
 
-            var snode = node.SelectSingleNode("Bones");
-            if (snode != null)
-            {
-                var iNodes = snode.SelectNodes("Item");
-                if (iNodes != null)
-                {
-                    var bones = new List<Rsc6Bone>();
-                    foreach (XmlNode inode in iNodes)
-                    {
-                        var bone = new Rsc6Bone();
-                        bone.ReadXml(inode);
-                        bones.Add(bone);
-                    }
-
-                    BoneData = new Rsc6RawLst<Rsc6Bone>(bones.ToArray());
-                    Bones = BoneData.Items;
-                    BoneCount = (ushort)(BoneData.Items?.Length ?? 0);
-                }
-            }
+            Bones = BoneData.Items;
+            BoneCount = (ushort)(BoneData.Items?.Length ?? 0);
 
             BuildIndices();
             AssignBoneParents();
             BuildTransformations();
             BuildBoneTags();
+
+            if (Signature <= 0)
+            {
+                CalculateSignature();
+            }
         }
 
-        public void WriteXml(StringBuilder sb, int indent)
+        public override void Write(MetaNodeWriter writer)
         {
-            Xml.ValueTag(sb, indent, "NumTranslationDofs", NumTranslationDofs.ToString());
-            Xml.ValueTag(sb, indent, "NumRotationDofs", NumRotationDofs.ToString());
-            Xml.ValueTag(sb, indent, "NumScaleDofs", NumScaleDofs.ToString());
-            Xml.ValueTag(sb, indent, "Flags", Flags.ToString());
-            Xml.ValueTag(sb, indent, "Signature", Signature.ToString());
-            Xml.ValueTag(sb, indent, "JointData", JointData.ToString());
+            writer.WriteUInt16("NumTranslationDofs", NumTranslationDofs);
+            writer.WriteUInt16("NumRotationDofs", NumRotationDofs);
+            writer.WriteUInt16("NumScaleDofs", NumScaleDofs);
+            writer.WriteUInt32("Flags", Flags);
+            writer.WriteUInt32("Signature", Signature);
+            writer.WriteUInt32("JointData", JointData);
+            writer.WriteNodeArray("Bones", BoneData.Items);
+        }
 
-            if (Bones != null)
+        public void CalculateSignature()
+        {
+            //Calculate signature
+            uint signature = 0;
+            for (int i = 0; i < BoneCount; i++)
             {
-                Xml.OpenTag(sb, indent, "Bones");
-                foreach (Rsc6Bone bone in Bones.Cast<Rsc6Bone>())
-                {
-                    Xml.OpenTag(sb, indent + 1, "Item");
-                    bone.WriteXml(sb, indent + 2);
-                    Xml.CloseTag(sb, indent + 1, "Item");
-                }
-                Xml.CloseTag(sb, indent, "Bones");
+                var bone = (Rsc6BoneData)Bones[i];
+                var idAndDofs = ((uint)bone.BoneId << 32) | bone.Dofs;
+                signature = UpdateCrc32(signature, BitConverter.GetBytes(idAndDofs));
             }
+
+            //Calculate signature (non-chiral)
+            uint signatureNonChiral = 0;
+            if (HasBoneIDs())
+            {
+                foreach (var bone in BoneIDs.Items)
+                {
+                    var idAndDofs = ((Rsc6BoneData)Bones[bone.BoneIndex]).GetSignatureNonChiral();
+                    signatureNonChiral = UpdateCrc32(signatureNonChiral, BitConverter.GetBytes(idAndDofs));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < BoneCount; i++)
+                {
+                    var bone = (Rsc6BoneData)Bones[i];
+                    var idAndDofs = bone.GetSignatureNonChiral();
+                    signatureNonChiral = UpdateCrc32(signatureNonChiral, BitConverter.GetBytes(idAndDofs));
+                }
+            }
+
+            //Calculate signature (comprehensive)
+            uint signatureComprehensive = 0;
+            for (int i = 0; i < BoneCount; i++)
+            {
+                var bone = (Rsc6BoneData)Bones[i];
+                var idAndDofs = ((uint)bone.BoneId << 32) | bone.Dofs;
+                signatureComprehensive = UpdateCrc32(signatureComprehensive, BitConverter.GetBytes(idAndDofs));
+                signatureComprehensive = UpdateCrc32(signatureComprehensive, Rpf6Crypto.Vector4ToByteArray(bone.DefaultTranslation));
+                signatureComprehensive = UpdateCrc32(signatureComprehensive, Rpf6Crypto.Vector4ToByteArray(bone.DefaultRotation));
+                signatureComprehensive = UpdateCrc32(signatureComprehensive, Rpf6Crypto.Vector4ToByteArray(bone.DefaultScale));
+            }
+            Signature = signature;
+        }
+
+        private uint UpdateCrc32(uint crc, byte[] data)
+        {
+            var crc32 = new Crc32();
+            crc32.Update(data);
+            return (uint)crc32.Value ^ crc; //XOR the CRC32 value with the existing crc
+        }
+
+        public bool HasBoneIDs()
+        {
+            for (int i = 0; i < BoneCount; i++)
+            {
+                var bone = (Rsc6BoneData)Bones[i];
+                if (bone.BoneId != i)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public uint GetNumAnimatableDofs(uint dofFlags = (uint)(Rsc6DoFs.TRANSLATION | Rsc6DoFs.ROTATION | Rsc6DoFs.SCALE)) //Get the number of DOFs that can be animated
+        {
+            uint numDofs = 0;
+            for (int i = 0; i < BoneCount; ++i)
+            {
+                var boneData = BoneData.Items[i];
+                if (boneData != null)
+                {
+                    //The DOFs in BoneData are currently channel DOFs, NOT track DOFs!
+                    if (((dofFlags & (uint)Rsc6DoFs.TRANSLATION) != 0) && boneData.HasDofs((uint)Rsc6DoFs.TRANSLATION))
+                        ++numDofs;
+
+                    if (((dofFlags & (uint)Rsc6DoFs.ROTATION) != 0) && boneData.HasDofs((uint)Rsc6DoFs.ROTATION))
+                        ++numDofs;
+
+                    if (((dofFlags & (uint)Rsc6DoFs.SCALE) != 0) && boneData.HasDofs((uint)Rsc6DoFs.SCALE))
+                        ++numDofs;
+                }
+            }
+            return numDofs;
         }
 
         public void BuildBoneTags()
@@ -2332,7 +1837,7 @@ namespace CodeX.Games.RDR1.RSC6
             var cumulativeTransforms = new List<Matrix4x4>();
             if (Bones != null)
             {
-                foreach (var bone in Bones.Cast<Rsc6Bone>())
+                foreach (var bone in Bones.Cast<Rsc6BoneData>())
                 {
                     var pos = bone.Position;
                     var ori = bone.Rotation;
@@ -2350,7 +1855,7 @@ namespace CodeX.Games.RDR1.RSC6
                         var parentTransform = Matrix4x4Ext.Transformation(parentSca, parentOri, parentPos);
                         cumulativeTransform = parentTransform * cumulativeTransform;
 
-                        bone.AbsolutePosition = new Vector4(cumulativeTransform.Translation, 0.0f);
+                        bone.GlobalOffset = new Vector4(cumulativeTransform.Translation, 0.0f);
                         pos = pbone.Rotation.Multiply(pos) + pbone.Position;
                         ori = pbone.Rotation * ori;
                         pbone = pbone.Parent;
@@ -2398,39 +1903,19 @@ namespace CodeX.Games.RDR1.RSC6
                     if ((pind >= 0) && (pind < bones.Length))
                     {
                         bone.Parent = bones[pind];
-                        bone.ParentRef = new Rsc6Ptr<Rsc6Bone>(bones[pind]);
+                        bone.ParentRef = new Rsc6Ptr<Rsc6BoneData>(bones[pind]);
                     }
 
                     if (sibling >= 0)
                     {
-                        bone.NextSibling = new Rsc6Ptr<Rsc6Bone>(bones[sibling]);
+                        bone.NextSibling = new Rsc6Ptr<Rsc6BoneData>(bones[sibling]);
                     }
 
                     if (child >= 0)
                     {
-                        bone.FirstChild = new Rsc6Ptr<Rsc6Bone>(bones[child]);
+                        bone.FirstChild = new Rsc6Ptr<Rsc6BoneData>(bones[child]);
                     }
                 }
-
-                /*for (uint i = 0; i < BoneCount; i++)
-                {
-                    var bone = bones[i];
-                    var ns = bone.NextSibling;
-                    var fc = bone.FirstChild;
-                    var pr = bone.ParentRef;
-
-                    if (reader.BlockPool.TryGetValue(ns.Position, out var nsi))
-                        ns.Item = nsi as Rsc6Bone;
-                    if (reader.BlockPool.TryGetValue(fc.Position, out var fci))
-                        fc.Item = fci as Rsc6Bone;
-                    if (reader.BlockPool.TryGetValue(pr.Position, out var pri))
-                        pr.Item = pri as Rsc6Bone;
-
-                    bone.NextSibling = ns;
-                    bone.FirstChild = fc;
-                    bone.ParentRef = pr;
-                    bone.Parent = pr.Item;
-                }*/
             }
         }
 
@@ -2469,37 +1954,44 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Bone : Bone, Rsc6Block //rage::crBoneData
+    [TC(typeof(EXP))] public class Rsc6BoneData : Bone, Rsc6Block //rage::crBoneData
     {
+        /*
+         * The crBoneData holds data that is general to all instances of a particular matrix that belongs
+         * to skeletons of the type of described by a particular crSkeletonData.
+         * 
+         * Several crBoneData are owned by a crSkeletonData, the connections between them determine the structure of the skeleton.
+         */
+
         public ulong BlockLength => 224;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
-        public Rsc6Str NameStr { get; set; } //m_Name
-        public uint Dofs { get; set; } //m_Dofs
-        public Rsc6Ptr<Rsc6Bone> NextSibling { get; set; } //m_Next
-        public Rsc6Ptr<Rsc6Bone> FirstChild { get; set; } //m_Child
-        public Rsc6Ptr<Rsc6Bone> ParentRef { get; set; } //m_Parent
-        public ushort BoneId { get; set; } //m_BoneId
-        public ushort MirrorIndex { get; set; } //m_MirrorIndex
+        public Rsc6Str NameStr { get; set; } //m_Name, bone name
+        public uint Dofs { get; set; } //m_Dofs, bone data degree-of-freedom flags
+        public Rsc6Ptr<Rsc6BoneData> NextSibling { get; set; } //m_Next, pointer to the bone's next sibling, or NULL if no more siblings
+        public Rsc6Ptr<Rsc6BoneData> FirstChild { get; set; } //m_Child, pointer to the bone's first child, or NULL if no children
+        public Rsc6Ptr<Rsc6BoneData> ParentRef { get; set; } //m_Parent, pointer to the bone's parent, or NULL if no parent
+        public ushort BoneId { get; set; } //m_BoneId, the bone id of this bone (or if bone ids not used, returns the bone's index)
+        public ushort MirrorIndex { get; set; } //m_MirrorIndex, index of the bone that is a mirror to this bone (used to mirror animations/frames)
         public byte NumTransChannels { get; set; } //m_NumTransChannels, related to TranslationMin and TranslationMax
         public byte NumRotChannels { get; set; } //m_NumRotChannels, related to RotationMin and RotationMax
         public byte NumScaleChannels { get; set; } //m_NumScaleChannels, related to OrigScale
         public ushort Unknown_1Dh { get; set; } //Pad
         public byte Unknown_1Fh { get; set; } //Pad
-        public Vector4 OrigPosition { get; set; } //m_DefaultTranslation
-        public Vector4 OrigRotationEuler { get; set; } //m_DefaultRotation
-        public Vector4 OrigRotation { get; set; } //m_DefaultRotationQuat
-        public Vector4 OrigScale { get; set; } //m_DefaultScale
-        public Vector4 AbsolutePosition { get; set; } //m_GlobalOffset, depending on Dofs, ParentRef->m_vOffset or m_vOffset transformed to the model space
-        public Vector4 AbsoluteRotationEuler { get; set; } //m_JointOrient
+        public Vector4 DefaultTranslation { get; set; } //m_DefaultTranslation, default translation vector of bone, this is the offset between this bone and it's parent
+        public Vector4 DefaultRotation { get; set; } //m_DefaultRotation, default rotation on the bone
+        public Quaternion DefaultRotationQuat { get; set; } //m_DefaultRotationQuat, default rotation on the bone as a quaternion
+        public Vector4 DefaultScale { get; set; } //m_DefaultScale, default scale vector (not properly implemented in RAGE)
+        public Vector4 GlobalOffset { get; set; } //m_GlobalOffset, depending on Dofs, ParentRef->m_vOffset or m_vOffset transformed to the model space
+        public Vector4 JointOrient { get; set; } //m_JointOrient
         public Vector4 ScaleOrient { get; set; } //m_ScaleOrient
         public Vector4 TranslationMin { get; set; } //m_TransMin
         public Vector4 TranslationMax { get; set; } //m_TransMax
         public Vector4 RotationMin { get; set; } //m_RotMin
         public Vector4 RotationMax { get; set; } //m_RotMax
         public uint JointData { get; set; } //m_JointData, always 0
-        public JenkHash NameHash { get; set; } //m_NameHash
+        public JenkHash NameHash { get; set; } //m_NameHash, bone name hashed
         public uint Unknown_D8h { get; set; } //Always 0
         public uint Unknown_DCh { get; set; } //Always 0
 
@@ -2514,9 +2006,9 @@ namespace CodeX.Games.RDR1.RSC6
         {
             NameStr = reader.ReadStr();
             Dofs = reader.ReadUInt32();
-            NextSibling = new Rsc6Ptr<Rsc6Bone>() { Position = reader.ReadUInt32() };
-            FirstChild = new Rsc6Ptr<Rsc6Bone>() { Position = reader.ReadUInt32() };
-            ParentRef = new Rsc6Ptr<Rsc6Bone>() { Position = reader.ReadUInt32() };
+            NextSibling = new Rsc6Ptr<Rsc6BoneData>() { Position = reader.ReadUInt32() };
+            FirstChild = new Rsc6Ptr<Rsc6BoneData>() { Position = reader.ReadUInt32() };
+            ParentRef = new Rsc6Ptr<Rsc6BoneData>() { Position = reader.ReadUInt32() };
             Index = reader.ReadUInt16();
             BoneId = reader.ReadUInt16();
             MirrorIndex = reader.ReadUInt16();
@@ -2525,12 +2017,12 @@ namespace CodeX.Games.RDR1.RSC6
             NumScaleChannels = reader.ReadByte();
             Unknown_1Dh = reader.ReadUInt16();
             Unknown_1Fh = reader.ReadByte();
-            OrigPosition = reader.ReadVector4();
-            OrigRotationEuler = reader.ReadVector4();
-            OrigRotation = reader.ReadVector4();
-            OrigScale = reader.ReadVector4();
-            AbsolutePosition = reader.ReadVector4();
-            AbsoluteRotationEuler = reader.ReadVector4();
+            DefaultTranslation = reader.ReadVector4();
+            DefaultRotation = reader.ReadVector4();
+            DefaultRotationQuat = reader.ReadVector4().ToQuaternion();
+            DefaultScale = reader.ReadVector4();
+            GlobalOffset = reader.ReadVector4();
+            JointOrient = reader.ReadVector4();
             ScaleOrient = reader.ReadVector4();
             TranslationMin = reader.ReadVector4();
             TranslationMax = reader.ReadVector4();
@@ -2542,18 +2034,18 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_DCh = reader.ReadUInt32();
 
             Name = NameStr.Value;
-            Position = OrigPosition.XYZ();
-            Rotation = OrigRotation.ToQuaternion();
+            Position = DefaultTranslation.XYZ();
+            Rotation = DefaultRotationQuat;
             Scale = Vector3.One;
 
             AnimRotation = Rotation;
             AnimTranslation = Position;
             AnimScale = Scale;
         }
-        
+
         public void Write(Rsc6DataWriter writer)
         {
-            Rsc6Bone parent = null, child = null, sibling = null;
+            Rsc6BoneData parent = null, child = null, sibling = null;
             var bdata = writer.BlockList.OfType<Rsc6SkeletonBoneData>().FirstOrDefault();
 
             if (bdata != null)
@@ -2579,12 +2071,12 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(NumScaleChannels);
             writer.WriteUInt16(Unknown_1Dh);
             writer.WriteByte(Unknown_1Fh);
-            writer.WriteVector4(OrigPosition);
-            writer.WriteVector4(OrigRotationEuler);
-            writer.WriteVector4(OrigRotation);
-            writer.WriteVector4(OrigScale);
-            writer.WriteVector4(AbsolutePosition);
-            writer.WriteVector4(AbsoluteRotationEuler);
+            writer.WriteVector4(DefaultTranslation);
+            writer.WriteVector4(DefaultRotation);
+            writer.WriteVector4(DefaultRotationQuat.ToVector4());
+            writer.WriteVector4(DefaultScale);
+            writer.WriteVector4(GlobalOffset);
+            writer.WriteVector4(JointOrient);
             writer.WriteVector4(ScaleOrient);
             writer.WriteVector4(TranslationMin);
             writer.WriteVector4(TranslationMax);
@@ -2596,83 +2088,88 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_DCh);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            NameStr = new(Xml.GetChildInnerText(node, "Name"));
-            Dofs = Xml.GetChildUIntAttribute(node, "Dofs", "value");
-            Index = Xml.GetChildIntAttribute(node, "Index", "value");
-            BoneId = (ushort)Xml.GetChildIntAttribute(node, "BoneId", "value");
-            MirrorIndex = (ushort)Xml.GetChildIntAttribute(node, "MirrorIndex", "value");
-            NumTransChannels = (byte)Xml.GetChildIntAttribute(node, "NumTransChannels", "value");
-            NumRotChannels = (byte)Xml.GetChildIntAttribute(node, "NumRotChannels", "value");
-            NumScaleChannels = (byte)Xml.GetChildIntAttribute(node, "NumScaleChannels", "value");
-            OrigPosition = Rpf6Crypto.GetXmlVector4(node, "OrigPosition");
-            OrigRotationEuler = Rpf6Crypto.GetXmlVector4(node, "RotationEuler");
-            OrigRotation = Rpf6Crypto.GetXmlVector4(node, "Rotation");
-            OrigScale = Rpf6Crypto.GetXmlVector4(node, "Scale");
-            AbsolutePosition = Rpf6Crypto.GetXmlVector4(node, "AbsolutePosition");
-            AbsoluteRotationEuler = Rpf6Crypto.GetXmlVector4(node, "AbsoluteRotationEuler");
-            ScaleOrient = Rpf6Crypto.GetXmlVector4(node, "ScaleOrient");
-            TranslationMin = Rpf6Crypto.GetXmlVector4(node, "TranslationMin");
-            TranslationMax = Rpf6Crypto.GetXmlVector4(node, "TranslationMax");
-            RotationMin = Rpf6Crypto.GetXmlVector4(node, "RotationMin");
-            RotationMax = Rpf6Crypto.GetXmlVector4(node, "RotationMax");
-            JointData = Xml.GetChildUIntAttribute(node, "JointData");
-            SiblingIndex = Xml.GetChildIntAttribute(node, "SiblingIndex", "value");
-            ChildIndex = Xml.GetChildIntAttribute(node, "ChildIndex", "value");
-            ParentIndex = Xml.GetChildIntAttribute(node, "ParentIndex", "value");
+            NameStr = new(reader.ReadString("Name"));
+            Dofs = reader.ReadUInt32("Dofs");
+            Index = reader.ReadInt32("Index");
+            BoneId = reader.ReadUInt16("BoneId");
+            MirrorIndex = reader.ReadUInt16("MirrorIndex");
+            NumTransChannels = reader.ReadByte("NumTransChannels");
+            NumRotChannels = reader.ReadByte("NumRotChannels");
+            NumScaleChannels = reader.ReadByte("NumScaleChannels");
+            DefaultTranslation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultTranslation"));
+            DefaultRotation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultRotation"));
+            DefaultRotationQuat = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultRotationQuat")).ToQuaternion();
+            DefaultScale = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultScale"));
+            GlobalOffset = Rpf6Crypto.ToYZX(reader.ReadVector4("GlobalOffset"));
+            JointOrient = Rpf6Crypto.ToYZX(reader.ReadVector4("JointOrient"));
+            ScaleOrient = Rpf6Crypto.ToYZX(reader.ReadVector4("ScaleOrient"));
+            TranslationMin = Rpf6Crypto.ToYZX(reader.ReadVector4("TranslationMin"));
+            TranslationMax = Rpf6Crypto.ToYZX(reader.ReadVector4("TranslationMax"));
+            RotationMin = Rpf6Crypto.ToYZX(reader.ReadVector4("RotationMin"));
+            RotationMax = Rpf6Crypto.ToYZX(reader.ReadVector4("RotationMax"));
+            JointData = reader.ReadUInt32("JointData");
+            SiblingIndex = reader.ReadInt32("SiblingIndex");
+            ChildIndex = reader.ReadInt32("ChildIndex");
+            ParentIndex = reader.ReadInt32("ParentIndex");
 
             Name = NameStr.Value;
             NameHash = new JenkHash(Name);
-            Position = OrigPosition.XYZ();
-            Rotation = OrigRotation.ToQuaternion();
+            Position = DefaultTranslation.XYZ();
+            Rotation = DefaultRotationQuat;
 
             Scale = Vector3.One;
             AnimRotation = Rotation;
             AnimTranslation = Position;
         }
 
-        public void WriteXml(StringBuilder sb, int indent)
+        public override void Write(MetaNodeWriter writer)
         {
-            Xml.StringTag(sb, indent, "Name", Name);
-            Xml.ValueTag(sb, indent, "Dofs", Dofs.ToString());
-            Xml.ValueTag(sb, indent, "Index", Index.ToString());
-            Xml.ValueTag(sb, indent, "BoneId", BoneId.ToString());
-            Xml.ValueTag(sb, indent, "MirrorIndex", MirrorIndex.ToString());
-            Xml.ValueTag(sb, indent, "NumTransChannels", NumTransChannels.ToString());
-            Xml.ValueTag(sb, indent, "NumRotChannels", NumRotChannels.ToString());
-            Xml.ValueTag(sb, indent, "NumScaleChannels", NumScaleChannels.ToString());
-            Xml.SelfClosingTag(sb, indent, "OrigPosition " + FloatUtil.GetVector4XmlString(OrigPosition));
-            Xml.SelfClosingTag(sb, indent, "RotationEuler " + FloatUtil.GetVector4XmlString(OrigRotationEuler));
-            Xml.SelfClosingTag(sb, indent, "Rotation " + FloatUtil.GetVector4XmlString(OrigRotation));
-            Xml.SelfClosingTag(sb, indent, "Scale " + FloatUtil.GetVector4XmlString(OrigScale));
-            Xml.SelfClosingTag(sb, indent, "AbsolutePosition " + FloatUtil.GetVector4XmlString(AbsolutePosition));
-            Xml.SelfClosingTag(sb, indent, "AbsoluteRotationEuler " + FloatUtil.GetVector4XmlString(AbsoluteRotationEuler));
-            Xml.SelfClosingTag(sb, indent, "ScaleOrient " + FloatUtil.GetVector4XmlString(ScaleOrient));
-            Xml.SelfClosingTag(sb, indent, "TranslationMin " + FloatUtil.GetVector4XmlString(TranslationMin));
-            Xml.SelfClosingTag(sb, indent, "TranslationMax " + FloatUtil.GetVector4XmlString(TranslationMax));
-            Xml.SelfClosingTag(sb, indent, "RotationMin " + FloatUtil.GetVector4XmlString(RotationMin));
-            Xml.SelfClosingTag(sb, indent, "RotationMax " + FloatUtil.GetVector4XmlString(RotationMax));
-            Xml.ValueTag(sb, indent, "JointData", JointData.ToString());
-            Xml.ValueTag(sb, indent, "SiblingIndex", (NextSibling.Item == null) ? "-1" : NextSibling.Item.Index.ToString());
-            Xml.ValueTag(sb, indent, "ChildIndex", FirstChild.Item == null ? "-1" : FirstChild.Item.Index.ToString());
-            Xml.ValueTag(sb, indent, "ParentIndex", Parent == null ? "-1" : Parent.Index.ToString());
+            writer.WriteString("Name", Name);
+            writer.WriteUInt32("Dofs", Dofs);
+            writer.WriteInt32("Index", Index);
+            writer.WriteUInt16("BoneId", BoneId);
+            writer.WriteUInt16("MirrorIndex", MirrorIndex);
+            writer.WriteByte("NumTransChannels", NumTransChannels);
+            writer.WriteByte("NumRotChannels", NumRotChannels);
+            writer.WriteByte("NumScaleChannels", NumScaleChannels);
+            writer.WriteVector4("DefaultTranslation", DefaultTranslation);
+            writer.WriteVector4("DefaultRotation", DefaultRotation);
+            writer.WriteVector4("DefaultRotationQuat", DefaultRotationQuat.ToVector4());
+            writer.WriteVector4("DefaultScale", DefaultScale);
+            writer.WriteVector4("GlobalOffset", GlobalOffset);
+            writer.WriteVector4("JointOrient", JointOrient);
+            writer.WriteVector4("ScaleOrient", ScaleOrient);
+            writer.WriteVector4("TranslationMin", TranslationMin);
+            writer.WriteVector4("TranslationMax", TranslationMax);
+            writer.WriteVector4("RotationMin", RotationMin);
+            writer.WriteVector4("RotationMax", RotationMax);
+            writer.WriteUInt32("JointData", JointData);
+            writer.WriteInt32("SiblingIndex", (NextSibling.Item == null) ? -1 : NextSibling.Item.Index);
+            writer.WriteInt32("ChildIndex", (FirstChild.Item == null) ? -1 : FirstChild.Item.Index);
+            writer.WriteInt32("ParentIndex", (Parent == null) ? -1 : Parent.Index);
         }
 
-        public ulong GetSignatureNonChiral()
+        public bool HasDofs(uint dofMask) //Check if any of the degrees of freedom in the mask exist on this bone
         {
-            return ((ulong)BoneId << 32) |
-                   ((Dofs & ((uint)Rsc6DoFs.TRANSLATE_X | (uint)Rsc6DoFs.TRANSLATE_Y | (uint)Rsc6DoFs.TRANSLATE_Z)) != 0 ? 0x1UL : 0x0UL) |
-                   ((Dofs & ((uint)Rsc6DoFs.ROTATE_X | (uint)Rsc6DoFs.ROTATE_Y | (uint)Rsc6DoFs.ROTATE_Z)) != 0 ? 0x2UL : 0x0UL) |
-                   ((Dofs & ((uint)Rsc6DoFs.SCALE_X | (uint)Rsc6DoFs.SCALE_Y | (uint)Rsc6DoFs.SCALE_Z)) != 0 ? 0x4UL : 0x0UL);
+            return (Dofs & dofMask) != 0;
+        }
+
+        public uint GetSignatureNonChiral() //Skeleton signature, insensitive to chirality, it cares only about the dofs and ids present in the skeleton (not their order)
+        {
+            return (uint)(BoneId << 32) |
+                   (((Dofs & ((uint)Rsc6DoFs.TRANSLATE_X | (uint)Rsc6DoFs.TRANSLATE_Y | (uint)Rsc6DoFs.TRANSLATE_Z)) != 0 ? 0x1U : 0x0U) |
+                   ((Dofs & ((uint)Rsc6DoFs.ROTATE_X | (uint)Rsc6DoFs.ROTATE_Y | (uint)Rsc6DoFs.ROTATE_Z)) != 0 ? 0x2U : 0x0U) |
+                   ((Dofs & ((uint)Rsc6DoFs.SCALE_X | (uint)Rsc6DoFs.SCALE_Y | (uint)Rsc6DoFs.SCALE_Z)) != 0 ? 0x4U : 0x0U));
         }
     }
 
     [TC(typeof(EXP))] public class Rsc6SkeletonBoneTag : Rsc6BlockBase //rage::crSkeletonData::BoneIdData
     {
         public override ulong BlockLength => 4;
-        public ushort BoneTag { get; set; }
-        public ushort BoneIndex { get; set; }
+        public ushort BoneTag { get; set; } //m_Id
+        public ushort BoneIndex { get; set; } //m_Index
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2696,13 +2193,13 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => BonesCount * 224;
         public uint BonesCount { get; set; }
-        public Rsc6Bone[] Bones { get; set; }
+        public Rsc6BoneData[] Bones { get; set; }
 
         public Rsc6SkeletonBoneData()
         {
         }
 
-        public Rsc6SkeletonBoneData(Rsc6Bone[] bones)
+        public Rsc6SkeletonBoneData(Rsc6BoneData[] bones)
         {
             Bones = bones;
             BonesCount = (uint)(bones?.Length ?? 0);
@@ -2725,11 +2222,11 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderGroup : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6ShaderGroup : Rsc6BlockBase, MetaNode //rage::grmShaderGroup
     {
         public override ulong BlockLength => 32;
         public uint VFT { get; set; } = 0x0184A26C;
-        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //m_TextureDictionary
+        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //m_TextureDictionary, always NULL
         public Rsc6PtrArr<Rsc6ShaderFX> Shaders { get; set; } //m_Shaders
         public uint Unknown_10h { get; set; } //m_ShaderGroupVars[]
         public uint Unknown_14h { get; set; }
@@ -2745,6 +2242,12 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_14h = reader.ReadUInt32();
             Unknown_18h = reader.ReadUInt32();
             Unknown_1Ch = reader.ReadUInt32();
+
+            //Tests
+            if (Unknown_10h != 0 || Unknown_14h != 0 || Unknown_18h != 0 || Unknown_1Ch != 0)
+            {
+                throw new Exception("Rsc6ShaderGroup: Unknown property");
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -2759,46 +2262,27 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_1Ch);
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
+        public void Read(MetaNodeReader reader)
         {
-            var tnode = node.SelectSingleNode("TextureDictionary");
-            WtdFile wtd = null;
-            if (tnode != null)
-            {
-                wtd = new WtdFile();
-                wtd.ReadXml(tnode, ddsfolder);
-                TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(wtd.TextureDictionary);
-            }
+            TextureDictionary = new(reader.ReadNode<Rsc6TextureDictionary>("TextureDictionary"));
+            Shaders = new(reader.ReadNodeArray<Rsc6ShaderFX>("Shaders"));
 
-            var snode = node.SelectSingleNode("Shaders");
-            if (snode != null)
+            foreach (var shader in Shaders.Items)
             {
-                var iNodes = snode.SelectNodes("Item");
-                if (iNodes != null)
+                foreach (var param in shader.ParametersList.Item?.Parameters)
                 {
-                    var shaders = new List<Rsc6ShaderFX>();
-                    foreach (XmlNode inode in iNodes)
+                    if (param.DataType == 0 && param.Texture != null)
                     {
-                        var shader = new Rsc6ShaderFX();
-                        shader.ReadXml(inode);
-
-                        foreach (var param in shader?.ParametersList.Item?.Parameters)
+                        var embeddedTex = TextureDictionary.Item?.Textures.Items?.Where(t => t.Name == param.Texture.Name).FirstOrDefault();
+                        if (embeddedTex != null)
                         {
-                            if (param.DataType == 0 && param.Texture != null)
-                            {
-                                var embeddedTex = TextureDictionary.Item?.Textures.Items?.Where(t => t.Name == param.Texture.Name).FirstOrDefault();
-                                if (embeddedTex != null)
-                                {
-                                    param.Texture = embeddedTex;
-                                }
-                            }
+                            param.Texture = embeddedTex;
                         }
-                        shaders.Add(shader);
                     }
-                    Shaders = new Rsc6PtrArr<Rsc6ShaderFX>(shaders.ToArray());
                 }
             }
 
+            var dictionary = new WtdFile(TextureDictionary.Item.Textures.Items.ToList());
             if ((Shaders.Items != null) && (TextureDictionary.Item != null))
             {
                 foreach (var shader in Shaders.Items)
@@ -2808,9 +2292,9 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         foreach (var sparam in sparams)
                         {
-                            if (sparam.Texture != null && wtd != null)
+                            if (sparam.Texture != null && dictionary != null)
                             {
-                                var tex2 = wtd.Lookup(JenkHash.GenHash(sparam.Texture.NameRef.Value));
+                                var tex2 = dictionary.Lookup(JenkHash.GenHash(sparam.Texture.NameRef.Value));
                                 if (tex2 != null)
                                 {
                                     sparam.Texture = tex2; //Swap the parameter out for the embedded texture
@@ -2822,411 +2306,38 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsfolder)
+        public void Write(MetaNodeWriter writer)
         {
-            var shaders = Shaders.Items;
-            if (shaders != null)
+            //We don't use 'TextureDictionary' in RDR1, so we manually collect all the textures from our shaders
+            var dict = new List<Texture>();
+            foreach (var tex in Shaders.Items)
             {
-                var writtenTextures = new List<string>();
-                Xml.OpenTag(sb, indent, "TextureDictionary");
-                foreach (var tex in shaders)
+                foreach (var param in tex?.ParametersList.Item?.Parameters)
                 {
-                    foreach (var param in tex?.ParametersList.Item?.Parameters)
-                    {
-                        if (param.DataType != 0 || writtenTextures.Contains(param.Texture?.Name) || param.Texture?.Height == 0) continue;
-
-                        Xml.OpenTag(sb, indent + 1, "Item");
-                        param.Texture?.WriteXml(sb, indent + 2, ddsfolder);
-                        writtenTextures.Add(param.Texture?.Name);
-                        Xml.CloseTag(sb, indent + 1, "Item");
-                    }
+                    if (param.DataType != 0
+                        || param.Texture == null
+                        || dict.FirstOrDefault(tex => tex.Name == param.Texture.Name) != null
+                        || param.Texture?.Height == 0)
+                        continue;
+                    dict.Add(param.Texture);
                 }
-                Xml.CloseTag(sb, indent, "TextureDictionary");
             }
 
-            Xml.OpenTag(sb, indent, "Shaders");
-            if (shaders != null)
+            var texDict = new Rsc6TextureDictionary()
             {
-                indent += 2;
-                foreach (var v in shaders)
-                {
-                    if (v.Name.Str == string.Empty || v.ParameterCount == 0) continue;
+                Textures = new(dict.Select(tex => (Rsc6Texture)tex).ToArray())
+            };
 
-                    Xml.OpenTag(sb, indent - 1, "Item");
-                    Xml.StringTag(sb, indent, "Name", v.Name.ToString());
-                    Xml.StringTag(sb, indent, "FileName", v.Name.ToString() + ".sps");
-                    Xml.ValueTag(sb, indent, "RenderBucket", v.RenderBucket.ToString());
-                    Xml.OpenTag(sb, indent, "Parameters");
-
-                    foreach (var p in v.GetParams())
-                    {
-                        p.WriteXml(sb, indent + 1);
-                    }
-                    Xml.CloseTag(sb, indent, "Parameters");
-                    Xml.CloseTag(sb, indent - 1, "Item");
-                }
-            }
-            Xml.CloseTag(sb, indent, "Shaders");
-        }
-
-        private Rsc6ShaderFX ConvertToRDR1(Rsc6ShaderFX shader)
-        {
-            var s = shader;
-            byte textureCount;
-            ushort parameterSize;
-            ushort parameterDataSize;
-            JenkHash[] hashes;
-            Rsc6ShaderParameter[] parametersGTAV = s.GetParams();
-            Rsc6ShaderParameter[] parametersRDR;
-
-            if (shader.Name.Str == "ped")
-            {
-                s.Name = JenkHash.GenHash("rdr2_bump_spec_ambocc_shareduv_character_skin");
-                s.FileName = new JenkHash(); //FileName seems to always be 0
-                parametersRDR = new Rsc6ShaderParameter[27];
-
-                foreach (var p in parametersGTAV)
-                {
-                    switch (p.Hash.Str)
-                    {
-                        case "diffusesampler":
-                            parametersRDR[0] = p;
-                            parametersRDR[0].Hash = new JenkHash("texturesampler");
-                            parametersRDR[0].Texture = p.Texture;
-                            break;
-                        case "specsampler":
-                            parametersRDR[1] = p;
-                            parametersRDR[1].Hash = new JenkHash("amboccsampler");
-                            parametersRDR[1].Texture = p.Texture;
-                            break;
-                        case "bumpsampler":
-                            parametersRDR[2] = p;
-                            parametersRDR[2].Hash = new JenkHash("bumpsampler");
-                            parametersRDR[2].Texture = p.Texture;
-                            break;
-                        case "bumpiness":
-                            parametersRDR[5] = p;
-                            parametersRDR[5].Hash = new JenkHash("bumpiness");
-                            parametersRDR[5].Vector = p.Vector;
-                            break;
-                    }
-                }
-
-                if (parametersRDR[1] == null)
-                {
-                    //amboccsampler
-                    parametersRDR[1] = new Rsc6ShaderParameter
-                    {
-                        Hash = new JenkHash("amboccsampler"),
-                        DataType = 0
-                    };
-                }
-                if (parametersRDR[2] == null)
-                {
-                    //bumpsampler
-                    parametersRDR[2] = new Rsc6ShaderParameter
-                    {
-                        Hash = new JenkHash("bumpsampler"),
-                        DataType = 0
-                    };
-                }
-
-                //detailmapsampler
-                parametersRDR[3] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("detailmapsampler"),
-                    DataType = 0
-                };
-
-                //Colors
-                var colorsVectors = new Vector4[]
-                {
-                    new Vector4(1f, 0f, 0f, 1f),
-                    new Vector4(1f, 0.5f, 0f, 1f),
-                    new Vector4(1f, 1f, 0f, 1f),
-                    new Vector4(0f, 1f, 0f, 1f),
-                    new Vector4(0f, 1f, 1f, 1f),
-                    new Vector4(0f, 0f, 1f, 1f),
-                    new Vector4(0.5f, 0f, 1f, 1f),
-                    new Vector4(1f, 0f, 1f, 1f),
-                    new Vector4(1f, 1f, 1f, 1f),
-                };
-                var colorsParams = new Rsc6Vector4(colorsVectors);
-                parametersRDR[4] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("colors"),
-                    DataType = 9,
-                    Array = colorsParams
-                };
-
-                //rimglowscale
-                var rimglowscaleParams = new Rsc6Vector4(new Vector4(1f, 0f, 0f, 0f));
-                parametersRDR[6] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("rimglowscale"),
-                    DataType = 1,
-                    Vector = rimglowscaleParams
-                };
-
-                //rimamount
-                var rimamountParams = new Rsc6Vector4(new Vector4(0.03f, 0f, 0f, 0f));
-                parametersRDR[7] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("rimamount"),
-                    DataType = 1,
-                    Vector = rimamountParams
-                };
-
-                //rimpower
-                var rimpowerParams = new Rsc6Vector4(new Vector4(2.7f, 0f, 0f, 0f));
-                parametersRDR[8] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("rimpower"),
-                    DataType = 1,
-                    Vector = rimpowerParams
-                };
-
-                //specularfresnelmax
-                var specularfresnelmaxParams = new Rsc6Vector4(new Vector4(4f, 0f, 0f, 0f));
-                parametersRDR[9] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularfresnelmax"),
-                    DataType = 1,
-                    Vector = specularfresnelmaxParams
-                };
-
-                //specularfresnelmin
-                var specularfresnelminParams = new Rsc6Vector4(new Vector4(0.15f, 0f, 0f, 0f));
-                parametersRDR[10] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularfresnelmin"),
-                    DataType = 1,
-                    Vector = specularfresnelminParams
-                };
-
-                //specularfresnelexp
-                var specularfresnelexpParams = new Rsc6Vector4(new Vector4(2.163f, 0f, 0f, 0f));
-                parametersRDR[11] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularfresnelexp"),
-                    DataType = 1,
-                    Vector = specularfresnelexpParams
-                };
-
-                //specdiffuseamount
-                var specdiffuseamountParams = new Rsc6Vector4(new Vector4(0f, 0f, 0f, 0f));
-                parametersRDR[12] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specdiffuseamount"),
-                    DataType = 1,
-                    Vector = specdiffuseamountParams
-                };
-
-                //specularcolorfactor2
-                var specularcolorfactor2Params = new Rsc6Vector4(new Vector4(0.5f, 0f, 0f, 0f));
-                parametersRDR[13] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularcolorfactor2"),
-                    DataType = 1,
-                    Vector = specularcolorfactor2Params
-                };
-
-                //specularfactor2
-                var specularfactor2Params = new Rsc6Vector4(new Vector4(22.9f, 0f, 0f, 0f));
-                parametersRDR[14] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularfactor2"),
-                    DataType = 1,
-                    Vector = specularfactor2Params
-                };
-
-                //specularcolorfactor
-                var specularcolorfactorParams = new Rsc6Vector4(new Vector4(1f, 0f, 0f, 0f));
-                parametersRDR[15] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularcolorfactor"),
-                    DataType = 1,
-                    Vector = specularcolorfactorParams
-                };
-
-                //specularfactor
-                var specularfactorParams = new Rsc6Vector4(new Vector4(20f, 0f, 0f, 0f));
-                parametersRDR[16] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("specularfactor"),
-                    DataType = 1,
-                    Vector = specularfactorParams
-                };
-
-                //detailmapscale
-                var detailmapscaleParams = new Rsc6Vector4(new Vector4(0.5f, 0f, 0f, 0f));
-                parametersRDR[17] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("detailmapscale"),
-                    DataType = 1,
-                    Vector = detailmapscaleParams
-                };
-
-                //detailmapscalev
-                var detailmapscalevParams = new Rsc6Vector4(new Vector4(39f, 0f, 0f, 0f));
-                parametersRDR[18] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("detailmapscalev"),
-                    DataType = 1,
-                    Vector = detailmapscalevParams
-                };
-
-                //detailmapscalev
-                var detailmapscaleuParams = new Rsc6Vector4(new Vector4(54f, 0f, 0f, 0f));
-                parametersRDR[19] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("detailmapscaleu"),
-                    DataType = 1,
-                    Vector = detailmapscaleuParams
-                };
-
-                //0xA7B06B29
-                var A7B06B29Params = new Rsc6Vector4(new Vector4[] { Vector4.Zero, Vector4.Zero, Vector4.Zero });
-                parametersRDR[20] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash(694923431),
-                    DataType = 3,
-                    Array = A7B06B29Params
-                };
-
-                //blursize
-                var blursizeParams = new Rsc6Vector4(new Vector4(1f, 0f, 0f, 0f));
-                parametersRDR[21] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("blursize"),
-                    DataType = 1,
-                    Vector = blursizeParams
-                };
-
-                //epidermiswieght
-                var epidermiswieghtParams = new Rsc6Vector4(new Vector4(0.2f, 0f, 0f, 0f));
-                parametersRDR[22] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("epidermiswieght"),
-                    DataType = 1,
-                    Vector = epidermiswieghtParams
-                };
-
-                //epidermiscolor
-                var epidermiscolorParams = new Rsc6Vector4(new Vector4(1f, 1f, 1f, 0f));
-                parametersRDR[23] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("epidermiscolor"),
-                    DataType = 1,
-                    Vector = epidermiscolorParams
-                };
-
-                //dermiswieght
-                var dermiswieghtParams = new Rsc6Vector4(new Vector4(0.2f, 1f, 1f, 0f));
-                parametersRDR[24] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("dermiswieght"),
-                    DataType = 1,
-                    Vector = dermiswieghtParams
-                };
-
-                //dermiscolor
-                var dermiscolorParams = new Rsc6Vector4(new Vector4(0.8705f, 0.7725f, 0.7647f, 0f));
-                parametersRDR[25] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("dermiscolor"),
-                    DataType = 1,
-                    Vector = dermiscolorParams
-                };
-
-                //PhysicsMaterial
-                parametersRDR[26] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("physicsmaterial"),
-                    DataType = 1,
-                    Vector = new Rsc6Vector4(Vector4.Zero)
-                };
-
-                hashes = new JenkHash[parametersRDR.Length];
-                for (int i = 0; i < hashes.Length; i++)
-                {
-                    hashes[i] = parametersRDR[i].Hash;
-                }
-
-                textureCount = 4;
-                parameterSize = 752;
-                parameterDataSize = 896;
-            }
-            else
-            {
-                s.Name = JenkHash.GenHash("rdr2_low_lod_nodirt"); //Easier shader to handle (single sampler, simple layout)
-                s.FileName = new JenkHash(); //FileName seems to always be 0
-                parametersRDR = new Rsc6ShaderParameter[3];
-
-                foreach (var p in parametersGTAV)
-                {
-                    switch (p.Hash.Str)
-                    {
-                        case "diffusesampler":
-                            parametersRDR[0] = p;
-                            parametersRDR[0].Hash = new JenkHash("texturesampler");
-                            break;
-                    }
-                }
-
-                //Colors
-                var colorsVectors = new Vector4[]
-                {
-                    new Vector4(1f, 0f, 0f, 1f),
-                    new Vector4(1f, 0.5f, 0f, 1f),
-                    new Vector4(1f, 1f, 0f, 1f),
-                    new Vector4(0f, 1f, 0f, 1f),
-                    new Vector4(0f, 1f, 1f, 1f),
-                    new Vector4(0f, 0f, 1f, 1f),
-                    new Vector4(0.5f, 0f, 1f, 1f),
-                    new Vector4(1f, 0f, 1f, 1f),
-                    new Vector4(1f, 1f, 1f, 1f),
-                };
-                var colorsParams = new Rsc6Vector4(colorsVectors);
-                parametersRDR[1] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("colors"),
-                    DataType = 9,
-                    Array = colorsParams
-                };
-
-                //PhysicsMaterial
-                parametersRDR[2] = new Rsc6ShaderParameter
-                {
-                    Hash = new JenkHash("physicsmaterial"),
-                    DataType = 1,
-                    Vector = new Rsc6Vector4(Vector4.Zero)
-                };
-
-                hashes = new JenkHash[parametersRDR.Length];
-                for (int i = 0; i < hashes.Length; i++)
-                {
-                    hashes[i] = parametersRDR[i].Hash;
-                }
-                textureCount = 1;
-                parameterSize = 192;
-                parameterDataSize = 240;
-            }
-            s.SetParams(parametersRDR, hashes);
-            s.ParametersList.Item.Count = parametersRDR.Length;
-            s.ParameterCount = (byte)parametersRDR.Length;
-            s.TextureParametersCount = textureCount;
-            s.ParameterSize = parameterSize;
-            s.ParameterDataSize = parameterDataSize;
-            return s;
+            writer.WriteNode("TextureDictionary", texDict);
+            writer.WriteNodeArray("Shaders", Shaders.Items);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderParameter
+    [TC(typeof(EXP))] public class Rsc6ShaderParameter : MetaNode
     {
         public byte RegisterCount { get; set; }
         public byte RegisterIndex { get; set; }
-        public byte DataType { get; set; } //0: texture, 1: vector4
+        public Rsc6ShaderParamType DataType { get; set; } //0: texture, 1: vector4
         public byte Unknown_3h { get; set; }
         public uint DataPointer { get; set; }
         public JenkHash Hash { get; set; }
@@ -3236,7 +2347,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            DataType = reader.ReadByte();
+            DataType = (Rsc6ShaderParamType)reader.ReadByte();
             RegisterIndex = reader.ReadByte();
             RegisterCount = reader.ReadByte();
             Unknown_3h = reader.ReadByte();
@@ -3245,7 +2356,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(Rsc6DataWriter writer)
         {
-            writer.WriteByte(DataType);
+            writer.WriteByte((byte)DataType);
             writer.WriteByte(RegisterIndex);
             writer.WriteByte(RegisterCount);
             writer.WriteByte(Unknown_3h);
@@ -3262,10 +2373,13 @@ namespace CodeX.Games.RDR1.RSC6
 
             switch (DataType)
             {
-                case 0:
-                    writer.WritePtrEmbed(texture, texture, 0);
+                case Rsc6ShaderParamType.Texture:
+                    if (texture == null)
+                        writer.WritePtr(new Rsc6Ptr<Rsc6TextureBase>(Texture)); //External texture
+                    else
+                        writer.WritePtrEmbed(texture, texture, 0); //Embedded texture
                     break;
-                case 1:
+                case Rsc6ShaderParamType.CBuffer:
                     writer.WritePtr(new Rsc6Ptr<Rsc6Vector4>(Vector));
                     break;
                 default:
@@ -3274,44 +2388,78 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void WriteXml(StringBuilder sb, int indent)
+        public void Read(MetaNodeReader reader)
         {
-            var otstr = "Item name=\"" + Hash.ToString() + "\" type=\"" + ((DataType > 1) ? "Array" : ((Rsc6ShaderParamType)DataType).ToString()) + "\"";
+            DataType = reader.ReadEnum<Rsc6ShaderParamType>("@type");
+            Hash = new JenkHash(reader.ReadString("@name"));
+
             switch (DataType)
             {
-                case (byte)Rsc6ShaderParamType.Texture:
-                    var name = Texture?.Name ?? "";
-                    if (name != "")
+                case Rsc6ShaderParamType.Texture:
+                    var tex = reader.ReadString("@texture");
+                    if (tex.Contains('-')) tex = tex.Replace("-", ":");
+                    Texture = new Rsc6TextureBase()
                     {
-                        if (name.EndsWith(".dds"))
-                            name = name.Replace(".dds", "");
-                        if (name.Contains(':'))
-                            name = name.Replace(':', '-');
-                        Xml.OpenTag(sb, indent, otstr);
-                        Xml.StringTag(sb, indent + 1, "Name", Xml.Escape(name.ToLower()));
-                        Xml.CloseTag(sb, indent, "Item");
+                        Name = tex + ".dds",
+                        NameRef = new Rsc6Str(tex + ".dds")
+                    };
+                    break;
+                case Rsc6ShaderParamType.CBuffer:
+                    var length = reader.ReadUInt16("@length") / 16;
+                    var cbuffer = new Rsc6Vector4() { Count = length };
+                    switch (length)
+                    {
+                        case 0:
+                            break;
+                        case 1:
+                            cbuffer.Vector = new(reader.ReadSingle("@x"), reader.ReadSingle("@y"), reader.ReadSingle("@z"), reader.ReadSingle("@w"));
+                            Vector = new(cbuffer.Vector);
+                            break;
+                        default:
+                            cbuffer.Array = reader.ReadVector4Array("Array");
+                            Array = new(cbuffer.Array);
+                            break;
                     }
+                    DataType = (Rsc6ShaderParamType)length;
                     break;
-
-                case (byte)Rsc6ShaderParamType.Vector:
-                    Xml.SelfClosingTag(sb, indent, otstr + " " + FloatUtil.GetVector4XmlString(Vector.Vector));
-                    break;
-
                 default:
-                    Xml.OpenTag(sb, indent, otstr);
-                    foreach (var vec in Array.Array)
-                    {
-                        Xml.SelfClosingTag(sb, indent + 1, "Value " + FloatUtil.GetVector4XmlString(vec));
-                    }
-                    Xml.CloseTag(sb, indent, "Item");
                     break;
             }
         }
 
-        public enum Rsc6ShaderParamType : byte
+
+        public void Write(MetaNodeWriter writer)
         {
-            Texture = 0,
-            Vector = 1
+            string type = (DataType == Rsc6ShaderParamType.Texture) ? "Texture" : "CBuffer";
+            writer.WriteString("@type", type);
+            writer.WriteString("@name", Hash.ToString());
+
+            switch (DataType)
+            {
+                case Rsc6ShaderParamType.Texture:
+                    if (Texture != null)
+                    {
+                        writer.WriteString("@texture", Texture.Name.Replace(".dds", ""));
+                    }
+                    break;
+                default:
+                    writer.WriteUInt16("@length", (ushort)((int)DataType * 16));
+                    switch ((int)DataType)
+                    {
+                        case 0:
+                            break;
+                        case 1:
+                            writer.WriteSingle("@x", Vector.Vector.X);
+                            writer.WriteSingle("@y", Vector.Vector.Y);
+                            writer.WriteSingle("@z", Vector.Vector.Z);
+                            writer.WriteSingle("@w", Vector.Vector.W);
+                            break;
+                        default:
+                            writer.WriteVector4Array("Array", Array.Array);
+                            break;
+                    }
+                    break;
+            }
         }
 
         public override string ToString()
@@ -3327,7 +2475,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderParametersBlock : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6ShaderParametersBlock : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength
         {
@@ -3345,7 +2493,7 @@ namespace CodeX.Games.RDR1.RSC6
                 foreach (var x in Parameters)
                 {
                     offset += 8;
-                    offset += 16 * x.DataType;
+                    offset += 16 * (byte)x.DataType;
                 }
 
                 offset += Parameters.Length * 4;
@@ -3360,7 +2508,7 @@ namespace CodeX.Games.RDR1.RSC6
                 ushort size = (ushort)((Parameters?.Length ?? 0) * 8);
                 foreach (var x in Parameters)
                 {
-                    size += (ushort)(16 * x.DataType);
+                    size += (ushort)(16 * (byte)x.DataType);
                 }
 
                 if ((size % 16) != 0)
@@ -3407,6 +2555,11 @@ namespace CodeX.Games.RDR1.RSC6
 
         }
 
+        public Rsc6ShaderParametersBlock(Rsc6ShaderFX owner)
+        {
+            Owner = owner;
+        }
+
         public Rsc6ShaderParametersBlock(Rsc6ShaderFX owner, int count)
         {
             Owner = owner;
@@ -3432,7 +2585,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 switch (p.DataType)
                 {
-                    case 0:
+                    case Rsc6ShaderParamType.Texture:
                         var block = reader.ReadBlock<Rsc6TextureBase>(p.DataPointer);
                         var tex = WfdFile.TextureDictionary.Item;
                         if (tex == null)
@@ -3475,11 +2628,11 @@ namespace CodeX.Games.RDR1.RSC6
                             }
                         }
                         break;
-                    case 1:
-                        p.Vector = reader.ReadBlock(p.DataPointer, (_) => new Rsc6Vector4(p.DataType));
+                    case Rsc6ShaderParamType.CBuffer:
+                        p.Vector = reader.ReadBlock(p.DataPointer, (_) => new Rsc6Vector4((int)p.DataType));
                         break;
                     default:
-                        p.Array = reader.ReadBlock(p.DataPointer, (_) => new Rsc6Vector4(p.DataType));
+                        p.Array = reader.ReadBlock(p.DataPointer, (_) => new Rsc6Vector4((int)p.DataType));
                         break;
                 }
             }
@@ -3487,7 +2640,7 @@ namespace CodeX.Games.RDR1.RSC6
             ushort size = (ushort)((paras?.Length ?? 0) * 8);
             foreach (var x in paras)
             {
-                size += (ushort)(16 * x.DataType);
+                size += (ushort)(16 * (byte)x.DataType);
             }
 
             if ((size % 16) != 0)
@@ -3516,7 +2669,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 if (param.DataType == 0)
                     param.DataPointer = (uint)param.Texture.FilePosition;
-                else if (param.DataType == 1)
+                else if (param.DataType == Rsc6ShaderParamType.CBuffer)
                     param.DataPointer = (uint)param.Vector.FilePosition;
                 else
                     param.DataPointer = (uint)param.Array.FilePosition;
@@ -3538,9 +2691,9 @@ namespace CodeX.Games.RDR1.RSC6
             for (int i = 0; i < Parameters.Length; i++)
             {
                 var param = Parameters[i];
-                if (param.DataType == 1)
+                if (param.DataType == (Rsc6ShaderParamType)1)
                     writer.WriteVector4(param.Vector.Vector);
-                else if (param.DataType > 1)
+                else if (param.DataType > (Rsc6ShaderParamType)1)
                 {
                     foreach (var v in param.Array.Array)
                     {
@@ -3556,80 +2709,11 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void ReadXml(XmlNode node)
+        public void Read(MetaNodeReader reader)
         {
-            var plist = new List<Rsc6ShaderParameter>();
-            var hlist = new List<JenkHash>();
-            var pnodes = node.SelectNodes("Item");
-
-            foreach (XmlNode pnode in pnodes)
-            {
-                var p = new Rsc6ShaderParameter
-                {
-                    Hash = JenkHash.GenHash(Xml.GetStringAttribute(pnode, "name")?.ToLowerInvariant())
-                };
-                var type = Xml.GetStringAttribute(pnode, "type");
-
-                if (type == "Texture")
-                {
-                    p.DataType = 0;
-                    if (pnode.SelectSingleNode("Name") != null)
-                    {
-                        var tex = new Rsc6TextureBase();
-                        tex.ReadXml(pnode);
-                        p.Texture = tex;
-                    }
-                }
-                else if (type == "Vector")
-                {
-                    float fx = Xml.GetFloatAttribute(pnode, "x");
-                    float fy = Xml.GetFloatAttribute(pnode, "y");
-                    float fz = Xml.GetFloatAttribute(pnode, "z");
-                    float fw = Xml.GetFloatAttribute(pnode, "w");
-                    p.Vector = new Rsc6Vector4()
-                    {
-                        Vector = new Vector4(fx, fz, fy, fw),
-                        Count = 1
-                    };
-                    p.DataType = 1;
-                }
-                else if (type == "Array")
-                {
-                    var vecs = new List<Vector4>();
-                    if (Xml.GetStringAttribute(pnode, "name")?.ToLowerInvariant() == "colors")
-                    {
-                        var colors = CreateColorsParameters();
-                        foreach (var c in colors)
-                        {
-                            vecs.Add(c);
-                        }
-                    }
-                    else
-                    {
-                        var inodes = pnode.SelectNodes("Value");
-                        foreach (XmlNode inode in inodes)
-                        {
-                            float fx = Xml.GetFloatAttribute(inode, "x");
-                            float fy = Xml.GetFloatAttribute(inode, "y");
-                            float fz = Xml.GetFloatAttribute(inode, "z");
-                            float fw = Xml.GetFloatAttribute(inode, "w");
-                            vecs.Add(new Vector4(fx, fz, fy, fw));
-                        }
-                    }
-                    p.Array = new Rsc6Vector4()
-                    {
-                        Array = vecs.ToArray(),
-                        Count = vecs.Count
-                    };
-                    p.DataType = (byte)vecs.Count;
-                }
-                plist.Add(p);
-                hlist.Add(p.Hash);
-            }
-
-            Parameters = plist.ToArray();
-            Hashes = hlist.ToArray();
-            Count = plist.Count;
+            Parameters = reader.ReadNodeArray<Rsc6ShaderParameter>("Items");
+            Hashes = Parameters.Select(param => param.Hash).ToArray();
+            Count = Parameters.Length;
 
             for (int i = 0; i < Parameters.Length; i++)
             {
@@ -3647,25 +2731,14 @@ namespace CodeX.Games.RDR1.RSC6
                 if (param.DataType != 0)
                 {
                     param.RegisterIndex = (byte)offset;
-                    offset += param.DataType;
+                    offset += (byte)param.DataType;
                 }
             }
         }
 
-        private Vector4[] CreateColorsParameters()
+        public void Write(MetaNodeWriter writer)
         {
-            return new Vector4[9]
-            {
-                new Vector4(1f, 0f, 0f , 1f),
-                new Vector4(1f, 0.5f, 0f , 1f),
-                new Vector4(1f, 1f, 0f , 1f),
-                new Vector4(0f, 1f, 0f , 1f),
-                new Vector4(0f, 1f, 1f , 1f),
-                new Vector4(0f, 0f, 1f , 1f),
-                new Vector4(0.5f, 0f, 1f , 1f),
-                new Vector4(1f, 0f, 1f , 1f),
-                new Vector4(1f, 1f, 1f , 1f),
-            };
+            writer.WriteNodeArray("Items", Parameters);
         }
     }
 
@@ -3709,7 +2782,7 @@ namespace CodeX.Games.RDR1.RSC6
                 Array = reader.ReadVector4Arr(Count, false);
             }
         }
-        
+
         public override void Write(Rsc6DataWriter writer)
         {
             if (Array != null)
@@ -3726,7 +2799,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderFX : Rsc6BlockBase //rage::grmShader + rage::grcInstanceData
+    [TC(typeof(EXP))] public class Rsc6ShaderFX : Rsc6BlockBase, MetaNode //rage::grmShader + rage::grcInstanceData
     {
         public override ulong BlockLength => 32;
         public Rsc6Ptr<Rsc6ShaderParametersBlock> ParametersList { get; set; } //Data
@@ -3787,25 +2860,23 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(SortKey);
         }
 
-        public void ReadXml(XmlNode node)
+        public void Read(MetaNodeReader reader)
         {
-            Name = JenkHash.GenHash(Xml.GetChildInnerText(node, "Name"));
-            FileName = JenkHash.GenHash(Xml.GetChildInnerText(node, "FileName"));
-            RenderBucket = (byte)Xml.GetChildUIntAttribute(node, "RenderBucket", "value");
+            Name = new JenkHash(reader.ReadString("Name"));
+            RenderBucket = reader.ReadByte("DrawBucket");
+            SortKey = reader.ReadUInt32("SortKey");
+            ParametersList = new(reader.ReadNode("Parameters", (_) => new Rsc6ShaderParametersBlock(this)));
+            ParameterSize = ParametersList.Item?.ParametersSize ?? 0;
+            ParameterDataSize = ParametersList.Item?.ParametersDataSize ?? 0;
+            TextureParametersCount = ParametersList.Item?.TextureParamsCount ?? 0;
+        }
 
-            var pnode = node.SelectSingleNode("Parameters");
-            if (pnode != null)
-            {
-                var parametersList = new Rsc6ShaderParametersBlock();
-                parametersList.Owner = this;
-                parametersList.ReadXml(pnode);
-
-                ParametersList = new Rsc6Ptr<Rsc6ShaderParametersBlock>(parametersList);
-                ParameterCount = (byte)parametersList.Count;
-                ParameterSize = parametersList.ParametersSize;
-                ParameterDataSize = parametersList.ParametersDataSize;
-                TextureParametersCount = parametersList.TextureParamsCount;
-            }
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteString("Name", Name.ToString());
+            writer.WriteByte("DrawBucket", RenderBucket);
+            writer.WriteUInt32("SortKey", SortKey);
+            writer.WriteNode("Parameters", ParametersList.Item);
         }
 
         public Rsc6ShaderParameter[] GetParams()
@@ -3831,22 +2902,32 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6VertexDeclaration : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6VertexDeclaration : Rsc6BlockBase, MetaNode //rage::grcFvf
     {
+        /*
+         * FVF - Flexible Vertex Format
+         * This class uses the concepts of channels and data size/type.
+         * A channel represents actual data sent, such as positions or normals.
+         * A data size/type represents how that data is stored in a vertex buffer
+         */
+
         public override ulong BlockLength => 16;
-        public uint Flags { get; set; } //m_Fvf, fvf channels currently used, mostly 16601, 16473 or 16857
-        public ushort Stride { get; set; } //m_FvfSize + m_Flags, total size of the fvf + various flags for transformed positions, etc
-        public byte DynamicOrder { get; set; } //m_DynamicOrder, padded dynamic order instead of standard order
-        public byte Count { get; set; } //m_ChannelCount, number of '1's in 'Flags'
+        public uint FVF { get; set; } //m_Fvf, fvf channels currently used, (16601, 16473, 16857, etc)
+        public byte FVFSize { get; set; } //m_FvfSize, total size of the fvf
+        public byte Flags { get; set; } //m_Flags, various flags to use (i.e. transformed positions, etc)
+        public byte DynamicOrder { get; set; } //m_DynamicOrder, if fvf is in dynamic order or standard order
+        public byte ChannelCount { get; set; } //m_ChannelCount, number of 1's in 'Flags'
         public Rsc6VertexDeclarationTypes Types { get; set; } //m_FvfChannelSizes, 16 fields 4 bits each
+
         public VertexLayout VertexLayout { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
-            Flags = reader.ReadUInt32();
-            Stride = reader.ReadUInt16();
+            FVF = reader.ReadUInt32();
+            FVFSize = reader.ReadByte();
+            Flags = reader.ReadByte();
             DynamicOrder = reader.ReadByte();
-            Count = reader.ReadByte();
+            ChannelCount = reader.ReadByte();
             Types = (Rsc6VertexDeclarationTypes)reader.ReadUInt64();
 
             ulong t = (ulong)Types;
@@ -3856,7 +2937,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < 16; i++)
             {
-                if (((Flags >> i) & 1) != 0)
+                if (((FVF >> i) & 1) != 0)
                 {
                     var i4 = i * 4;
                     var n4 = n * 4;
@@ -3872,55 +2953,43 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(Flags);
-            writer.WriteUInt16(Stride);
+            writer.WriteUInt32(FVF);
+            writer.WriteByte(FVFSize);
+            writer.WriteByte(Flags);
             writer.WriteByte(DynamicOrder);
-            writer.WriteByte(Count);
+            writer.WriteByte(ChannelCount);
             writer.WriteUInt64((ulong)Types);
         }
 
-        public void ReadXml(XmlNode node)
+        public void Read(MetaNodeReader reader)
         {
-            if (node == null) return;
-
-            Types = Xml.GetEnumValue<Rsc6VertexDeclarationTypes>(Xml.GetStringAttribute(node, "type").Replace("GTAV1", "RDR1_1"));
-            uint f = 0;
-
-            foreach (XmlNode cnode in node.ChildNodes)
-            {
-                if (cnode is XmlElement celem)
-                {
-                    var componentSematic = Xml.GetEnumValue<Rsc6VertexElementSemantic>(celem.Name);
-                    var idx = (int)componentSematic;
-                    f |= (1u << idx);
-                }
-            }
-            Flags = f;
-            UpdateCountAndStride();
+            FVF = reader.ReadUInt32("FVF");
+            FVFSize = reader.ReadByte("FVFSize");
+            Flags = reader.ReadByte("Flags");
+            DynamicOrder = reader.ReadByte("DynamicOrder");
+            ChannelCount = reader.ReadByte("ChannelCount");
+            Types = (Rsc6VertexDeclarationTypes)reader.ReadUInt64("Types");
         }
 
-        public ulong GetDeclarationId()
+        public void Write(MetaNodeWriter writer)
         {
-            ulong res = 0;
-            for (int i = 0; i < 16; i++)
-            {
-                if (((Flags >> i) & 1) == 1)
-                {
-                    res += ((ulong)Types & (0xFu << (i * 4)));
-                }
-            }
-            return res;
+            writer.WriteUInt32("FVF", FVF);
+            writer.WriteByte("FVFSize", FVFSize);
+            writer.WriteByte("Flags", Flags);
+            writer.WriteByte("DynamicOrder", DynamicOrder);
+            writer.WriteByte("ChannelCount", ChannelCount);
+            writer.WriteUInt64("Types", (ulong)Types);
         }
 
-        private bool IsPreTransform() //Query to see if the position channel contains pre-transformed data
+        public bool IsPreTransform() //Query to see if the position channel contains pre-transformed data
         {
             return (Flags & 0x1) == 0x1;
         }
 
-        private bool IsChannelActive(Rsc6VertexElementBits channel) //Determine if a channel is active
+        public bool IsChannelActive(Rsc6VertexElementBits channel) //Determine if a channel is active/enabled
         {
             uint msk = 1U << (int)channel;
-            return (Flags & msk) == msk;
+            return (FVF & msk) == msk;
         }
 
         public Rsc6VertexComponentType GetComponentType(int index)
@@ -3935,53 +3004,13 @@ namespace CodeX.Games.RDR1.RSC6
             var offset = 0;
             for (int k = 0; k < index; k++)
             {
-                if (((Flags >> k) & 0x1) == 1)
+                if (((FVF >> k) & 0x1) == 1)
                 {
                     var componentType = GetComponentType(k);
                     offset += Rsc6VertexComponentTypes.GetSizeInBytes(componentType);
                 }
             }
             return offset;
-        }
-
-        public void UpdateCountAndStride()
-        {
-            var cnt = 0;
-            var str = 0;
-            for (int k = 0; k < 16; k++)
-            {
-                if (((Flags >> k) & 0x1) == 1)
-                {
-                    var componentType = GetComponentType(k);
-                    str += Rsc6VertexComponentTypes.GetSizeInBytes(componentType);
-                    cnt++;
-                }
-            }
-            Count = (byte)cnt;
-            Stride = (ushort)str;
-        }
-
-        public VertexLayout GetEngineLayout()
-        {
-            ulong formats = 0;
-            ulong semantics = 0;
-            int eidx = 0;
-            var types = (ulong)Types;
-            for (int i = 0; i < 16; i++)
-            {
-                if (((Flags >> i) & 1) == 1)
-                {
-                    var t = (Rsc6VertexComponentType)((types >> (i * 4)) & 0xF);
-                    var efmt = GetEngineElementFormat(t);
-                    var esem = GetEngineElementSemantic(i);
-                    var o4 = eidx * 4;
-                    formats += (((ulong)efmt) << o4);
-                    semantics += (((ulong)esem) << o4);
-                    eidx++;
-                }
-            }
-            var vl = new VertexLayout(formats, semantics);
-            return vl;
         }
 
         private static VertexElementFormat GetEngineElementFormat(Rsc6VertexComponentType t)
@@ -4000,30 +3029,6 @@ namespace CodeX.Games.RDR1.RSC6
                 case Rsc6VertexComponentType.Dec3N: return VertexElementFormat.Dec3N;
                 case Rsc6VertexComponentType.UShort2N: return VertexElementFormat.UShort2N;
                 default: return VertexElementFormat.None;
-            }
-        }
-
-        private static byte GetEngineElementSemantic(int i)
-        {
-            switch (i)
-            {
-                default:
-                case 0: return 0; //"POSITION"
-                case 1: return 1; //"BLENDWEIGHTS"
-                case 2: return 2; //"BLENDINDICES"
-                case 3: return 3; //"NORMAL"
-                case 4:
-                case 5: return 4; //"COLOR"
-                case 6:
-                case 7:
-                case 8:
-                case 9:
-                case 10:
-                case 11:
-                case 12:
-                case 13: return 5; //"TEXCOORD"
-                case 14: return 6; //"TANGENT"
-                case 15: return 7; //"BINORMAL"
             }
         }
 
@@ -4055,7 +3060,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override string ToString()
         {
-            return Stride.ToString() + ": " + Count.ToString() + ": " + Flags.ToString() + ": " + Types.ToString();
+            return FVFSize.ToString() + ": " + ChannelCount.ToString() + ": " + FVF.ToString() + ": " + Types.ToString();
         }
     }
 
@@ -4169,6 +3174,27 @@ namespace CodeX.Games.RDR1.RSC6
         Unk3 = 13,
         UShort2N = 14,
         Unk5 = 15,
+    }
+
+    public enum Rsc6ShaderParamType : byte
+    {
+        Texture = 0,
+        CBuffer = 1
+    }
+
+    public enum Rsc6VertexBufferFlags : byte
+    {
+        Dynamic = 1 << 0,
+        PreallocatedMemory = 1 << 1,
+        ReadWrite = 1 << 2
+    }
+
+    public enum Rsc6VertexBufferType : byte
+    {
+        DONT_TRIPPLE_BUFFER = 0,
+        TRIPLE_VERTEX_BUFFER = 1 << 0,
+        TRIPLE_INDEX_BUFFER = 1 << 1,
+        USE_SECONDARY_BUFFER_INDICES = 1 << 2
     }
 
     public enum Rsc6VertexDeclarationTypes : ulong

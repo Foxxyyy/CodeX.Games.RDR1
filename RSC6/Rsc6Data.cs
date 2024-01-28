@@ -495,7 +495,7 @@ namespace CodeX.Games.RDR1.RSC6
                 if (pref.Data == null || pref.Object == null) continue;
                 if (blocks.TryGetValue(pref.Object, out var bblock) == false)
                 {
-                    if (pref.Object is Rsc6Bone bobject)
+                    if (pref.Object is Rsc6BoneData bobject)
                     {
                         var kv = blocks.FirstOrDefault(e => e.Key is Rsc6SkeletonBoneData data);
                         if (kv.Value != null)
@@ -1569,7 +1569,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public abstract class Rsc6FileBase : Rsc6BlockBase //I guess I should rework this to include blockmap and then update all the deriving classes...
+    public abstract class Rsc6FileBase : Rsc6BlockBase //I guess I should rework this to include blockmap and then update all classes...
     {
         public ulong VFT { get; set; }
 

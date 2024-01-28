@@ -54,17 +54,5 @@ namespace CodeX.Games.RDR1.Files
         {
             return null;
         }
-
-        //Temporary method
-        public string WriteXml(string ddsFolder)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            Xml.OpenTag(sb, 0, "Drawable", true, "");
-            Xml.StringTag(sb, 1, "Name", Name.Replace(".wft", ""), "");
-            Fragment.Drawable.Item.WriteXml(sb, 1, ddsFolder);
-            Xml.CloseTag(sb, 0, "Drawable", true);
-            return sb.ToString();
-        }
     }
 }

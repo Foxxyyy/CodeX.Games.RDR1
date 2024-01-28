@@ -3,8 +3,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -12,19 +10,15 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rsc6FragDrawable<Rsc6Drawable> Drawable;
         public static Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary;
-        public string Name;
-        public JenkHash Hash;
 
         public WfdFile(Rpf6FileEntry file) : base(file)
         {
-            Name = file.NameLower;
-            Hash = JenkHash.GenHash(file.NameLower);
+            
         }
 
-        public WfdFile(string filename)
+        public WfdFile(Rsc6FragDrawable<Rsc6Drawable> drawable) : base(null)
         {
-            Name = filename;
-            Hash = JenkHash.GenHash(filename);
+            Drawable = drawable;
         }
 
         public override void Load(byte[] data)
@@ -57,16 +51,6 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteBlock(Drawable);
             byte[] data = writer.Build(1);
             return data;
-        }
-
-        public Rsc6FragDrawable<Rsc6Drawable> ReadXmlNode(XmlNode node, string ddsfolder)
-        {
-            if (node == null)
-                return null;
-
-            var dictionary = new Rsc6FragDrawable<Rsc6Drawable>();
-            dictionary.ReadXml(node, ddsfolder);
-            return dictionary;
         }
     }
 }

@@ -116,7 +116,7 @@ namespace CodeX.Games.RDR1.Prefabs
             }
         }
 
-        public void ApplyBaseTextures(Rsc6DrawableBase drawable, RDR1Ped forPed)
+        public void ApplyBaseTextures(Rsc6Drawable drawable, RDR1Ped forPed)
         {
         }
     }

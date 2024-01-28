@@ -280,11 +280,9 @@ namespace CodeX.Games.RDR1.RPF6
             Rpf6File.DeleteEntry(entry as Rpf6Entry);
         }
 
-        public override void Defragment(GameArchive file, Action<string, float> progress = null) //TODO:
+        public override void Defragment(GameArchive file, Action<string, float> progress = null) //TODO: Add defragmentation
         {
-            //var f = file as Rpf6File;
-            //if (f == null) return;
-            //f.Defragment(progress);
+            
         }
 
         public override string ConvertToXml(GameArchiveFileInfo file, byte[] data, out string newfilename, out object infoObject, string folder = "")
@@ -301,25 +299,18 @@ namespace CodeX.Games.RDR1.RPF6
             }
 
             var fmtext = "";
-            if (file is Rpf6ResourceFileEntry re)
+            if (file is Rpf6ResourceFileEntry re && re.FlagInfos.IsResource)
             {
-                fmtext = ".rsc";
-                var isResFilepack = false;
-                var isRawBinaryRes = false;
-
-                switch (re.ResourceType)
+                var isResFilepack = re.ResourceType switch
                 {
-                    case Rpf6FileExt.generic:
-                    case Rpf6FileExt.wft:
-                    case Rpf6FileExt.wvd:
-                        isResFilepack = true;
-                        break;
-                    case Rpf6FileExt.wsi:
-                        isRawBinaryRes = true;
-                        break;
-                    default:
-                        throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 " + re.ResourceType.ToString() + " files to XML.\nCodeX is a work in progress and this is a planned future feature.");
-                }
+                    Rpf6FileExt.generic
+                        or Rpf6FileExt.wft
+                        or Rpf6FileExt.wvd => true,
+
+                    _ => throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 "
+                        + re.ResourceType.ToString()
+                        + " files to XML.\nCodeX is a work in progress and this is a planned future feature."),
+                };
 
                 if (re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd")
                 {
@@ -330,32 +321,15 @@ namespace CodeX.Games.RDR1.RPF6
                 folder = string.IsNullOrEmpty(folder) ? "" : Path.Combine(folder, Path.GetFileNameWithoutExtension(file.Name));
                 if (isResFilepack)
                 {
-                    if (fileext == ".wvd" /*|| fileext == ".wft"*/)
-                    {
-                        ConvertXML = true;
-                        newfilename = file.Name + ".xml";
-                        var piecePack = LoadPiecePack(file, data, true);
-                        ConvertXML = false;
+                    newfilename = file.Name + ".xml";
+                    var fp = LoadFilePack(re, data, false);
+                    if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.VisualDictionary, folder);
+                    if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.Drawable, folder);
+                    if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
+                    throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
 
-                        if (data != null)
-                        {
-                            if (piecePack is WvdFile wvdFile)
-                                return wvdFile.WriteXml(folder);
-                            else if (piecePack is WftFile wftFile)
-                                return wftFile.WriteXml(folder);
-                        }
-                    }
-                    else //Waiting for Sollumz to support dexy's new xmls
-                    {
-                        newfilename = file.Name + ".xml";
-                        var fp = LoadFilePack(re, data, false);
-                        //if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.DrawableDictionary);
-                        if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.Drawable);
-                        if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
-                        throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
-                    }
                 }
-                else if (isRawBinaryRes) //We can atleast use the new xmls for .wsi resources since we don't need Sollumz
+                else
                 {
                     newfilename = file.Name + ".xml";
                     var wsi = new WsiFile(re);
@@ -366,8 +340,8 @@ namespace CodeX.Games.RDR1.RPF6
             }
 
             newfilename = file.Name + fmtext + ".xml";
-
             var bag = LoadMetadata(file, data);
+
             if (bag != null)
             {
                 infoObject = bag.Owner ?? bag;
@@ -378,37 +352,14 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override byte[] ConvertFromXml(string xml, string filename, string folder = "")
         {
-            //Old xmls methods
             if (filename.EndsWith(".wvd.xml"))
             {
-                XmlDocument doc = new XmlDocument();
-                doc.LoadXml(xml);
-
-                WvdFile wvd = new WvdFile(filename);
-                var ddsfolder = folder;
-
-                var node = doc.DocumentElement;
-                if (node != null)
-                {
-                    wvd.DrawableDictionary = wvd.ReadXmlNode(node, ddsfolder);
-                }
-                wvd.Name = filename.Replace(".wvd.xml", ".wvd");
+                var wvd = new WvdFile(XmlMetaNodeReader.GetMetaNode<Rsc6VisualDictionary<Rsc6Drawable>>(xml, null, folder));
                 return wvd.Save();
             }
-            if (filename.EndsWith(".wfd.xml"))
+            else if (filename.EndsWith(".wfd.xml"))
             {
-                XmlDocument doc = new XmlDocument();
-                doc.LoadXml(xml);
-
-                WfdFile wfd = new WfdFile(filename);
-                var ddsfolder = folder;
-
-                var node = doc.DocumentElement;
-                if (node != null)
-                {
-                    wfd.Drawable = wfd.ReadXmlNode(node, ddsfolder);
-                }
-                wfd.Name = filename.Replace(".wfd.xml", ".wfd");
+                var wfd = new WfdFile(XmlMetaNodeReader.GetMetaNode<Rsc6FragDrawable<Rsc6Drawable>>(xml, null, folder));
                 return wfd.Save();
             }
             else if (filename.EndsWith(".wsi.xml"))
@@ -568,7 +519,7 @@ namespace CodeX.Games.RDR1.RPF6
                             if ((bool)(tex?.Name.Contains(texName))) //Assign each shader texture params with the external textures found
                             {
                                 mesh.Textures[i] = tex;
-                                foreach (var shader in ((Rsc6DrawableBase)piece)?.ShaderGroup.Item?.Shaders.Items)
+                                foreach (var shader in ((Rsc6Drawable)piece)?.ShaderGroup.Item?.Shaders.Items)
                                 {
                                     foreach (var param in shader?.ParametersList.Item?.Parameters)
                                     {
@@ -601,7 +552,7 @@ namespace CodeX.Games.RDR1.RPF6
 
         public static byte[] CreateNewWtd(string name)
         {
-            var wtd = new WtdFile(null)
+            var wtd = new WtdFile()
             {
                 TextureDictionary = new Rsc6TextureDictionary()
             };
@@ -614,7 +565,7 @@ namespace CodeX.Games.RDR1.RPF6
             var wvdParent = entry.Parent.Parent;
             if (entry.Name.StartsWith("tile")) //We're searching for a tile, their textures can be in various dictionaries
             {
-                foreach (var drawable in ((WvdFile)pack).DrawableDictionary.Drawables.Items)
+                foreach (var drawable in ((WvdFile)pack).VisualDictionary.Drawables.Items)
                 {
                     foreach (var model in drawable.AllModels)
                     {
@@ -673,7 +624,7 @@ namespace CodeX.Games.RDR1.RPF6
                             continue;
 
                         var r = LoadPiecePack(f);
-                        var drawables = ((WvdFile)r).DrawableDictionary;
+                        var drawables = ((WvdFile)r).VisualDictionary;
 
                         if (drawables == null)
                             continue;

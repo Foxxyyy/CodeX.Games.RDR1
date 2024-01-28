@@ -306,10 +306,14 @@ namespace CodeX.Games.RDR1.RPF6
             return m;
         }
 
-        public static Vector3 GetXmlVector3(XmlNode node, string name)
+        public static Vector3 ToYZX(Vector3 vector)
         {
-            var vector = Xml.GetChildVector3Attributes(node, name);
             return new Vector3(vector.Y, vector.Z, vector.X);
+        }
+
+        public static Vector4 ToYZX(Vector4 vector)
+        {
+            return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
         }
 
         public static Vector4 GetXmlVector4(XmlNode node, string name)
@@ -324,15 +328,25 @@ namespace CodeX.Games.RDR1.RPF6
             return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20);
         }
 
-        //Writes a Vector3 (XYZ to ZXY) at the given offset in a buffer
-        public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset)
+        //Swap the axis and writes a Vector3 at the given offset in a buffer
+        public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
         {
             var x = BitConverter.GetBytes(vec.X);
             var y = BitConverter.GetBytes(vec.Y);
             var z = BitConverter.GetBytes(vec.Z);
-            Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
-            Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
-            Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
+
+            if (zxy) //XYZ > ZXY (RDR1 to CX)
+            {
+                Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
+                Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
+                Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
+            }
+            else //XYZ > YZX (CX to RDR1)
+            {
+                Buffer.BlockCopy(y, 0, buffer, offset, sizeof(float));
+                Buffer.BlockCopy(z, 0, buffer, offset + 4, sizeof(float));
+                Buffer.BlockCopy(x, 0, buffer, offset + 8, sizeof(float));
+            }
         }
 
         //Rescale Half2 texcoords (used for the terrain tiles)
@@ -445,6 +459,20 @@ namespace CodeX.Games.RDR1.RPF6
 
             piece.BoundingBox = new BoundingBox(min, max);
             piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
+        }
+
+        //Convert a Vector4 to a byte array
+        public static byte[] Vector4ToByteArray(Vector4 vector)
+        {
+            var buffer = new byte[16];
+            Buffer.BlockCopy(new float[]
+            {
+                vector.X,
+                vector.Y,
+                vector.Z,
+                vector.W
+            }, 0, buffer, 0, buffer.Length);
+            return buffer;
         }
     }
 }

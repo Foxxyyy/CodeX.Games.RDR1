@@ -362,7 +362,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragDrawable : Rsc6DrawableBase, MetaNode //rage::fragDrawable
+    public class Rsc6FragDrawable : Rsc6Drawable, MetaNode //rage::fragDrawable
     {
         /*
          * Handles the loading of the drawing and bounds data for each piece of a fragment type
@@ -371,7 +371,7 @@ namespace CodeX.Games.RDR1.RSC6
          * and exit positions from every door, the position of particle effects, etc.
          */
 
-        public override ulong BlockLength => base.BlockLength + 120;
+        public new ulong BlockLength => base.BlockLength + 120;
         public uint Unknow_78h { get; set; } //Padding
         public uint Unknow_7Ch { get; set; } //Padding
         public Matrix4x4 BoundMatrix { get; set; } = Matrix4x4.Identity; //m_BoundMatrix

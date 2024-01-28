@@ -2,14 +2,12 @@
 using CodeX.Core.Utilities;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Xml;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6TextureDictionary : Rsc6FileBase
+    public class Rsc6TextureDictionary : Rsc6FileBase, MetaNode
     {
         public override ulong BlockLength => 32;
         public Rsc6Ptr<Rsc6BlockMap> BlockMapPointer { get; set; }
@@ -32,6 +30,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             bool wvd = writer.BlockList[0] is Rsc6VisualDictionary<Rsc6Drawable>;
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+
             writer.WriteUInt32((uint)(wvd ? 0x01831108 : wfd ? 0x00ECE5FC : 0x00A9C028));
             writer.WritePtr(BlockMapPointer);
             writer.WriteUInt32(ParentDictionary);
@@ -40,19 +39,38 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtrArr(Textures);
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsfolder)
+        public void Read(MetaNodeReader reader)
         {
-            if (Textures.Items != null)
+            Build(reader.ReadNodeArray<Rsc6Texture>("Textures"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("@version", 0);
+            writer.WriteNodeArray("Textures", Textures.Items);
+        }
+
+        public void Build(IEnumerable<Rsc6Texture> textures)
+        {
+            var list = new List<Tuple<JenkHash, Rsc6Texture>>();
+            foreach (var tex in textures)
             {
-                Xml.OpenTag(sb, indent, "TextureDictionary");
-                foreach (var tex in Textures.Items)
-                {
-                    Xml.OpenTag(sb, indent + 1, "Item");
-                    tex.WriteXml(sb, indent + 2, ddsfolder);
-                    Xml.CloseTag(sb, indent + 1, "Item");
-                }
-                Xml.CloseTag(sb, indent, "TextureDictionary");
+                list.Add(new Tuple<JenkHash, Rsc6Texture>(JenkHash.GenHash(tex.Name.Replace(".dds", "")), tex)); //Hashes don't have the extension
             }
+
+            var cnt = list.Count;
+            var texarr = new Rsc6Texture[cnt];
+            var hasharr = new JenkHash[cnt];
+
+            for (int i = 0; i < cnt; i++)
+            {
+                var item = list[i];
+                hasharr[i] = item.Item1;
+                texarr[i] = item.Item2;
+            }
+
+            Hashes = new Rsc6Arr<JenkHash>(hasharr);
+            Textures = new Rsc6PtrArr<Rsc6Texture>(texarr);
         }
     }
 
@@ -303,46 +321,14 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(IsSRBG);
         }
 
-        public void ReadXml(XmlNode node, string ddsfolder)
+        public override void Read(MetaNodeReader reader)
         {
-            base.ReadXml(node);
-            Width = (ushort)Xml.GetChildUIntAttribute(node, "Width", "value");
-            Height = (ushort)Xml.GetChildUIntAttribute(node, "Height", "value");
-            MipLevels = (byte)Xml.GetChildUIntAttribute(node, "MipLevels", "value");
-            Format = Xml.GetChildEnumInnerText<TextureFormat>(node, "Format");
+            base.Read(reader);
+        }
 
-            var filename = Xml.GetChildInnerText(node, "FileName");
-            if ((!string.IsNullOrEmpty(filename)) && (!string.IsNullOrEmpty(ddsfolder)))
-            {
-                var filepath = Path.Combine(ddsfolder, filename);
-                if (File.Exists(filepath))
-                {
-                    try
-                    {
-                        var dds = File.ReadAllBytes(filepath);
-                        var tex = DDSIO.GetTexture(dds);
-
-                        if (tex != null)
-                        {
-                            Data = tex.Data;
-                            Width = tex.Width;
-                            Height = tex.Height;
-                            Depth = tex.Depth;
-                            MipLevels = tex.MipLevels;
-                            Format = tex.Format;
-                            Stride = tex.Stride;
-                        }
-                    }
-                    catch
-                    {
-                        throw new Exception("Texture file format not supported:\n" + filepath);
-                    }
-                }
-                else
-                {
-                    throw new Exception("Texture file not found:\n" + filepath);
-                }
-            }
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
         }
 
         public int[] BitsPerPixel = { 4, 8, 8, 8, 8, 8, 8, 8, 8, 4, 4, 4, 8, 4, 8 }; //crn stuff
@@ -391,32 +377,30 @@ namespace CodeX.Games.RDR1.RSC6
             return Encoding.ASCII.GetBytes(format);
         }
 
-        public static TextureFormat ConvertToEngineFormat(Rsc6TextureFormat f)
+        public static TextureFormat ConvertToEngineFormat(Rsc6TextureFormat format)
         {
-            switch (f)
+            return format switch
             {
-                default:
-                case Rsc6TextureFormat.D3DFMT_DXT1: return TextureFormat.BC1;
-                case Rsc6TextureFormat.D3DFMT_DXT3: return TextureFormat.BC2;
-                case Rsc6TextureFormat.D3DFMT_DXT5: return TextureFormat.BC3;
-                case Rsc6TextureFormat.D3DFMT_A8R8G8B8: return TextureFormat.A8R8G8B8;
-                case Rsc6TextureFormat.D3DFMT_L8: return TextureFormat.L8;
-                case Rsc6TextureFormat.CRND: return TextureFormat.Unknown;
-            }
+                Rsc6TextureFormat.D3DFMT_DXT3 => TextureFormat.BC2,
+                Rsc6TextureFormat.D3DFMT_DXT5 => TextureFormat.BC3,
+                Rsc6TextureFormat.D3DFMT_A8R8G8B8 => TextureFormat.A8R8G8B8,
+                Rsc6TextureFormat.D3DFMT_L8 => TextureFormat.L8,
+                Rsc6TextureFormat.CRND => TextureFormat.Unknown,
+                _ => TextureFormat.BC1,
+            };
         }
 
-        public static Rsc6TextureFormat ConvertToRsc6Format(TextureFormat f)
+        public static Rsc6TextureFormat ConvertToRsc6Format(TextureFormat format)
         {
-            switch (f)
+            return format switch
             {
-                default:
-                case TextureFormat.BC1: return Rsc6TextureFormat.D3DFMT_DXT1;
-                case TextureFormat.BC2: return Rsc6TextureFormat.D3DFMT_DXT3;
-                case TextureFormat.BC3: return Rsc6TextureFormat.D3DFMT_DXT5;
-                case TextureFormat.A8R8G8B8: return Rsc6TextureFormat.D3DFMT_A8R8G8B8;
-                case TextureFormat.L8: return Rsc6TextureFormat.D3DFMT_L8;
-                case TextureFormat.Unknown: return Rsc6TextureFormat.CRND;
-            }
+                TextureFormat.BC2 => Rsc6TextureFormat.D3DFMT_DXT3,
+                TextureFormat.BC3 => Rsc6TextureFormat.D3DFMT_DXT5,
+                TextureFormat.A8R8G8B8 => Rsc6TextureFormat.D3DFMT_A8R8G8B8,
+                TextureFormat.L8 => Rsc6TextureFormat.D3DFMT_L8,
+                TextureFormat.Unknown => Rsc6TextureFormat.CRND,
+                _ => Rsc6TextureFormat.D3DFMT_DXT1,
+            };
         }
 
         public static Rsc6Texture Create(Texture t)
@@ -531,7 +515,10 @@ namespace CodeX.Games.RDR1.RSC6
             bool wvd = writer.BlockList[0] is Rsc6VisualDictionary<Rsc6Drawable>;
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
 
-            if (!Name.EndsWith(".dds")) Name += ".dds";
+            if (!Name.EndsWith(".dds"))
+            {
+                Name += ".dds";
+            }
             NameRef = new Rsc6Str(Name);
 
             if (TextureSize == 0)
@@ -553,55 +540,23 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtr(D3DBaseTexture);
         }
 
-        public void ReadXml(XmlNode node)
+        public override void Read(MetaNodeReader reader)
         {
-            Name = Xml.GetChildInnerText(node, "Name") + ".dds";
-            if (Name.Contains('-')) Name = Name.Replace("-", ":");
+            base.Read(reader);
+            if (Name.Contains('-'))
+            {
+                Name = Name.Replace("-", ":");
+            }
             NameRef = new Rsc6Str(Name);
         }
 
-        public void WriteXml(StringBuilder sb, int indent, string ddsfolder)
+        public override void Write(MetaNodeWriter writer)
         {
-            string d3dFormat = Format switch
+            if (Name.Contains(':'))
             {
-                TextureFormat.BC1 => "D3DFMT_DXT1",
-                TextureFormat.BC2 => "D3DFMT_DXT3",
-                TextureFormat.BC3 => "D3DFMT_DXT5",
-                TextureFormat.L8 => "D3DFMT_L8",
-                _ => "D3DFMT_A8R8G8B8",
-            };
-
-            string newTextureName = Name;
-            if (newTextureName.Contains(':'))
-            {
-                newTextureName = newTextureName.Replace(":", "-");
+                Name = Name.Replace(":", "-");
             }
-
-            Xml.StringTag(sb, indent, "Name", Xml.Escape(newTextureName.Replace(".dds", "")));
-            Xml.ValueTag(sb, indent, "Unk32", "128");
-            Xml.StringTag(sb, indent, "Usage", "DEFAULT");
-            Xml.StringTag(sb, indent, "UsageFlags", "UNK24");
-            Xml.ValueTag(sb, indent, "ExtraFlags", "0");
-            Xml.ValueTag(sb, indent, "Width", Width.ToString());
-            Xml.ValueTag(sb, indent, "Height", Height.ToString());
-            Xml.ValueTag(sb, indent, "MipLevels", MipLevels.ToString());
-            Xml.StringTag(sb, indent, "Format", d3dFormat);
-            Xml.StringTag(sb, indent, "FileName", Xml.Escape(newTextureName ?? "null.dds"));
-
-            try
-            {
-                if (!string.IsNullOrEmpty(ddsfolder))
-                {
-                    if (!Directory.Exists(ddsfolder))
-                    {
-                        Directory.CreateDirectory(ddsfolder);
-                    }
-                    var filepath = Path.Combine(ddsfolder, newTextureName ?? "null.dds");
-                    var dds = DDSIO.GetDDSFile(this);
-                    File.WriteAllBytes(filepath, dds);
-                }
-            }
-            catch { }
+            base.Write(writer);
         }
 
         public override string ToString()
