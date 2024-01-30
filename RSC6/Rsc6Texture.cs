@@ -2,6 +2,8 @@
 using CodeX.Core.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -400,6 +402,79 @@ namespace CodeX.Games.RDR1.RSC6
                 TextureFormat.L8 => Rsc6TextureFormat.D3DFMT_L8,
                 TextureFormat.Unknown => Rsc6TextureFormat.CRND,
                 _ => Rsc6TextureFormat.D3DFMT_DXT1,
+            };
+        }
+
+        public static Vector4 BilinearFilterRead(Texture image, float u, float v)
+        {
+            float px = image.Width * u;
+            float py = image.Height * v;
+
+            int x = (int)px;
+            int y = (int)py;
+            int x2 = x + 1;
+            int y2 = y + 1;
+
+            if (x2 > image.Width - 1) x2 = x;
+            if (y2 > image.Height - 1) y2 = y;
+
+            //Calculate the coordinates of the top-left pixel
+            float fx = px - x;
+            float fy = py - y;
+
+            var weights = new Vector4((1.0f - fx) * (1.0f - fy), fx * (1.0f - fy), (1.0f - fx) * fy, fx * fy);
+
+            //Now get four values
+            var v1 = ColorToVector4(GetPixel(image, x, y));
+            var v2 = ColorToVector4(GetPixel(image, x2, y));
+            var v3 = ColorToVector4(GetPixel(image, x, y2));
+            var v4 = ColorToVector4(GetPixel(image, x2, y2));
+
+            return v1 * weights.X + v2 * weights.Y + v3 * weights.Z + v4 * weights.W;
+        }
+
+        public static Vector4 ColorToVector4(Color val)
+        {
+            return new Vector4(val.R, val.G, val.G, val.A);
+        }
+
+        public static Color GetColorFromByteArray(byte[] data, int offset)
+        {
+            if (data == null || offset < 0 || offset + 3 >= data.Length)
+            {
+                return Color.Black;
+            }
+
+            byte red = data[offset];
+            byte green = data[offset + 1];
+            byte blue = data[offset + 2];
+            byte alpha = data[offset + 3];
+
+            return Color.FromArgb(alpha, red, green, blue);
+        }
+
+        public static Color GetPixel(Texture tex, int x, int y)
+        {
+            if (tex.Data == null || x < 0 || x >= tex.Width || y < 0 || y >= tex.Height)
+            {
+                return Color.Black;
+            }
+
+            int pixelSize = GetPixelSize(tex.Format);
+            int rowPitch = tex.Stride;
+            int offset = y * rowPitch + x * pixelSize;
+
+            return GetColorFromByteArray(tex.Data, offset);
+        }
+
+        public static int GetPixelSize(TextureFormat format)
+        {
+            return format switch
+            {
+                TextureFormat.R32G32B32A32F => 4,
+                TextureFormat.BC1 => 8,
+                TextureFormat.BC3 => 16,
+                _ => throw new ArgumentException("GetPixelSize: Unsupported texture format"),
             };
         }
 

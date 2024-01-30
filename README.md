@@ -11,7 +11,8 @@ Other games are also supported to some extent (RDR2/GTAIV/GTAV/MP3/etc) with RDR
 
 Both the main engine and additional game support are available if you subscribe to [@dexyfex](https://www.patreon.com/dexyfex)         
 For more information, you can also visit the [CodeWalker discord](https://discord.gg/rgU4SbeR)                
-To set up, simply place my .dll/.pdb/.strings files from the bin/Debug/net7.0 folder into the CodeX and CodeX Explorer folders.
+
+To set up, locate the RDR1 bin/Debug/net7.0 folder and copy/paste its content to the same path for the CodeX/CodeX Explorer folders.
 
 Please note that everything is a work in progress, including the separated engine. If you're new and plan to mod the game, you might prefer using a more stable RPF tool for RDR1.
 

@@ -1,4 +1,4 @@
-﻿using CodeX.Core.Numerics;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
@@ -6,29 +6,26 @@ using System.Text;
 
 namespace CodeX.Games.RDR1.Files
 {
-    public class WsiFile
+    public class WsiFile : FilePack
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6SectorInfo StreamingItems;
         public JenkHash Hash;
         public string Name;
 
-        public WsiFile(Rpf6FileEntry e)
+        public WsiFile(Rpf6FileEntry file) : base(file)
         {
-            FileEntry = e;
-            if (FileEntry != null)
-            {
-                Name = FileEntry.Name;
-                Hash = FileEntry.ShortNameHash;
-            }
+            FileEntry = file;
+            Name = file?.NameLower;
+            Hash = JenkHash.GenHash(file?.NameLower ?? "");
         }
 
-        public WsiFile(Rsc6SectorInfo si)
+        public WsiFile(Rsc6SectorInfo si) : base(null)
         {
             StreamingItems = si;
         }
 
-        public void Load(byte[] data)
+        public override void Load(byte[] data)
         {
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
@@ -38,7 +35,7 @@ namespace CodeX.Games.RDR1.Files
             StreamingItems = r.ReadBlock<Rsc6SectorInfo>();
         }
 
-        public byte[] Save()
+        public override byte[] Save()
         {
             if (StreamingItems == null) return null;
             var writer = new Rsc6DataWriter();

@@ -1,27 +1,25 @@
-﻿using CodeX.Core.Utilities;
+﻿using CodeX.Core.Engine;
+using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 
 namespace CodeX.Games.RDR1.Files
 {
-    public class WspFile
+    public class WspFile : FilePack
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6TreeForestGrid Trees;
         public string Name;
         public JenkHash Hash;
 
-        public WspFile(Rpf6FileEntry e)
+        public WspFile(Rpf6FileEntry file) : base(file)
         {
-            FileEntry = e;
-            if (FileEntry != null)
-            {
-                Name = FileEntry.Name;
-                Hash = FileEntry.ShortNameHash;
-            }
+            FileEntry = file;
+            Name = file?.NameLower;
+            Hash = JenkHash.GenHash(file?.NameLower ?? "");
         }
 
-        public void Load(byte[] data)
+        public override void Load(byte[] data)
         {
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
@@ -29,6 +27,11 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
             };
             Trees = r.ReadBlock<Rsc6TreeForestGrid>();
+        }
+
+        public override byte[] Save()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override string ToString()

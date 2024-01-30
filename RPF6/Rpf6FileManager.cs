@@ -189,9 +189,13 @@ namespace CodeX.Games.RDR1.RPF6
         private void InitGameFiles()
         {
             Core.Engine.Console.Write("RDR1.InitGameFiles", "Initialising RDR1...");
+
             Rsc6BoundsMaterialTypes.Init(this);
+            Rsc6GrassManager.Init(this);
+
             DataFileMgr ??= new Rpf6DataFileMgr(this);
             DataFileMgr.Init();
+
             Core.Engine.Console.Write("RDR1.InitGameFiles", "RDR1 Initialised.");
         }
 
@@ -305,38 +309,28 @@ namespace CodeX.Games.RDR1.RPF6
                 {
                     Rpf6FileExt.generic
                         or Rpf6FileExt.wft
-                        or Rpf6FileExt.wvd => true,
+                        or Rpf6FileExt.wvd
+                        or Rpf6FileExt.wsi => true,
 
                     _ => throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 "
                         + re.ResourceType.ToString()
                         + " files to XML.\nCodeX is a work in progress and this is a planned future feature."),
                 };
 
-                if (re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd")
+                if ((re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd") || !isResFilepack)
                 {
                     newfilename = file.Name;
                     return string.Empty;
                 }
 
                 folder = string.IsNullOrEmpty(folder) ? "" : Path.Combine(folder, Path.GetFileNameWithoutExtension(file.Name));
-                if (isResFilepack)
-                {
-                    newfilename = file.Name + ".xml";
-                    var fp = LoadFilePack(re, data, false);
-                    if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.VisualDictionary, folder);
-                    if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.Drawable, folder);
-                    if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
-                    throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
-
-                }
-                else
-                {
-                    newfilename = file.Name + ".xml";
-                    var wsi = new WsiFile(re);
-                    wsi.Load(data);
-                    return XmlMetaNodeWriter.GetXml("RDR1SectorInfo", wsi.StreamingItems, folder);
-                    throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
-                }
+                newfilename = file.Name + ".xml";
+                var fp = LoadFilePack(re, data, false);
+                if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VolumeData", wvd.VisualDictionary, folder);
+                if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.Drawable, folder);
+                if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, folder);
+                if (fp is WsiFile wsi) return XmlMetaNodeWriter.GetXml("RDR1SectorInfo", wsi.StreamingItems, folder);
+                throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
             }
 
             newfilename = file.Name + fmtext + ".xml";
@@ -379,35 +373,9 @@ namespace CodeX.Games.RDR1.RPF6
         public override string ConvertToText(GameArchiveFileInfo file, byte[] data, out string newfilename)
         {
             newfilename = file.Name;
-            if (file is Rpf6ResourceFileEntry entry)
+            if (file is Rpf6ResourceFileEntry entry && entry.FlagInfos.IsResource)
             {
-                if (entry != null & entry.FlagInfos.IsResource)
-                {
-                    if (entry.ResourceType == Rpf6FileExt.wsi) //sector info
-                    {
-                        var sector = new WsiFile(entry);
-                        sector.Load(data);
-                        return sector.ToString();
-                    }
-                    else if (entry.ResourceType == Rpf6FileExt.wsg) //grass
-                    {
-                        var grass = new WsgFile(entry);
-                        grass.Load(data);
-                        return grass.ToString();
-                    }
-                    else if (entry.ResourceType == Rpf6FileExt.wsp) //trees
-                    {
-                        var tree = new WspFile(entry);
-                        tree.Load(data);
-                        return tree.ToString();
-                    }
-                    else if (entry.ResourceType == Rpf6FileExt.wedt) //expressions
-                    {
-                        var expr = new WedtFile(entry);
-                        expr.Load(data);
-                        return expr.ToString();
-                    }
-                }
+                return LoadFilePack(entry).ToString();
             }
             return TextUtil.GetUTF8Text(data);
         }
@@ -477,6 +445,22 @@ namespace CodeX.Games.RDR1.RPF6
                     var wbd = new WbdFile(entry);
                     wbd.Load(data);
                     return wbd;
+                case Rpf6FileExt.wsi: //sector info
+                    var wsi = new WsiFile(entry);
+                    wsi.Load(data);
+                    return wsi;
+                case Rpf6FileExt.wsg: //grass
+                    var wsg = new WsgFile(entry);
+                    wsg.Load(data);
+                    return wsg;
+                case Rpf6FileExt.wsp: //trees
+                    var wsp = new WspFile(entry);
+                    wsp.Load(data);
+                    return wsp;
+                case Rpf6FileExt.wedt: //expressions
+                    var wedt = new WedtFile(entry);
+                    wedt.Load(data);
+                    return wedt;
             }
             return null;
         }

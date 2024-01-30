@@ -8,6 +8,7 @@ using System.Text;
 using System.Linq;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using CodeX.Games.RDR1.RPF6;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -304,10 +305,10 @@ namespace CodeX.Games.RDR1.RSC6
             Dynamic = reader.ReadBool("Dynamic");
             HasBoneData = reader.ReadBool("HasBoneData");
             ExtraCurveData = reader.ReadUInt32("ExtraCurveData");
-            MinAndBoundingRadius = reader.ReadVector4("MinAndBoundingRadius");
-            MaxAndInscribedRadius = reader.ReadVector4("MaxAndInscribedRadius");
-            BoundMin = reader.ReadVector4("BoundMin");
-            BoundMax = reader.ReadVector4("BoundMax");
+            MinAndBoundingRadius = Rpf6Crypto.ToYZX(reader.ReadVector4("MinAndBoundingRadius"));
+            MaxAndInscribedRadius = Rpf6Crypto.ToYZX(reader.ReadVector4("MaxAndInscribedRadius"));
+            BoundMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundMin"));
+            BoundMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundMax"));
             PlacedLightsGroup = new(reader.ReadNode<Rsc6PlacedLightsGroup>("PlacedLightsGroup"));
             Entities = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
             ItemMapChilds = new(reader.ReadNodeArray<Rsc6SectorChild>("ItemMapChilds"));
@@ -647,7 +648,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             TimeLastVisible = reader.ReadSingle("TimeLastVisible");
-            LastKnownPositionAndFlags = reader.ReadVector4("LastKnownPositionAndFlags");
+            LastKnownPositionAndFlags = Rpf6Crypto.ToYZX(reader.ReadVector4("LastKnownPositionAndFlags"));
             Node = reader.ReadInt32("Node");
             AtDNode = reader.ReadInt32("AtDNode");
             Next = reader.ReadInt32("Next");
@@ -659,8 +660,8 @@ namespace CodeX.Games.RDR1.RSC6
             VisibilityFlag = reader.ReadInt32("VisibilityFlag");
             BucketFlag = reader.ReadInt32("BucketFlag");
             Matrix = reader.ReadMatrix4x4("Matrix");
-            BoundingBoxMin = reader.ReadVector4("BoundingBoxMin");
-            BoundingBoxMax = reader.ReadVector4("BoundingBoxMax");
+            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMax"));
             InstanceHash = reader.ReadUInt32("InstanceHash");
             RoomBits = reader.ReadInt32("RoomBits");
             Elements = reader.ReadUInt32("Elements");
@@ -779,7 +780,7 @@ namespace CodeX.Games.RDR1.RSC6
             Name = new Rsc6Str(reader.ReadString("Name"));
             RscName = new Rsc6Str(reader.ReadString("RscName"));
             AddMarker = reader.ReadUInt32("AddMarker");
-            Bounds = reader.ReadVector4("Bounds");
+            Bounds = Rpf6Crypto.ToYZX(reader.ReadVector4("Bounds"));
             Matrix = reader.ReadMatrix4x4("Matrix");
             Polygons = new(reader.ReadNodeArray<Rsc6Polygon>("Polygons"));
             StaticObjects = new(reader.ReadUInt16Array("StaticObjects") ?? Array.Empty<ushort>());
@@ -977,8 +978,8 @@ namespace CodeX.Games.RDR1.RSC6
             Next = reader.ReadInt32("Next");
             Prev = reader.ReadInt32("Prev");
             Polygon = reader.ReadInt32("Polygon");
-            PlaneCoeffs = reader.ReadVector4("PlaneCoeffs");
-            Center = reader.ReadVector4("Center");
+            PlaneCoeffs = Rpf6Crypto.ToYZX(reader.ReadVector4("PlaneCoeffs"));
+            Center = Rpf6Crypto.ToYZX(reader.ReadVector4("Center"));
             Points = new(reader.ReadVector4Array("Points"));
             VisibleEdges = new(reader.ReadByteArray("VisibleEdges"));
             SingleSided = reader.ReadBool("SingleSided");
@@ -1050,8 +1051,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundingBoxMin = reader.ReadVector4("BoundingBoxMin");
-            BoundingBoxMax = reader.ReadVector4("BoundingBoxMax");
+            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMax"));
             Curves = new(reader.ReadUInt32Array("Curves"));
             Next = reader.ReadInt32("Next");
             ParentLevelIndex = reader.ReadInt32("ParentLevelIndex");
@@ -1127,7 +1128,7 @@ namespace CodeX.Games.RDR1.RSC6
             RotationZ = reader.ReadStruct<Half>("RotationZ");
             Flags = reader.ReadByte("Flags");
             AO = reader.ReadByte("AO");
-            EntityPosition = reader.ReadVector4("EntityPosition");
+            EntityPosition = Rpf6Crypto.ToYZX(reader.ReadVector4("EntityPosition"));
             PortalOffset = reader.ReadUInt32("PortalOffset");
         }
 
@@ -1205,8 +1206,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            SectorBoundsMin = reader.ReadVector4("SectorBoundsMin");
-            SectorBoundsMax = reader.ReadVector4("SectorBoundsMax");
+            SectorBoundsMin = Rpf6Crypto.ToYZX(reader.ReadVector4("SectorBoundsMin"));
+            SectorBoundsMax = Rpf6Crypto.ToYZX(reader.ReadVector4("SectorBoundsMax"));
             SectorName = reader.ReadString("SectorName");
             SectorName2 = new Rsc6Str(reader.ReadString("SectorName2"));
             IsImportantLandmark = reader.ReadUInt32("IsImportantLandmark");
@@ -1272,8 +1273,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundsMin = reader.ReadVector4("BoundsMin");
-            BoundsMax = reader.ReadVector4("BoundsMax");
+            BoundsMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMin"));
+            BoundsMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMax"));
             Name = new Rsc6Str(reader.ReadString("Name"));
             Lights = new(reader.ReadNodeArray<Rsc6PlacedLight>("Lights"));
         }
@@ -1389,8 +1390,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Position = reader.ReadVector4("Position");
-            ParentPosition = reader.ReadVector4("ParentPosition");
+            Position = Rpf6Crypto.ToYZX(reader.ReadVector4("Position"));
+            ParentPosition = Rpf6Crypto.ToYZX(reader.ReadVector4("ParentPosition"));
             Direction = reader.ReadStruct<Half4>("Direction");
             Color = reader.ReadStruct<Half4>("Color");
             EnvInfluence = reader.ReadStruct<Half4>("EnvInfluence");
@@ -1624,8 +1625,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Offset = reader.ReadVector4("Offset");
-            Eulers = reader.ReadVector4("Eulers");
+            Offset = Rpf6Crypto.ToYZX(reader.ReadVector4("Offset"));
+            Eulers = Rpf6Crypto.ToYZX(reader.ReadVector4("Eulers"));
         }
 
         public void Write(MetaNodeWriter writer)
