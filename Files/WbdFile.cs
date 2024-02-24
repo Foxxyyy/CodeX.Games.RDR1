@@ -18,7 +18,7 @@ namespace CodeX.Games.RDR1.Files
         public override void Load(byte[] data)
         {
             var e = FileInfo as Rpf6ResourceFileEntry;
-            var r = new Rsc6DataReader(e, data, DataEndianess.BigEndian)
+            var r = new Rsc6DataReader(e, data)
             {
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
             };

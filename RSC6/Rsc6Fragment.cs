@@ -37,11 +37,11 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 DampingAngularV2 { get; set; }
         public Rsc6Str NameRef { get; set; } //m_TuneName
         public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; } //m_CommonDrawable, contains data common to all the parts of the fragment type, the shader groups, etc.
-        public Rsc6Ptr<Rsc6FragDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
-        public uint Unk1 { get; set; } //m_NumExtraDrawables
-        public int UnkInt { get; set; } //m_ExtraDrawableNames
-        public int UnkInt2 { get; set; }
-        public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild, when health value reaches zero, the piece can be swapped for a damaged version, which can also take more damage for further mesh deformation and texture adjustment
+        public Rsc6RawPtrArr<Rsc6FragDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
+        public Rsc6RawLst<Rsc6String> ExtraDrawableNames { get; set; } //m_ExtraDrawableNames
+        public uint NumExtraDrawables { get; set; } //m_NumExtraDrawables
+        public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild or just int, when health value reaches zero, the piece can be swapped for a damaged version, which can also take more damage for further mesh deformation and texture adjustment
+        public uint RootChild { get; set; } //m_RootChild, used when undamaged, and the bound is used when there are no children
         public Rsc6RawLst<Rsc6String> GroupNames { get; set; } //m_GroupNames
         public Rsc6RawPtrArr<Rsc6FragPhysGroup> Groups { get; set; } //m_Groups, rage::fragTypeGroup
         public Rsc6RawPtrArr<Rsc6FragPhysChild> Children { get; set; } //m_Children, rage::fragTypeChild
@@ -143,11 +143,11 @@ namespace CodeX.Games.RDR1.RSC6
             DampingAngularV2 = reader.ReadVector4();
             NameRef = reader.ReadStr();
             Drawable = reader.ReadPtr<Rsc6FragDrawable>();
-            ExtraDrawables = reader.ReadPtr<Rsc6FragDrawable>();
-            Unk1 = reader.ReadUInt32();
-            UnkInt = reader.ReadInt32();
-            UnkInt2 = reader.ReadInt32();
+            ExtraDrawables = reader.ReadRawPtrArrPtr<Rsc6FragDrawable>();
+            ExtraDrawableNames = reader.ReadRawLstPtr<Rsc6String>();
+            NumExtraDrawables = reader.ReadUInt32();
             DamagedDrawable = reader.ReadUInt32();
+            RootChild = reader.ReadUInt32();
             GroupNames = reader.ReadRawLstPtr<Rsc6String>();
             Groups = reader.ReadRawPtrArrPtr<Rsc6FragPhysGroup>();
             Children = reader.ReadRawPtrArrPtr<Rsc6FragPhysChild>();
@@ -215,13 +215,20 @@ namespace CodeX.Games.RDR1.RSC6
             InnerSorting = reader.ReadByte();
 
             AssociatedFragments = reader.ReadItems(AssociatedFragments);
+
             Groups = reader.ReadRawPtrArrItem(Groups, GroupCount);
+            GroupNames = reader.ReadRawLstItems(GroupNames, GroupCount);
+
             Children = reader.ReadRawPtrArrItem(Children, ChildCount);
             UndamagedAngInertia = reader.ReadRawArrItems(UndamagedAngInertia, ChildCount);
             DamagedAngInertia = reader.ReadRawArrItems(DamagedAngInertia, ChildCount);
             LinkAttachments = reader.ReadRawArrItems(LinkAttachments, ChildCount);
+
             SelfCollisionA = reader.ReadRawArrItems(SelfCollisionA, NumSelfCollisions);
             SelfCollisionB = reader.ReadRawArrItems(SelfCollisionB, NumSelfCollisions);
+
+            ExtraDrawables = reader.ReadRawPtrArrItem(ExtraDrawables, NumExtraDrawables);
+            ExtraDrawableNames = reader.ReadRawLstItems(ExtraDrawableNames, NumExtraDrawables);
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -251,11 +258,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("DampingAngularV2", DampingAngularV2);
             if (NameRef.Value != null) writer.WriteString("Name", NameRef.Value);
             if (Drawable.Item != null) writer.WriteNode("Drawable", Drawable.Item);
-            if (ExtraDrawables.Item != null) writer.WriteNode("ExtraDrawables", ExtraDrawables.Item);
-            writer.WriteUInt32("Unk1", Unk1);
-            writer.WriteInt32("UnkInt", UnkInt);
-            writer.WriteInt32("UnkInt2", UnkInt2);
-            writer.WriteUInt32("DamagedDrawable", DamagedDrawable);
+            if (ExtraDrawables.Items != null) writer.WriteNodeArray("ExtraDrawables", ExtraDrawables.Items);
+            if (ExtraDrawableNames.Items != null) writer.WriteStringArray("ExtraDrawableNames", ExtraDrawableNames.Items.Select(s => s.Value).ToArray());
+            writer.WriteUInt32("NumExtraDrawables", NumExtraDrawables);
             if (GroupNames.Items != null) writer.WriteStringArray("GroupNames", GroupNames.Items.Select(s => s.Value).ToArray());
             if (Groups.Items != null) writer.WriteNodeArray("Groups", Groups.Items);
             if (Children.Items != null) writer.WriteNodeArray("Children", Children.Items);
@@ -1015,11 +1020,6 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_B4h = reader.ReadUInt32();
             Unknown_B8h = reader.ReadUInt32();
             Unknown_BCh = reader.ReadUInt32();
-
-            if (DamagedEntity.Item != null)
-            {
-                throw new Exception("Rsc6FragPhysChild: Found a damageable fragDrawable!");
-            }
         }
 
         public override void Write(Rsc6DataWriter writer)

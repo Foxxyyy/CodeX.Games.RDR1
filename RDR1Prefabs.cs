@@ -7,9 +7,9 @@ namespace CodeX.Games.RDR1
     public class RDR1Prefabs : PrefabManager
     {
         public Rpf6FileManager FileManager;
-        public Peds Peds;
-        public Weapons Weapons;
-        public Vehicles Vehicles;
+        public RDR1Peds Peds;
+        public RDR1Weapons Weapons;
+        public RDR1Vehicles Vehicles;
 
         public RDR1Prefabs(RDR1Game game)
         {
@@ -38,9 +38,9 @@ namespace CodeX.Games.RDR1
                 case "Vehicles":
                     EnsureVehicles();
                     return Vehicles?.VehicleNames;
-                /*case "Weapons":
+                case "Weapons":
                     EnsureWeapons();
-                    return Weapons?.WeaponNames;*/
+                    return Weapons?.WeaponNames;
             }
             return null;
         }
@@ -53,8 +53,8 @@ namespace CodeX.Games.RDR1
                     return Peds?.GetPrefab(id);
                 case "Vehicles":
                     return Vehicles?.GetPrefab(id);
-                /*case "Weapons":
-                    return Weapons?.GetPrefab(id);*/
+                case "Weapons":
+                    return Weapons?.GetPrefab(id);
             }
             return null;
         }
@@ -62,22 +62,22 @@ namespace CodeX.Games.RDR1
         private void EnsurePeds()
         {
             if (Peds != null) return;
-            Peds = new Peds();
+            Peds = new RDR1Peds();
             Peds.Init(FileManager);
         }
 
         private void EnsureVehicles()
         {
             if (Vehicles != null) return;
-            Vehicles = new Vehicles();
+            Vehicles = new RDR1Vehicles();
             Vehicles.Init(FileManager);
         }
 
         private void EnsureWeapons()
         {
             if (Weapons != null) return;
-            Weapons = new Weapons();
-            //Weapons.Init(FileManager);
+            Weapons = new RDR1Weapons();
+            Weapons.Init(FileManager);
         }
     }
 }

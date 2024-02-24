@@ -19,7 +19,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 GridMax { get; set; }
         public Vector4 BoundSphere { get; set; } //m_BoundSphere
         public Rsc6ManagedArr<Rsc6TreeForestGridCell> GridCells { get; set; } //m_GridCells
-        public Rsc6Arr<ushort> IndexList { get; set; }
+        public Rsc6Arr<short> IndexList { get; set; }
         public int Left { get; set; } //m_nLeft
         public int Right { get; set; } //m_nRight
         public int Top { get; set; } //m_nTop
@@ -45,7 +45,7 @@ namespace CodeX.Games.RDR1.RSC6
             GridMax = reader.ReadVector4();
             BoundSphere = reader.ReadVector4();
             GridCells = reader.ReadArr<Rsc6TreeForestGridCell>(); //Rsc6TreeForestGridCell[CellsWidth][CellsHeight]
-            IndexList = reader.ReadArr<ushort>();
+            IndexList = reader.ReadArr<short>();
             Left = reader.ReadInt32();
             Right = reader.ReadInt32();
             Top = reader.ReadInt32();
@@ -193,13 +193,19 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_28h);
             writer.WriteUInt32(Unknown_2Ch);
         }
+
+        public override string ToString()
+        {
+            return BoundSphere.ToString() + ", instances: " + (CombinedInstanceListPos.Count + CombinedInstanceListMatrix.Count).ToString();
+        }
     }
 
-    public class Rsc6TreeForest : Rsc6Block
+    public class Rsc6TreeForest : Rsc6Block //rage::TreeForest
     {
         public ulong BlockLength => 96;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
+
         public Rsc6Arr<uint> Trees { get; set; } //m_Trees - rage::instanceTreeData
         public Rsc6Arr<JenkHash> TreeHashes { get; set; } //m_TreeSourceHashes
         public Rsc6PtrStr TreeNames { get; set; } //m_TreeDebugNames
@@ -207,7 +213,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6ManagedArr<Rsc6PackedInstancePos> CombinedVisibleInstancePos { get; set; } //m_CombinedVisibleTreeInstancesPos
         public Rsc6ManagedArr<Rsc6InstanceMatrix> TreeInstanceMatrix { get; set; } //m_TreeInstancesMtx
         public Rsc6ManagedArr<Rsc6InstanceMatrix> CombinedVisibleTreeInstanceMatrix { get; set; } //m_CombinedVisibleTreeInstancesMtx
-        public uint Unknown_40h { get; set; }
+        public int Unknown_40h { get; set; } //Always 0? Maybe render target size
         public int MaxBillboardsPerFrame { get; set; } //m_MaxBillboardsPerFrame
         public float BillboardBlendRange { get; set; } //m_billboardBlendRange
         public bool RegenerateAll { get; set; } //m_RegenerateAll
@@ -222,12 +228,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Trees = reader.ReadArr<uint>();
             TreeHashes = reader.ReadArr<JenkHash>();
-            TreeNames = reader.ReadPtrStr(0x10);
+            TreeNames = reader.ReadPtrStr(0x10); //Fixed-size string for debug names
             TreeInstancePos = reader.ReadArr<Rsc6TreeInstancePos>();
             CombinedVisibleInstancePos = reader.ReadArr<Rsc6PackedInstancePos>();
             TreeInstanceMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
             CombinedVisibleTreeInstanceMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
-            Unknown_40h = reader.ReadUInt32();
+            Unknown_40h = reader.ReadInt32();
             MaxBillboardsPerFrame = reader.ReadInt32();
             BillboardBlendRange = reader.ReadSingle();
             RegenerateAll = reader.ReadBoolean();
@@ -248,7 +254,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArr(CombinedVisibleInstancePos);
             writer.WriteArr(TreeInstanceMatrix);
             writer.WriteArr(CombinedVisibleTreeInstanceMatrix);
-            writer.WriteUInt32(Unknown_40h);
+            writer.WriteInt32(Unknown_40h);
             writer.WriteInt32(MaxBillboardsPerFrame);
             writer.WriteSingle(BillboardBlendRange);
             writer.WriteBoolean(RegenerateAll);
@@ -272,12 +278,6 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Fade { get; set; } //fade
         public byte Seed { get; set; } //seed
 
-        public byte SeedValue //rage::speedTreePackedInstancePos::SetRot(byte)
-        {
-            get => Seed;
-            set => Seed = (byte)((Seed & 0x3F) | (value << 6));
-        }
-
         public Vector3 Position { get; set; }
 
         public void Read(Rsc6DataReader reader)
@@ -287,7 +287,7 @@ namespace CodeX.Games.RDR1.RSC6
             Z = reader.ReadUInt16();
             Fade = reader.ReadByte();
             Seed = reader.ReadByte();
-            Position = new Vector3(Rpf6Crypto.Swap((float)X), Rpf6Crypto.Swap((float)Y), Rpf6Crypto.Swap((float)Z));
+            Position = new Vector3(X, Y, Z);
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -338,13 +338,14 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong BlockLength => 16;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
+
         public float LODDist { get; set; } //m_fLOD, lod value between 0.0f (lowest) and 1.0f (highest)
         public byte LODLevels { get; set; } //m_uLodLevels, LOD Levels[0-1] - 4 bits each
         public Rsc6TreeInstanceFlags Flags { get; set; } //m_uFlags
         public byte TreeTypeID { get; set; } //m_TreeTypeID
         public byte Pad0 { get; set; } //m_Pad0
         public float FadeOut { get; set; } //m_fadeOut
-        public uint Pad1 { get; set; } //m_Pad1
+        public int Pad1 { get; set; } //m_Pad1
 
         public void Read(Rsc6DataReader reader)
         {
@@ -354,7 +355,7 @@ namespace CodeX.Games.RDR1.RSC6
             TreeTypeID = reader.ReadByte();
             Pad0 = reader.ReadByte();
             FadeOut = reader.ReadSingle();
-            Pad1 = reader.ReadUInt32();
+            Pad1 = reader.ReadInt32();
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -365,7 +366,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(TreeTypeID);
             writer.WriteByte(Pad0);
             writer.WriteSingle(FadeOut);
-            writer.WriteUInt32(Pad1);
+            writer.WriteInt32(Pad1);
         }
 
         public int GetBranchLod() //Get the descreet branch level of detail from the speedtree runtime
@@ -436,6 +437,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong BlockLength => 48;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
+
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
         public Vector4 Position { get; set; } //m_vPosition, Position.W is the rotation in the Y axis, other axis are 0.0f (radians)
         public ushort Tilt { get; set; } //m_tilt
@@ -492,7 +494,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
 
         //Get the world Matrix4x4 for this instance
-        public Matrix4x4 GetMatrix44()
+        public Matrix4x4 GetMatrix4x4()
         {
             float ca = MathF.Cos(Position.W);
             float sa = MathF.Sin(Position.W);

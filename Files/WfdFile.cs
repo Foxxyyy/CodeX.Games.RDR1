@@ -8,7 +8,7 @@ namespace CodeX.Games.RDR1.Files
 {
     public class WfdFile : PiecePack
     {
-        public Rsc6FragDrawable<Rsc6Drawable> Drawable;
+        public Rsc6FragDrawable<Rsc6Drawable> FragDrawable;
         public static Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary;
 
         public WfdFile(Rpf6FileEntry file) : base(file)
@@ -18,7 +18,7 @@ namespace CodeX.Games.RDR1.Files
 
         public WfdFile(Rsc6FragDrawable<Rsc6Drawable> drawable) : base(null)
         {
-            Drawable = drawable;
+            FragDrawable = drawable;
         }
 
         public override void Load(byte[] data)
@@ -31,12 +31,12 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
             };
 
-            Drawable = r.ReadBlock<Rsc6FragDrawable<Rsc6Drawable>>();
+            FragDrawable = r.ReadBlock<Rsc6FragDrawable<Rsc6Drawable>>();
             Pieces = new Dictionary<JenkHash, Piece>();
 
-            if (Drawable != null)
+            if (FragDrawable != null)
             {
-                var d = Drawable.Drawables.Item;
+                var d = FragDrawable.Drawable.Item;
 
                 Rpf6Crypto.ResizeBoundsForPeds(d, false);
 
@@ -48,7 +48,7 @@ namespace CodeX.Games.RDR1.Files
         public override byte[] Save()
         {
             var writer = new Rsc6DataWriter();
-            writer.WriteBlock(Drawable);
+            writer.WriteBlock(FragDrawable);
             byte[] data = writer.Build(1);
             return data;
         }

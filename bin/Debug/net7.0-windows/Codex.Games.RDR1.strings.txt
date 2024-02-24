@@ -134615,6 +134615,8 @@ amboccsunfactor
 rippleparams
 waterparams
 wavesampler
+skyreflectionsampler
+skyreflectionsampler2
 cutflattenbumpoffset
 cutflattenbumpscale
 cutflattendiffuseoffset

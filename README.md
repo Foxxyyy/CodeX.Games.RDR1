@@ -1,24 +1,24 @@
-# CodeX (023)
+# CodeX (025)
 
 Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potentially PS4/PS5)
 
 --------------------
 
-You will need the main engine to either run it or compile the source.        
-Other games are also supported to some extent (RDR2/GTAIV/GTAV/MP3/etc) with RDR2 being the main project.
+You need the main engine to either run this or compile the source.     
+
+Some games are also supported (RDR2/GTAIV/GTAV/MP3/etc) with RDR2 being the main project.
+
+More info here: [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker discord](https://discord.gg/rgU4SbeR)   
+
+--------------------             
+
+To set up, download the files [here](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them in the CodeX/CodeX Explorer folders, next to the executable.
+
+Note that everything is work in progress, including the separated engine. If you want to mod RDR1, consider using this [tool](https://github.com/Foxxyyy/Magic-RDR) instead.
 
 --------------------
 
-Both the main engine and additional game support are available if you subscribe to [@dexyfex](https://www.patreon.com/dexyfex)         
-For more information, you can also visit the [CodeWalker discord](https://discord.gg/rgU4SbeR)                
-
-To set up, locate the RDR1 bin/Debug/net7.0 folder and copy/paste its content to the same path for the CodeX/CodeX Explorer folders.
-
-Please note that everything is a work in progress, including the separated engine. If you're new and plan to mod the game, you might prefer using a more stable RPF tool for RDR1.
-
---------------------
-
-If you wish to contribute to this project and the code, feel free to message me on my Discord #imfoxxyyy :-)
+If you want to contribute to this project, feel free to message me on Discord: #imfoxxyyy :-)
 
 # Contributors
 dexyfex     
@@ -32,7 +32,7 @@ Ktoś
 Im Foxxyyy      
 Neos    
 
-# Random screenshots
+# Pictures
 ![Screenshot](Files/Properties/codex_explorer.png)
 ![Screenshot](Files/Properties/codex_scene_preview.png)
 ![Screenshot](Files/Properties/map_viewer.png)

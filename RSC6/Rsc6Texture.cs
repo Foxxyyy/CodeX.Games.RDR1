@@ -57,7 +57,7 @@ namespace CodeX.Games.RDR1.RSC6
             var list = new List<Tuple<JenkHash, Rsc6Texture>>();
             foreach (var tex in textures)
             {
-                list.Add(new Tuple<JenkHash, Rsc6Texture>(JenkHash.GenHash(tex.Name.Replace(".dds", "")), tex)); //Hashes don't have the extension
+                list.Add(new Tuple<JenkHash, Rsc6Texture>(JenkHash.GenHash(tex.Name.Replace(".dds", "")), tex)); //Hashes don't use the extension
             }
 
             var cnt = list.Count;
@@ -591,9 +591,7 @@ namespace CodeX.Games.RDR1.RSC6
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
 
             if (!Name.EndsWith(".dds"))
-            {
                 Name += ".dds";
-            }
             NameRef = new Rsc6Str(Name);
 
             if (TextureSize == 0)
@@ -619,18 +617,18 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Read(reader);
             if (Name.Contains('-'))
-            {
                 Name = Name.Replace("-", ":");
-            }
+            if (!Name.EndsWith(".dds"))
+                Name += ".dds";
             NameRef = new Rsc6Str(Name);
         }
 
         public override void Write(MetaNodeWriter writer)
         {
             if (Name.Contains(':'))
-            {
                 Name = Name.Replace(":", "-");
-            }
+            if (Name.EndsWith(".dds"))
+                Name = Name.Replace(".dds", "");
             base.Write(writer);
         }
 

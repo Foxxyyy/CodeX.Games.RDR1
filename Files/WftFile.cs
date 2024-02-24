@@ -37,8 +37,9 @@ namespace CodeX.Games.RDR1.Files
                 var d = Fragment.Drawable.Item;
                 var b = Fragment.Bounds.Item;
                 var ped = Fragment.Archetype1.Item?.TypeFlags == Rsc6ObjectTypeFlags.OBJ_SKINNED;
+                var mass = Fragment.Archetype1.Item?.Mass ?? 0.0f;
 
-                if (d.IsSkinned() && (Fragment.HasFragLOD || ped))
+                if (d.IsSkinned() && (Fragment.HasFragLOD || ped) && mass > 10.0f) //Hack
                 {
                     Rpf6Crypto.ResizeBoundsForPeds(d, true);
                 }

@@ -476,7 +476,6 @@ namespace CodeX.Games.RDR1.RSC6
             int flag = flags.GetFlags((int)vlen, (int)plen);
             flags.IsExtendedFlags = false;
 
-            //TODO: Make sure this works
             if (flags.IsExtendedFlags)
                 flags.SetTotalSize((int)vlen, (int)plen);
             else

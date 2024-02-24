@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\CodeX-023\CodeX-main\CodeX.Core\CodeX.Core.csproj" />
+    <ProjectReference Include="..\..\CodeX-025\CodeX-main\CodeX.Core\CodeX.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

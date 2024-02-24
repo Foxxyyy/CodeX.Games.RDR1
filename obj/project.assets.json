@@ -5214,8 +5214,8 @@
     },
     "CodeX.Core/1.0.0": {
       "type": "project",
-      "path": "../../CodeX-023/CodeX-main/CodeX.Core/CodeX.Core.csproj",
-      "msbuildProject": "../../CodeX-023/CodeX-main/CodeX.Core/CodeX.Core.csproj"
+      "path": "../../CodeX-025/CodeX-main/CodeX.Core/CodeX.Core.csproj",
+      "msbuildProject": "../../CodeX-025/CodeX-main/CodeX.Core/CodeX.Core.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -5253,8 +5253,8 @@
         "net7.0-windows7.0": {
           "targetAlias": "net7.0-windows",
           "projectReferences": {
-            "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
-              "projectPath": "C:\\Research\\CodeX\\CodeX-023\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
+            "C:\\Research\\CodeX\\CodeX-025\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+              "projectPath": "C:\\Research\\CodeX\\CodeX-025\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
             }
           }
         }
@@ -5298,7 +5298,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.100\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.101\\RuntimeIdentifierGraph.json"
       }
     }
   }

@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Diagnostics;
+using System.IO;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -79,6 +79,9 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 VolumeDistribution { get; set; } //m_VolumeDistribution, angular inertia that this bound would have with a mass of 1kg and the bound's volume (element w).
         public Vector3 Margin { get; set; } //m_MarginV, the distance by which collision detection will be expanded beyond the bound's surface
         public uint RefCount { get; set; } //Number of physics instances (or sometimes other classes) using this bound
+
+        public Matrix4x4 Transform { get; set; } = Matrix4x4.Identity; //When it's the child of a bound composite
+        public Matrix4x4 TransformInv { get; set; } = Matrix4x4.Identity;
 
         public Rsc6Bounds()
         {
@@ -341,14 +344,13 @@ namespace CodeX.Games.RDR1.RSC6
 
             VertexColours = reader.ReadArray<Colour>(VerticesCount, VertexColoursPtr);
             VerticesData = reader.ReadArray<Vector3S>(VerticesCount, VerticesPtr);
-            Polygons = reader.ReadArray<Rsc6BoundBoxPolygon>(PolygonsCount, PolygonsPtr);
 
-            CreateMesh();
+            /*CreateMesh();
 
             PartColour = Material.Type.Colour;
             PartSize = BoxSize.XYZ();
             ComputeMass(ColliderType.Box, PartSize, 1.0f);
-            ComputeBodyInertia();
+            ComputeBodyInertia();*/
         }
 
         public override void Read(MetaNodeReader reader)
@@ -367,7 +369,7 @@ namespace CodeX.Games.RDR1.RSC6
             Material.Write(writer);
         }
 
-        private void CreateMesh()
+        /*private void CreateMesh()
         {
             bool usevertexcolours = false;
             var verts = new List<ShapeVertex>();
@@ -400,7 +402,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             PartMesh = Shape.Create("BoundGeometry", verts.ToArray(), indsl.ToArray());
             UpdateBounds();
-        }
+        }*/
     }
 
     public class Rsc6BoundGeometry : Rsc6BoundPolyhedron
@@ -453,14 +455,18 @@ namespace CodeX.Games.RDR1.RSC6
             var verts = new List<ShapeVertex>();
             var indsl = new List<ushort>();
 
-            int addVertex(int index, Vector3 norm, uint matind)
+            Colour getMaterialColour(int matind)
             {
                 var matcol = Colour.White;
                 if ((Materials != null) && (matind < Materials.Length))
                 {
                     matcol = Materials[matind].Type.Colour;
                 }
+                return matcol;
+            }
 
+            int addVertex(int index, Vector3 norm, Colour matcol)
+            {
                 var c = verts.Count;
                 verts.Add(new ShapeVertex()
                 {
@@ -477,12 +483,23 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 var p = Polygons[i];
                 var matind = p.MaterialIndex;
-                var i1 = (ushort)addVertex(p.TriIndex1, Vector3.One, matind);
-                var i2 = (ushort)addVertex(p.TriIndex2, Vector3.One, matind);
-                var i3 = (ushort)addVertex(p.TriIndex3, Vector3.One, matind);
-                indsl.Add(i1);
-                indsl.Add(i2);
-                indsl.Add(i3);
+                var matcol = getMaterialColour(matind);
+
+                if (p is Rsc6BoundPolygonTriangle ptri)
+                {
+                    var v1 = ptri.Vertex1;
+                    var v2 = ptri.Vertex2;
+                    var v3 = ptri.Vertex3;
+                    var e1 = Vector3.Normalize(v2 - v1);
+                    var e2 = Vector3.Normalize(v3 - v1);
+                    var nm = Vector3.Normalize(Vector3.Cross(e1, e2));
+                    var i1 = (ushort)addVertex(ptri.TriIndex1, nm, matcol);
+                    var i2 = (ushort)addVertex(ptri.TriIndex2, nm, matcol);
+                    var i3 = (ushort)addVertex(ptri.TriIndex3, nm, matcol);
+                    indsl.Add(i1);
+                    indsl.Add(i2);
+                    indsl.Add(i3);
+                }
             }
 
             PartMesh = Shape.Create("BoundGeometry", verts.ToArray(), indsl.ToArray());
@@ -564,8 +581,8 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong BlockLength => 96;
         public bool IsPhysical => false;
 
-        public Rsc6BoundBoxPolygon Polygons { get; set; }
-        public Vector4 CurvatureCenter { get; set; } //m_CurvatureCenter
+        public Rsc6BoundPolygonTriangle Polygons { get; set; }
+        public Vector4 CurvatureCenter { get; set; } //m_CurvatureCenter, the center of curvature of the face
         public Vector4 UnitNormal { get; set; } //m_UnitNormal, the unit-length normal vector
         public float OuterRadius { get; set; } //m_OuterRadius, the radius of curvature of the face
         public float InnerRadius { get; set; } //m_InnerRadius, the distance from the center of curvature about which to rotate the local center of curvature
@@ -582,7 +599,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            Polygons = reader.ReadStruct<Rsc6BoundBoxPolygon>();
+            byte[] temp = reader.ReadBytes(16);
+            Polygons = new Rsc6BoundPolygonTriangle();
+            Polygons.Read(new BinaryReader(new MemoryStream(temp)));
+
             CurvatureCenter = reader.ReadVector4();
             UnitNormal = reader.ReadVector4();
             OuterRadius = reader.ReadSingle();
@@ -601,7 +621,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(Rsc6DataWriter writer)
         {
-            writer.WriteStruct(Polygons);
+            var temp = new byte[16];
+            Polygons.Write(new BinaryWriter(new MemoryStream(temp)));
+
+            writer.WriteBytes(temp);
             writer.WriteVector4(CurvatureCenter);
             writer.WriteVector4(UnitNormal);
             writer.WriteSingle(OuterRadius);
@@ -620,7 +643,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Polygons = reader.ReadStruct<Rsc6BoundBoxPolygon>("Polygons");
             CurvatureCenter = reader.ReadVector4("CurvatureCenter");
             UnitNormal = reader.ReadVector4("UnitNormal");
             OuterRadius = reader.ReadSingle("OuterRadius");
@@ -634,7 +656,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteStruct("Polygons", Polygons);
             writer.WriteVector4("CurvatureCenter", CurvatureCenter);
             writer.WriteVector4("UnitNormal", UnitNormal);
             writer.WriteSingle("OuterRadius", OuterRadius);
@@ -699,16 +720,16 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 224;
         public uint VerticesPad { get; set; } //m_VerticesPad
-        public uint VertexColoursPtr { get; set; } //m_CompressedShrunkVertices
+        public uint VertexColoursPtr { get; set; } //m_CompressedShrunkVertices, vertices that have been shrunk inwards by a margin
         public uint VerticesWorldSpace { get; set; } //m_VerticesWorldSpace
-        public uint PolygonsPtr { get; set; } //m_Polygons
+        public Rsc6RawArr<byte> PolygonsData { get; set; } //m_Polygons
         public Vector4 Quantum { get; set; } //m_UnQuantizeFactor
         public Vector4 CenterGeom { get; set; } //m_BoundingBoxCenter
         public uint VerticesPtr { get; set; } //m_CompressedVertices
         public uint SmallPolygonsWorldSpace { get; set; } //m_SmallPolygonsWorldSpace
-        public bool UseActiveComponents { get; set; } //m_UseActiveComponents
-        public bool IsFlat { get; set; } //m_IsFlat
-        public short NumConvexHullVertices { get; set; } //m_NumConvexHullVertices
+        public bool UseActiveComponents { get; set; } //m_UseActiveComponents, true if this bound supports subsets of itself being active at any time
+        public bool IsFlat { get; set; } //m_IsFlat, flag to tell if this bound is flat, only used for debug drawing
+        public short NumConvexHullVertices { get; set; } //m_NumConvexHullVertices, the number of vertices on the convex hull of this bound
         public short NumActivePolygons { get; set; } //m_NumActivePolygons
         public short NumActiveVertices { get; set; } //m_NumActiveVertices
         public uint ActivePolygonIndices { get; set; } //m_ActivePolygonIndices
@@ -719,7 +740,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector3[] Vertices { get; set; }
         public Colour[] VertexColours { get; set; }
         public Vector3S[] VerticesData { get; set; }
-        public Rsc6BoundBoxPolygon[] Polygons { get; set; }
+        public Rsc6BoundPolygon[] Polygons { get; set; }
         public Rsc6BoundMaterial[] Materials { get; set; }
 
         public Rsc6BoundPolyhedron(Rsc6BoundsType type)
@@ -732,7 +753,7 @@ namespace CodeX.Games.RDR1.RSC6
             VerticesPad = reader.ReadUInt32();
             VertexColoursPtr = reader.ReadUInt32();
             VerticesWorldSpace = reader.ReadUInt32();
-            PolygonsPtr = reader.ReadUInt32();
+            PolygonsData = reader.ReadRawArrPtr<byte>();
             Quantum = reader.ReadVector4();
             CenterGeom = reader.ReadVector4();
             VerticesPtr = reader.ReadUInt32();
@@ -749,7 +770,8 @@ namespace CodeX.Games.RDR1.RSC6
 
             VertexColours = reader.ReadArray<Colour>(VerticesCount, VertexColoursPtr);
             VerticesData = reader.ReadArray<Vector3S>(VerticesCount, VerticesPtr);
-            Polygons = reader.ReadArray<Rsc6BoundBoxPolygon>(PolygonsCount, PolygonsPtr);
+            PolygonsData = reader.ReadRawArrItems(PolygonsData, PolygonsCount * 16);
+            ReadPolygons();
 
             if (VerticesData != null)
             {
@@ -786,12 +808,26 @@ namespace CodeX.Games.RDR1.RSC6
             bool usevertexcolours = false;
             var verts = new List<ShapeVertex>();
             var indsl = new List<ushort>();
+            var spheres = new List<ModelBatchInstance>();
+            var capsules = new List<ModelBatchInstance>();
+            var boxes = new List<ModelBatchInstance>();
+            var cylinders = new List<ModelBatchInstance>();
+            var inst = new ModelBatchInstance();
+            var children = new List<EditablePart>();
 
-            int addVertex(int index, Vector3 norm)
+            Colour getMaterialColour(int matind)
             {
                 var matcol = Colour.White;
-                var c = verts.Count;
+                if ((Materials != null) && (matind < Materials.Length))
+                {
+                    matcol = Materials[matind].Type.Colour;
+                }
+                return matcol;
+            }
 
+            int addVertex(int index, Vector3 norm, Colour matcol)
+            {
+                var c = verts.Count;
                 verts.Add(new ShapeVertex()
                 {
                     Position = new Vector4(Vertices[index], 1),
@@ -806,16 +842,189 @@ namespace CodeX.Games.RDR1.RSC6
             for (int i = 0; i < PolygonsCount; i++)
             {
                 var p = Polygons[i];
-                var i1 = (ushort)addVertex(p.TriIndex1, Vector3.One);
-                var i2 = (ushort)addVertex(p.TriIndex2, Vector3.One);
-                var i3 = (ushort)addVertex(p.TriIndex3, Vector3.One);
-                indsl.Add(i1);
-                indsl.Add(i2);
-                indsl.Add(i3);
+                var matind = p.MaterialIndex;
+                var matcol = getMaterialColour(matind);
+                var matcolparam = (uint)(matcol.ToRgba() << 8);
+
+                if (p is Rsc6BoundPolygonTriangle ptri)
+                {
+                    var v1 = ptri.Vertex1;
+                    var v2 = ptri.Vertex2;
+                    var v3 = ptri.Vertex3;
+                    var e1 = Vector3.Normalize(v2 - v1);
+                    var e2 = Vector3.Normalize(v3 - v1);
+                    var nm = Vector3.Normalize(Vector3.Cross(e1, e2));
+                    var i1 = (ushort)addVertex(ptri.TriIndex1, nm, matcol);
+                    var i2 = (ushort)addVertex(ptri.TriIndex2, nm, matcol);
+                    var i3 = (ushort)addVertex(ptri.TriIndex3, nm, matcol);
+                    indsl.Add(i1);
+                    indsl.Add(i2);
+                    indsl.Add(i3);
+                }
+                else if (p is Rsc6BoundPolygonCylinder pcyl)
+                {
+                    var v1 = pcyl.Vertex1;
+                    var v2 = pcyl.Vertex2;
+                    var t = v1;
+                    var a = v2 - v1;
+                    var h = a.Length();
+                    var y = Vector3.Normalize(a);
+                    var x = Vector3.Normalize(y.GetPerpVec());
+                    var z = Vector3.Normalize(Vector3.Cross(x, y));
+                    var r = pcyl.Radius;
+
+                    inst.Matrix = new Matrix3x4(new Vector4(x, t.X), new Vector4(y, t.Y), new Vector4(z, t.Z));
+                    inst.ParamX = r;
+                    inst.ParamY = h;
+                    inst.ParamZ = 0;
+                    inst.ParamW = matcolparam + 4; //signal to use cylinder transform
+                    cylinders.Add(inst);
+                }
             }
 
-            PartMesh = Shape.Create("BoundPolyhedron", verts.ToArray(), indsl.ToArray());
+            if (verts.Count > 0 & indsl.Count > 0)
+            {
+                PartMesh = Shape.Create("BoundPolyhedron", verts.ToArray(), indsl.ToArray());
+            }
+            else ColliderType = ColliderType.None;
+
+            void addInstChild(ColliderType shape, List<ModelBatchInstance> instances)
+            {
+                var size = Vector3.One;
+                switch (shape)
+                {
+                    case ColliderType.Capsule:
+                    case ColliderType.Cylinder:
+                        size = new Vector3(1, 0, 1);
+                        break;
+                }
+                var part = new Collider(shape)
+                {
+                    PartSize = size,
+                    PartInstances = instances.ToArray()
+                };
+                part.UpdateBounds();
+                children.Add(part);
+            }
+
+            if (spheres.Count > 0) addInstChild(ColliderType.Sphere, spheres);
+            if (capsules.Count > 0) addInstChild(ColliderType.Capsule, capsules);
+            if (boxes.Count > 0) addInstChild(ColliderType.Box, boxes);
+            if (cylinders.Count > 0) addInstChild(ColliderType.Cylinder, cylinders);
+
+            if (children.Count > 0)
+            {
+                PartChildren = children.ToArray();
+            }
             UpdateBounds();
+        }
+
+        private void ReadPolygons()
+        {
+            if (PolygonsCount == 0) return;
+
+            var polygonData = PolygonsData.Items;
+            using var ms = new MemoryStream(polygonData);
+            var br = new BinaryReader(ms);
+
+            Polygons = new Rsc6BoundPolygon[PolygonsCount];
+            for (int i = 0; i < PolygonsCount; i++)
+            {
+                var offset = i * 16;
+                ms.Position = offset;
+
+                var area = br.ReadSingle();
+                ms.Position -= 0x4;
+
+                Rsc6BoundPolygonType type;
+                if (!float.IsNaN(area) && !float.IsInfinity(area) && area > 0.00001f && area < 10000.0f)
+                {
+                    type = Rsc6BoundPolygonType.Triangle;
+                }
+                else
+                {
+                    byte b0 = polygonData[offset];
+                    type = (Rsc6BoundPolygonType)(b0 & 7);
+                }
+
+                var p = CreatePolygon(type);
+                if (p != null)
+                {
+                    p.Index = i;
+                    p.Read(br);
+                }
+                Polygons[i] = p;
+            }
+        }
+
+        private Rsc6BoundPolygon CreatePolygon(Rsc6BoundPolygonType type)
+        {
+            Rsc6BoundPolygon p = null;
+            switch (type)
+            {
+                default:
+                case Rsc6BoundPolygonType.Triangle:
+                    p = new Rsc6BoundPolygonTriangle();
+                    if (type != Rsc6BoundPolygonType.Triangle && type != 0)
+                    {
+                        throw new Exception("Unknown CreatePolygon.Rsc6BoundPolygonType");
+                    }
+                    break;
+                case Rsc6BoundPolygonType.Cylinder:
+                    p = new Rsc6BoundPolygonCylinder();
+                    break;
+            }
+
+            if (p != null)
+            {
+                p.Owner = this;
+            }
+            return p;
+        }
+
+        public Vector3 GetVertexPos(int index)
+        {
+            var p = ((index >= 0) && (index < Vertices.Length)) ? Vertices[index] : Vector3.Zero;
+            return Vector3.Transform(p, Transform);
+        }
+
+        public void SetVertexPos(int index, Vector3 v)
+        {
+            if ((index >= 0) && (index < Vertices.Length))
+            {
+                var t = Vector3.Transform(v, TransformInv);
+                Vertices[index] = t;
+            }
+        }
+
+        public int GetMaterialIndex(int polyIndex)
+        {
+            var matind = 0;
+            var inds = Polygons;
+            if ((inds != null) && (polyIndex < inds.Length))
+            {
+                if (inds[polyIndex] is Rsc6BoundPolygonTriangle triangle)
+                {
+                    matind = triangle.MaterialIndex;
+                }
+            }
+            return matind;
+        }
+
+        public Rsc6BoundMaterial GetMaterialByIndex(int matIndex)
+        {
+            var mats = Materials;
+            if ((mats != null) && (matIndex < mats.Length))
+            {
+                return mats[matIndex];
+            }
+            return new Rsc6BoundMaterial();
+        }
+
+        public Rsc6BoundMaterial GetMaterial(int polyIndex)
+        {
+            var matind = GetMaterialIndex(polyIndex);
+            return GetMaterialByIndex(matind);
         }
     }
 
@@ -839,7 +1048,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_F8h = reader.ReadUInt32();
             Unknown_FCh = reader.ReadUInt32();
 
-            Debug.Assert(false);
+            //Debug.Assert(false);
         }
 
         public override void Read(MetaNodeReader reader) //TODO: finish this
@@ -959,7 +1168,7 @@ namespace CodeX.Games.RDR1.RSC6
             BVHQuantum = reader.ReadVector4();
             Trees = reader.ReadArr<Rsc6BoundGeometryBVHTree>();
 
-            Debug.Assert(false);
+            //Debug.Assert(false);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -1047,13 +1256,13 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public static class Rsc6BoundsMaterialTypes
+    [TC(typeof(EXP))] public static class Rsc6BoundsMaterialTypes
     {
         public static List<Rsc6BoundsMaterialData> Materials;
 
         public static void Init(Rpf6FileManager fman)
         {
-            Core.Engine.Console.Write("Rsc6BoundsMaterialTypes", "Initialising Bounds Material Types...");
+            Core.Engine.Console.Write("Rsc6BoundsMaterialTypes", "Initialising bounds materials...");
 
             var list = new List<Rsc6BoundsMaterialData>();
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "tune_switch.rpf");
@@ -1188,7 +1397,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6BoundFlags : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6BoundFlags : Rsc6BlockBase
     {
         public override ulong BlockLength => 0;
 
@@ -1207,28 +1416,386 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundBoxPolygon //phPolygon
+    [TC(typeof(EXP))] public abstract class Rsc6BoundPolygon //phPrimitive
     {
-        //Polygon class used by physics bounds, vertex and neighboring polygon index numbers, and methods for
-        //polygon-polygon intersections and polygon-segment intersections
+        //Simple wrapper around a phPolygon
 
-        public float Area { get; set; } //m_Area
-        public ushort TriIndex1 { get; set; } //m_VertexIndices[3]
-        public ushort TriIndex2 { get; set; }
-        public ushort TriIndex3 { get; set; }
-        public ushort EdgeIndex1 { get; set; } //m_NeighboringPolygons[3]
-        public ushort EdgeIndex2 { get; set; }
-        public ushort EdgeIndex3 { get; set; }
+        public Rsc6BoundPolygonType Type { get; set; }
+        public Rsc6BoundPolyhedron Owner { get; set; } //For browsing/editing convenience
 
-        public byte MaterialIndex { get { return (byte)(BitConverter.DoubleToInt64Bits(Area) & 0xFF); } }
+        public Rsc6BoundMaterial Material
+        {
+            get
+            {
+                if (MaterialCustom.HasValue) return MaterialCustom.Value;
+                return Owner?.GetMaterial(Index) ?? new Rsc6BoundMaterial();
+            }
+            set
+            {
+                MaterialCustom = value;
+            }
+        }
+
+        public Rsc6BoundMaterial? MaterialCustom; //For editing, when assigning a new material
+
+        public int MaterialIndex
+        {
+            get { return Owner?.GetMaterialIndex(Index) ?? -1; }
+        }
+
+        public Vector3[] VertexPositions
+        {
+            get
+            {
+                var inds = VertexIndices;
+                var va = new Vector3[inds.Length];
+                if (Owner != null)
+                {
+                    for (int i = 0; i < inds.Length; i++)
+                    {
+                        va[i] = Owner.GetVertexPos(inds[i]);
+                    }
+                }
+                return va;
+            }
+            set
+            {
+                if (value == null) return;
+                var inds = VertexIndices;
+                if (Owner != null)
+                {
+                    var imax = Math.Min(inds.Length, value.Length);
+                    for (int i = 0; i < imax; i++)
+                    {
+                        Owner.SetVertexPos(inds[i], value[i]);
+                    }
+                }
+            }
+        }
+
+        public int Index { get; set; } //For editing convenience, not stored
+        public abstract Vector3 BoxMin { get; }
+        public abstract Vector3 BoxMax { get; }
+        public abstract Vector3 Scale { get; set; }
+        public abstract Vector3 Position { get; set; }
+        public abstract Quaternion Orientation { get; set; }
+        public abstract int[] VertexIndices { get; set; }
+        public abstract void Read(BinaryReader br);
+        public abstract void Write(BinaryWriter bw);
 
         public override string ToString()
         {
-            return "Material: " + MaterialIndex.ToString() + ", Area: " + Area.ToString();
+            return Type.ToString();
+        }
+
+        public virtual string Title
+        {
+            get
+            {
+                return Type.ToString() + " " + Index.ToString();
+            }
         }
     }
 
-    public struct Rsc6BoundGeometryBVHNode
+    [TC(typeof(EXP))] public class Rsc6BoundPolygonTriangle : Rsc6BoundPolygon //phPolygon
+    {
+        public float Area { get; set; } //m_Area, area of this polygon (in square meters)
+        public ushort TriIndex1 { get; set; } //m_VertexIndices[3], indices of the vertices that make up this polygon
+        public ushort TriIndex2 { get; set; }
+        public ushort TriIndex3 { get; set; }
+        public ushort EdgeIndex1 { get; set; } //m_NeighboringPolygons[3], indices of the polygons that are neighbors of this polygon
+        public ushort EdgeIndex2 { get; set; }
+        public ushort EdgeIndex3 { get; set; }
+
+        private Quaternion? OrientationCached;
+        private Vector3? ScaleCached;
+
+        public Vector3 Vertex1
+        {
+            get { return (Owner != null) ? Owner.GetVertexPos(TriIndex1) : Vector3.Zero; }
+            set { Owner?.SetVertexPos(TriIndex1, value); }
+        }
+        public Vector3 Vertex2
+        {
+            get { return (Owner != null) ? Owner.GetVertexPos(TriIndex2) : Vector3.Zero; }
+            set { Owner?.SetVertexPos(TriIndex2, value); }
+        }
+        public Vector3 Vertex3
+        {
+            get { return (Owner != null) ? Owner.GetVertexPos(TriIndex3) : Vector3.Zero; }
+            set { Owner?.SetVertexPos(TriIndex3, value); }
+        }
+
+        public override Vector3 BoxMin => Vector3.Min(Vector3.Min(Vertex1, Vertex2), Vertex3);
+        public override Vector3 BoxMax => Vector3.Max(Vector3.Max(Vertex1, Vertex2), Vertex3);
+
+        public override Vector3 Scale
+        {
+            get
+            {
+                if (ScaleCached.HasValue) return ScaleCached.Value;
+                ScaleCached = Vector3.One;
+                return Vector3.One;
+            }
+            set
+            {
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var v3 = Vertex3;
+                var cen = (v1 + v2 + v3) * (1.0f / 3.0f);
+                var trans = value / Scale;
+                var ori = Orientation;
+                var orinv = Quaternion.Inverse(ori);
+                Vertex1 = cen + ori.Multiply(trans * orinv.Multiply(v1 - cen));
+                Vertex2 = cen + ori.Multiply(trans * orinv.Multiply(v2 - cen));
+                Vertex3 = cen + ori.Multiply(trans * orinv.Multiply(v3 - cen));
+                ScaleCached = value;
+            }
+        
+        }
+
+        public override Vector3 Position 
+        {
+            get
+            {
+                return (Vertex1 + Vertex2 + Vertex3) * (1.0f / 3.0f);
+            }
+            set
+            {
+                var offset = value - Position;
+                Vertex1 += offset;
+                Vertex2 += offset;
+                Vertex3 += offset;
+            }
+        }
+
+        public override Quaternion Orientation
+        {
+            get
+            {
+                if (OrientationCached.HasValue) return OrientationCached.Value;
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var v3 = Vertex3;
+                var dir = v2 - v1;
+                var side = Vector3.Cross((v3 - v1), dir);
+                var up = Vector3.Normalize(Vector3.Cross(dir, side));
+                var ori = Quaternion.Inverse(QuaternionExt.LookAtRH(Vector3.Zero, side, up));
+                OrientationCached = ori;
+                return ori;
+            }
+            set
+            {
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var v3 = Vertex3;
+                var cen = (v1 + v2 + v3) * (1.0f / 3.0f);
+                var trans = value * Quaternion.Inverse(Orientation);
+                Vertex1 = cen + trans.Multiply(v1 - cen);
+                Vertex2 = cen + trans.Multiply(v2 - cen);
+                Vertex3 = cen + trans.Multiply(v3 - cen);
+                OrientationCached = value;
+            }
+        }
+
+        public override int[] VertexIndices
+        {
+            get => new int[] { TriIndex1, TriIndex2, TriIndex3 };
+            set
+            {
+                if (value?.Length >= 3)
+                {
+                    TriIndex1 = (ushort)value[0];
+                    TriIndex2 = (ushort)value[1];
+                    TriIndex3 = (ushort)value[2];
+                }
+            }
+        }
+
+        public new byte MaterialIndex
+        {
+            get { return BitConverter.GetBytes(Area)[0]; }
+            set
+            {
+                byte[] byteArray = BitConverter.GetBytes(Area);
+                byteArray[0] = value;
+                Area = BitConverter.ToSingle(byteArray, 0);
+            }
+        }
+
+        public Rsc6BoundPolygonTriangle()
+        {
+            Type = Rsc6BoundPolygonType.Triangle;
+        }
+
+        public override void Read(BinaryReader br)
+        {
+            Area = br.ReadSingle();
+            TriIndex1 = br.ReadUInt16();
+            TriIndex2 = br.ReadUInt16();
+            TriIndex3 = br.ReadUInt16();
+            EdgeIndex1 = br.ReadUInt16();
+            EdgeIndex2 = br.ReadUInt16();
+            EdgeIndex3 = br.ReadUInt16();
+        }
+
+        public override void Write(BinaryWriter bw)
+        {
+            bw.Write(Area);
+            bw.Write(TriIndex1);
+            bw.Write(TriIndex2);
+            bw.Write(TriIndex3);
+            bw.Write(EdgeIndex1);
+            bw.Write(EdgeIndex2);
+            bw.Write(EdgeIndex3);
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + ": Area: " + Area.ToString() + ", "+ TriIndex1.ToString() + ", " + TriIndex2.ToString() + ", " + TriIndex3.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6BoundPolygonCylinder : Rsc6BoundPolygon //phPrimCylinder
+    {
+        //A physics bound in the shape of a cylinder
+
+        public byte PrimType { get; set; } //m_PrimType
+        public byte Pad0 { get; set; } //m_Pad0
+        public ushort EndIndex0 { get; set; } //m_EndIndex0
+        public float Radius { get; set; } //m_Radius
+        public ushort EndIndex1 { get; set; } //m_EndIndex1
+        public ushort Pad1_1 { get; set; } //m_Pad1[6]
+        public uint Pad1_2 { get; set; } //m_Pad1[6]
+
+        private Quaternion? OrientationCached;
+        private Vector3? ScaleCached;
+
+        public Vector3 Vertex1
+        {
+            get { return (Owner != null) ? Owner.GetVertexPos(EndIndex0) : Vector3.Zero; }
+            set { Owner?.SetVertexPos(EndIndex0, value); }
+        }
+
+        public Vector3 Vertex2
+        {
+            get { return (Owner != null) ? Owner.GetVertexPos(EndIndex1) : Vector3.Zero; }
+            set { Owner?.SetVertexPos(EndIndex1, value); }
+        }
+
+        public override Vector3 BoxMin => Vector3.Min(Vertex1, Vertex2) - new Vector3(Radius); //not perfect but meh
+        public override Vector3 BoxMax => Vector3.Max(Vertex1, Vertex2) + new Vector3(Radius); //not perfect but meh
+
+        public override Vector3 Scale
+        {
+            get
+            {
+                if (ScaleCached.HasValue) return ScaleCached.Value;
+                ScaleCached = Vector3.One;
+                return Vector3.One;
+            }
+            set
+            {
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var cen = (v1 + v2) * 0.5f;
+                var trans = value / Scale;
+                var ori = Orientation;
+                var orinv = Quaternion.Inverse(ori);
+                Vertex1 = cen + ori.Multiply(trans * orinv.Multiply(v1 - cen));
+                Vertex2 = cen + ori.Multiply(trans * orinv.Multiply(v2 - cen));
+                Radius = trans.X * Radius;
+                ScaleCached = value;
+            }
+
+        }
+
+        public override Vector3 Position
+        {
+            get
+            {
+                return (Vertex1 + Vertex2) * 0.5f;
+            }
+            set
+            {
+                var offset = value - Position;
+                Vertex1 += offset;
+                Vertex2 += offset;
+            }
+        }
+
+        public override Quaternion Orientation
+        {
+            get
+            {
+                if (OrientationCached.HasValue) return OrientationCached.Value;
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var dir = v2 - v1;
+                var up = Vector3.Normalize(dir.GetPerpVec());
+                var ori = Quaternion.Inverse(QuaternionExt.LookAtRH(Vector3.Zero, dir, up));
+                OrientationCached = ori;
+                return ori;
+            }
+            set
+            {
+                var v1 = Vertex1;
+                var v2 = Vertex2;
+                var cen = (v1 + v2) * 0.5f;
+                var trans = value * Quaternion.Inverse(Orientation);
+                Vertex1 = cen + trans.Multiply(v1 - cen);
+                Vertex2 = cen + trans.Multiply(v2 - cen);
+                OrientationCached = value;
+            }
+        }
+
+        public override int[] VertexIndices
+        {
+            get => new int[] { EndIndex0, EndIndex1 };
+            set
+            {
+                if (value?.Length >= 3)
+                {
+                    EndIndex0 = (ushort)value[0];
+                    EndIndex1 = (ushort)value[1];
+                }
+            }
+        }
+
+        public Rsc6BoundPolygonCylinder()
+        {
+            Type = Rsc6BoundPolygonType.Cylinder;
+        }
+
+        public override void Read(BinaryReader br)
+        {
+            PrimType = br.ReadByte();
+            Pad0 = br.ReadByte();
+            EndIndex0 = br.ReadUInt16();
+            Radius = br.ReadSingle();
+            EndIndex1 = br.ReadUInt16();
+            Pad1_1 = br.ReadUInt16();
+            Pad1_2 = br.ReadUInt32();
+        }
+
+        public override void Write(BinaryWriter bw)
+        {
+            bw.Write(PrimType);
+            bw.Write(Pad0);
+            bw.Write(EndIndex0);
+            bw.Write(Radius);
+            bw.Write(EndIndex1);
+            bw.Write(Pad1_1);
+            bw.Write(Pad1_2);
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + ": " + EndIndex0.ToString() + ", " + EndIndex1.ToString() + ", " + Radius.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public struct Rsc6BoundGeometryBVHNode
     {
         public short MinX { get; set; }
         public short MinY { get; set; }
@@ -1258,7 +1825,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6BoundGeometryBVHTree
+    [TC(typeof(EXP))] public struct Rsc6BoundGeometryBVHTree
     {
         public short MinX { get; set; }
         public short MinY { get; set; }
@@ -1286,7 +1853,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6BoundMaterial : MetaNode
+    [TC(typeof(EXP))] public struct Rsc6BoundMaterial : MetaNode
     {
         public uint Data { get; set; }
 
@@ -1344,5 +1911,11 @@ namespace CodeX.Games.RDR1.RSC6
         {
             return this.Type.ToString() + ", " + this.ProceduralId.ToString() + ", " + this.RoomId.ToString() + ", " + this.PedDensity.ToString();
         }
+    }
+
+    public enum Rsc6BoundPolygonType : byte
+    {
+        Cylinder = 6, //0xCE - PRIM_TYPE_CYLINDER
+        Triangle = 7  //0xCF - PRIM_TYPE_POLYGON
     }
 }

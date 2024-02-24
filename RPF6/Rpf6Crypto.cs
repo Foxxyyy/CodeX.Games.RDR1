@@ -322,10 +322,13 @@ namespace CodeX.Games.RDR1.RPF6
             return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
         }
 
-        //Converts a Vector3 (XYZ to ZXY) to Dec3N
-        public static uint GetDec3N(Vector3 val)
+        //Converts a Vector3 (XYZ to ZXY/YZX) to Dec3N
+        public static uint GetDec3N(Vector3 val, bool zxy = true)
         {
-            return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20);
+            if (zxy) //XYZ > ZXY (RDR1 to CX)
+                return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20);
+            else     //XYZ > YZX (CX to RDR1)
+                return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20);
         }
 
         //Swap the axis and writes a Vector3 at the given offset in a buffer
