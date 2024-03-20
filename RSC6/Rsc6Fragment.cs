@@ -36,8 +36,8 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 DampingAngularV { get; set; }
         public Vector4 DampingAngularV2 { get; set; }
         public Rsc6Str NameRef { get; set; } //m_TuneName
-        public Rsc6Ptr<Rsc6FragDrawable> Drawable { get; set; } //m_CommonDrawable, contains data common to all the parts of the fragment type, the shader groups, etc.
-        public Rsc6RawPtrArr<Rsc6FragDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
+        public Rsc6Ptr<Rsc6FragmentDrawable> Drawable { get; set; } //m_CommonDrawable, contains data common to all the parts of the fragment type, the shader groups, etc.
+        public Rsc6RawPtrArr<Rsc6FragmentDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
         public Rsc6RawLst<Rsc6String> ExtraDrawableNames { get; set; } //m_ExtraDrawableNames
         public uint NumExtraDrawables { get; set; } //m_NumExtraDrawables
         public uint DamagedDrawable { get; set; } //m_DamagedDrawable, rage::fragTypeChild or just int, when health value reaches zero, the piece can be swapped for a damaged version, which can also take more damage for further mesh deformation and texture adjustment
@@ -114,6 +114,8 @@ namespace CodeX.Games.RDR1.RSC6
         public bool NoSnow { get; set; } //m_NoSnow
         public bool ForceOutSide { get; set; } //m_ForceOutSide
 
+        public static bool IsSkinnedPed = false;
+
         public void Read(Rsc6DataReader reader) //sagFragType
         {
             VFT = reader.ReadUInt32();
@@ -142,8 +144,9 @@ namespace CodeX.Games.RDR1.RSC6
             DampingAngularV = reader.ReadVector4();
             DampingAngularV2 = reader.ReadVector4();
             NameRef = reader.ReadStr();
-            Drawable = reader.ReadPtr<Rsc6FragDrawable>();
-            ExtraDrawables = reader.ReadRawPtrArrPtr<Rsc6FragDrawable>();
+            Drawable = reader.ReadPtr<Rsc6FragmentDrawable>();
+            IsSkinnedPed = Drawable.Item?.IsSkinned() ?? false;
+            ExtraDrawables = reader.ReadRawPtrArrPtr<Rsc6FragmentDrawable>();
             ExtraDrawableNames = reader.ReadRawLstPtr<Rsc6String>();
             NumExtraDrawables = reader.ReadUInt32();
             DamagedDrawable = reader.ReadUInt32();
@@ -367,7 +370,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragDrawable : Rsc6Drawable, MetaNode //rage::fragDrawable
+    public class Rsc6FragmentDrawable : Rsc6Drawable, MetaNode //rage::fragDrawable
     {
         /*
          * Handles the loading of the drawing and bounds data for each piece of a fragment type
@@ -968,7 +971,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragPhysChild : Rsc6BlockBase, MetaNode
+    public class Rsc6FragPhysChild : Rsc6BlockBase, MetaNode //rage::fragTypeChild
     {
         /*
          * Holds type data related to one atomic piece of a fragment type.
@@ -985,8 +988,8 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort BoneID { get; set; } //m_BoneID, the bone of the main entity's skeleton this child follows, 0 if it's parented to the entity itself
         public Matrix4x4 BoneAttachment { get; set; } = Matrix4x4.Identity; //m_BoneAttachment
         public Matrix4x4 LinkAttachment { get; set; } = Matrix4x4.Identity; //m_LinkAttachment
-        public Rsc6Ptr<Rsc6FragDrawable> UndamagedEntity { get; set; } //m_UndamagedEntity
-        public Rsc6Ptr<Rsc6FragDrawable> DamagedEntity { get; set; } //DamagedEntity
+        public Rsc6Ptr<Rsc6FragmentDrawable> UndamagedEntity { get; set; } //m_UndamagedEntity
+        public Rsc6Ptr<Rsc6FragmentDrawable> DamagedEntity { get; set; } //DamagedEntity
         public uint ContinuousEventset { get; set; } //m_ContinuousEventset
         public uint CollisionEventset { get; set; } //m_CollisionEventset
         public uint BreakEventset { get; set; } //m_BreakEventset
@@ -1008,8 +1011,8 @@ namespace CodeX.Games.RDR1.RSC6
             BoneID = reader.ReadUInt16();
             BoneAttachment = reader.ReadMatrix4x4();
             LinkAttachment = reader.ReadMatrix4x4();
-            UndamagedEntity = reader.ReadPtr<Rsc6FragDrawable>();
-            DamagedEntity = reader.ReadPtr<Rsc6FragDrawable>();
+            UndamagedEntity = reader.ReadPtr<Rsc6FragmentDrawable>();
+            DamagedEntity = reader.ReadPtr<Rsc6FragmentDrawable>();
             ContinuousEventset = reader.ReadUInt32();
             CollisionEventset = reader.ReadUInt32();
             BreakEventset = reader.ReadUInt32();

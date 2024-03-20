@@ -1,4 +1,5 @@
-﻿using CodeX.Core.Numerics;
+﻿using BepuPhysics.Collidables;
+using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using System;
@@ -72,7 +73,8 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i1 = 0; i1 < GridCells.Items[i].CombinedInstanceListPos.Count; i1++)
                 {
                     var t = GridCells.Items[i].CombinedInstanceListPos[i1];
-                    t.Position = min + siz * (new Vector3(t.Z, t.X, t.Y) / 65535.0f); //wrong
+                    var pos = new Vector3(t.Z, t.X, t.Y) / 65535.0f;
+                    t.Position = min + (siz * pos); //wrong
                 }
             }
 

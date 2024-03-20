@@ -7,17 +7,15 @@ using CodeX.Games.RDR1.RPF6;
 using ICSharpCode.SharpZipLib.Checksum;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Reflection.PortableExecutable;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6VisualDictionary<T> : Rsc6FileBase, MetaNode where T : Rsc6Drawable, new()
+    [TC(typeof(EXP))] public class Rsc6VisualDictionary : Rsc6FileBase, MetaNode
     {
         public override ulong BlockLength => 60;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
@@ -53,6 +51,15 @@ namespace CodeX.Games.RDR1.RSC6
             UsageCount = reader.ReadUInt32();
             Hashes = reader.ReadArr<JenkHash>();
             Drawables = reader.ReadPtrArr<Rsc6Drawable>();
+
+            if ((Hashes.Items != null) && (Drawables.Items != null))
+            {
+                var imax = Math.Min(Hashes.Items.Length, Drawables.Items.Length);
+                for (int i = 0; i < imax; i++)
+                {
+                    Drawables.Items[i].NameHash = Hashes.Items[i];
+                }
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -113,7 +120,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6FragDrawable<T> : Rsc6FileBase, MetaNode where T : Rsc6Drawable, new()
+    [TC(typeof(EXP))] public class Rsc6FragDrawable : Rsc6FileBase, MetaNode
     {
         public override ulong BlockLength => 16;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
@@ -152,7 +159,7 @@ namespace CodeX.Games.RDR1.RSC6
             };
             TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
 
-            writer.WriteUInt32(0x00F9C0A0);
+            writer.WriteUInt32(0x00DDC0A0);
             writer.WritePtr(BlockMap);
             writer.WritePtr(Drawable);
             writer.WritePtr(TextureDictionary);
@@ -233,8 +240,8 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawArr<ushort> BoneIds { get; set; } //m_MtxPalette, matrix palette for this geometry
         public ushort BoneIdsCount { get; set; } //m_MtxCount, the number of matrices in the matrix paletter
         public Rsc6RawArr<byte> VertexDataRef { get; set; } //m_VtxDeclOffset, always 0xCDCDCDCD
-        public uint OffsetBuffer { get; set; } //m_OffsetBuffer
-        public uint IndexOffset { get; set; } //m_IndexOffset
+        public uint OffsetBuffer { get; set; } //m_OffsetBuffer, PS3 only I think
+        public uint IndexOffset { get; set; } //m_IndexOffset, PS3 only I think
         public uint Unknown_3Ch { get; set; }
 
         public Rsc6ShaderFX ShaderRef { get; set; } //Written by parent DrawableBase, using ShaderID
@@ -288,16 +295,9 @@ namespace CodeX.Games.RDR1.RSC6
             byte[] numArray = VertexData;
             var elems = VertexLayout.Elements;
             var elemcount = elems.Length;
-            var uvX = new List<float>();
-            var uvX1 = new List<float>();
-            var uvY = new List<float>();
-            var uvY1 = new List<float>();
-            var uvOffset = new List<int>();
-            var uvOffset1 = new List<int>();
-            var highLOD = reader.FileEntry.EntryParent.Name == "resource_0";
             var terrainMesh = reader.FileEntry.Name.StartsWith("tile");
 
-            for (int index = 0; index < numArray.Length; index += VertexStride) //set render.debugoutput 1
+            for (int index = 0; index < numArray.Length; index += VertexStride)
             {
                 for (int i = 0; i < elemcount; i++)
                 {
@@ -306,15 +306,15 @@ namespace CodeX.Games.RDR1.RSC6
 
                     switch (elem.Format)
                     {
-                        case VertexElementFormat.Float3: //XYZ to ZXY
+                        case VertexElementFormat.Float3:
                             var newVert = BufferUtil.ReadVector3(numArray, index + elemoffset);
-                            Rpf6Crypto.WriteVector3AtIndex(newVert, numArray, index + elemoffset);
+                            Rpf6Crypto.WriteVector3AtIndex(newVert, numArray, index + elemoffset); //Convert Vector3 from RDR axis
                             break;
-                        case VertexElementFormat.Dec3N:
+                        case VertexElementFormat.Dec3N: //10101012
                             var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
-                            var packedVec = FloatUtil.Dec3NToVector3(packed); //XYZ to ZXY
-                            packed = Rpf6Crypto.GetDec3N(packedVec);
-                            BufferUtil.WriteUint(numArray, index + elemoffset, packed);
+                            var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
+                            var np1 = FloatUtil.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N from RDR axis
+                            BufferUtil.WriteUint(numArray, index + elemoffset, np1);
                             break;
                         case VertexElementFormat.Half2: //Scale terrain UVs
                             if (!terrainMesh) continue;
@@ -322,34 +322,11 @@ namespace CodeX.Games.RDR1.RSC6
                             half2 = Rpf6Crypto.RescaleHalf2(half2, 2.0f);
                             BufferUtil.WriteStruct(numArray, index + elemoffset, ref half2);
                             break;
-                        case VertexElementFormat.UShort2N: //Scale UVs
-                            var tUv = Rpf6Crypto.ReadRescaleUShort2N(numArray, index + elemoffset, highLOD);
-                            if (tUv[0] is float.NaN || tUv[1] is float.NaN) continue; //Nothing to do
-                            if (elem.SemanticIndex == 0)
-                            {
-                                uvX.Add(tUv[0]);
-                                uvY.Add(tUv[1]);
-                                uvOffset.Add(index + elemoffset);
-                            }
-                            else if (elem.SemanticIndex == 1)
-                            {
-                                uvX1.Add(tUv[0]);
-                                uvY1.Add(tUv[1]);
-                                uvOffset1.Add(index + elemoffset);
-                            }
-                            break;
                         default:
                             break;
                     }
                 }
             }
-
-            //rdr2_cliffwall_ao
-            /*if (AreTexcoordsNormalizable() && highLOD)
-            {
-                Rpf6Crypto.NormalizeUVs(uvX, uvY, uvOffset, ref numArray);
-                Rpf6Crypto.NormalizeUVs(uvX1, uvY1, uvOffset1, ref numArray);
-            }*/
 
             //Triangles or strips
             if (PrimitiveType == 3)
@@ -362,8 +339,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x00EF397C : VFT);
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
+            writer.WriteUInt32(wfd ? 0x00D3397C : VFT);
             writer.WriteUInt32(Unknown_4h);
             writer.WriteUInt32(Unknown_8h);
             writer.WritePtr(VertexBuffer);
@@ -397,6 +374,7 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderID = reader.ReadUInt16("ShaderID");
             BoneIds = new(reader.ReadUInt16Array("BoneIDs"));
             BoneIdsCount = (ushort)(BoneIds.Items?.Length ?? 0);
+            Unknown_3Ch = reader.ReadUInt32("Unknown_3Ch");
 
             var vbuf = new Rsc6VertexBuffer();
             base.Read(reader);
@@ -414,13 +392,13 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         case VertexElementFormat.Float3:
                             var newVert = BufferUtil.ReadVector3(VertexData, index + elemoffset);
-                            Rpf6Crypto.WriteVector3AtIndex(newVert, VertexData, index + elemoffset, false);
+                            Rpf6Crypto.WriteVector3AtIndex(newVert, VertexData, index + elemoffset, false); //Convert Vector3 to Dec3N with RDR axis
                             break;
                         case VertexElementFormat.Dec3N:
                             var packed = BufferUtil.ReadUint(VertexData, index + elemoffset);
-                            var packedVec = FloatUtil.Dec3NToVector3(packed);
-                            packed = Rpf6Crypto.GetDec3N(new Vector3(packedVec.X, packedVec.Y, packedVec.Z), false);
-                            BufferUtil.WriteUint(VertexData, index + elemoffset, packed);
+                            var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
+                            var np = Rpf6Crypto.GetDec3N(pv, false); //Convert Vector4 back to Dec3N with RDR axis
+                            BufferUtil.WriteUint(VertexData, index + elemoffset, np);
                             break;
                         default:
                             break;
@@ -466,13 +444,14 @@ namespace CodeX.Games.RDR1.RSC6
             if (AABB.Min.XYZ() != default) writer.WriteVector3("BoundingBoxMin", AABB.Min.XYZ());
             if (AABB.Max.XYZ() != default) writer.WriteVector3("BoundingBoxMax", AABB.Max.XYZ());
             writer.WriteUInt16("ShaderID", ShaderID);
+            writer.WriteUInt32("Unknown_3Ch", Unknown_3Ch);
             if (BoneIds.Items != null) writer.WriteUInt16Array("BoneIDs", BoneIds.Items);
             base.Write(writer);
         }
 
-        public List<ushort> ConvertStripToTriangles(ushort[] stripIndices)
+        public static List<ushort> ConvertStripToTriangles(ushort[] stripIndices)
         {
-            List<ushort> triangleIndices = new List<ushort>();
+            var triangleIndices = new List<ushort>();
             for (int i = 2; i < stripIndices.Length; i++)
             {
                 if (i % 2 == 0)
@@ -491,11 +470,6 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
             return triangleIndices;
-        }
-
-        public bool AreTexcoordsNormalizable()
-        {
-            return VertexBuffer.Item.Layout.Item.FVF == 49369;
         }
 
         public int GetBufferIndex()
@@ -533,6 +507,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x3103407E: //rdr2_cliffwall_ao_low_lod
                     case 0x249BB297: //rdr2_cliffwall_ao
+                    case 0x227C5611: //rdr2_cliffwall_alpha
                         SetupClifwallTerrainShader(shader);
                         break;
                     case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal
@@ -541,6 +516,15 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x24982D70: //rdr2_layer_3_nospec_normal_ambocc
                         SetDiffuse3Shader(shader);
+                        break;
+                    case 0x173D5F9D: //rdr2_grass
+                    case 0x171C9E47: //rdr2_glass_glow
+                        SetupGrassShader(shader);
+                        break;
+                    case 0xC714B86E: //rdr2_alpha_foliage
+                    case 0x592D7DC2: //rdr2_alpha_foliage_no_fade
+                    case 0x18C56B10: //rdr2_treerock_prototype
+                        SetupTreesShader(shader);
                         break;
                     default:
                         SetupDefaultShader(shader);
@@ -592,6 +576,14 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x4C03B90B: //rdr2_shadowonly
                         ShaderInputs.SetUInt32(0x0188ECE8, 1U);  //DecalMode - Hack to remove useless meshes
                         break;
+                    case 0x227C5611: //rdr2_cliffwall_alpha
+                        ShaderInputs.SetFloat4(0xA83AA336, new Vector4(3.640625f, 3.640625f, 0.0f, 0.0f)); //LODColourLevels    float4
+                        ShaderInputs.SetFloat(0x7CB163F5, 1.5f); //BumpScales
+                        break;
+                    case 0x707EF967: //rdr2_flattenterrain_blend
+                    case 0xC242DAA7: //rdr2_terrain_blend
+                        ShaderInputs.SetFloat(0x7CB163F5, 1.5f); //BumpScales
+                        break;
                 }
             }
         }
@@ -601,7 +593,7 @@ namespace CodeX.Games.RDR1.RSC6
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
-            ShaderInputs.SetUInt32(0x249983FD, 5); //ParamsMapConfig
+            ShaderInputs.SetUInt32(0x249983FD, 4); //ParamsMapConfig
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
@@ -611,6 +603,7 @@ namespace CodeX.Games.RDR1.RSC6
             var sfresnel = 0.96f;
             var sintensitymult = 0.2f;
             var sfalloffmult = 35.0f;
+
             for (int p = 0; p < parms.Length; p++)
             {
                 var parm = parms[p];
@@ -631,8 +624,6 @@ namespace CodeX.Games.RDR1.RSC6
                                 break;
                             case 0x608799C6: //specsampler
                                 Textures[2] = tex;
-                                break;
-                            case 0x3E19076B: //detailmapsampler
                                 break;
                         }
                     }
@@ -676,7 +667,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null)
                 return;
 
-            Textures = new Texture[14];
+            Textures = new Texture[15];
             for (int k = 0; k < parms.Length; k++)
             {
                 var prm = parms[k];
@@ -726,6 +717,9 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0xA0918A47: //terrainblendmap2
                             Textures[13] = prm.Texture;
                             break;
+                        case 0x2B5170FD: //texturesampler - 'rdr2_terrain_blend' only
+                            Textures[14] = prm.Texture;
+                            break;
                         default:
                             break;
                     }
@@ -771,7 +765,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[3];
+            Textures = new Texture[4];
 
             for (int k = 0; k < parms.Length; k++)
             {
@@ -785,9 +779,6 @@ namespace CodeX.Games.RDR1.RSC6
                             break;
                         case 0x46B7C64F: //bumpsampler
                             Textures[1] = prm.Texture;
-                            break;
-                        case 0x0ED966D5: //terrainblendmap1
-                            Textures[2] = prm.Texture;
                             break;
                         default:
                             break;
@@ -824,11 +815,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[2];
-
-            var sfresnel = 0.96f;
-            var sintensitymult = 0.2f;
-            var sfalloffmult = 35.0f;
+            Textures = new Texture[3];
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -850,6 +837,9 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0xA3348DA6: //texturesampler3
                                 Textures[1] = tex;
                                 break;
+                            case 0x46B7C64F: //bumpsampler
+                                Textures[2] = tex;
+                                break;
                         }
                     }
                 }
@@ -857,21 +847,12 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (parm.Hash)
                     {
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
-                            sfresnel = parm.Vector.Vector.X;
-                            break;
-                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
-                            sintensitymult = parm.Vector.Vector.X;
-                            break;
-                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
-                            sfalloffmult = parm.Vector.Vector.X;
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat4(0x7CB163F5, parm.Vector.Vector); //BumpScales
                             break;
                     }
                 }
             }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //"MeshMetallicity"
-            ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //"MeshParamsMult"
-            ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
         }
 
         private void SetDiffuse3Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + diffuse3 + bump + ambocc
@@ -883,11 +864,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[3];
-
-            var sfresnel = 0.96f;
-            var sintensitymult = 0.2f;
-            var sfalloffmult = 35.0f;
+            Textures = new Texture[4];
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -911,6 +888,9 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0xA3348DA6: //texturesampler3
                                 Textures[2] = tex;
                                 break;
+                            case 0x46B7C64F: //bumpsampler
+                                Textures[3] = tex;
+                                break;
                         }
                     }
                 }
@@ -918,21 +898,12 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     switch (parm.Hash)
                     {
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
-                            sfresnel = parm.Vector.Vector.X;
-                            break;
-                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
-                            sintensitymult = parm.Vector.Vector.X;
-                            break;
-                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
-                            sfalloffmult = parm.Vector.Vector.X;
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat4(0x7CB163F5, parm.Vector.Vector); //BumpScales
                             break;
                     }
                 }
             }
-            ShaderInputs.SetFloat(0xDA9702A9, FloatUtil.Saturate(sintensitymult * (1.0f - ((sfresnel - 0.1f) / 0.896f)))); //MeshMetallicity
-            ShaderInputs.SetFloat(0x57C22E45, FloatUtil.Saturate(sfalloffmult / 100.0f)); //MeshParamsMult
-            ShaderInputs.SetFloat(0x92176B1A, FloatUtil.Saturate(0.3f)); //"MeshSmoothness
         }
 
         private void SetupSkyShader(Rsc6ShaderFX s)
@@ -992,6 +963,114 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        private void SetupGrassShader(Rsc6ShaderFX s)
+        {
+            SetDefaultShader();
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
+            ShaderInputs.SetUInt32(0x249983FD, 4); //ParamsMapConfig
+
+            ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode, foliage shading mode
+            ShaderInputs.SetUInt32(0x65DD2E63, 1); //MeshWindMode, grass wind mode
+            ShaderInputs.SetFloat(0x8B342EF3, 1); //MeshWindAmount
+            ShaderInputs.SetFloat(0xB52CC88F, BoundingBox.Size.Z); //MeshWindHeight
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+            Textures = new Texture[5];
+            Textures[3] = Noise.Perm;
+
+            for (int p = 0; p < parms.Length; p++)
+            {
+                var parm = parms[p];
+                if (parm.DataType == 0)
+                {
+                    var tex = parm.Texture;
+                    if (tex != null)
+                    {
+                        switch (parm.Hash)
+                        {
+                            case 0xF1FE2B71: //diffusesampler
+                            case 0x2B5170FD: //texturesampler
+                                Textures[0] = tex;
+                                break;
+                            case 0x46B7C64F: //bumpsampler
+                            case 0x8AC11CB0: //normalsampler
+                                Textures[1] = tex;
+                                break;
+                            case 0x608799C6: //specsampler
+                                Textures[2] = tex;
+                                break;
+                        }
+                    }
+                }
+                else if (parm.Vector != null)
+                {
+                    switch (parm.Hash)
+                    {
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X); //BumpScale
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void SetupTreesShader(Rsc6ShaderFX s)
+        {
+            SetDefaultShader();
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
+            ShaderInputs.SetUInt32(0x249983FD, 4); //ParamsMapConfig
+
+            ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode, foliage shading mode
+            ShaderInputs.SetUInt32(0x65DD2E63, 5); //MeshWindMode, grass wind mode
+            ShaderInputs.SetFloat(0x8B342EF3, 0.5f); //MeshWindAmount
+            ShaderInputs.SetFloat(0xB52CC88F, MathF.Max(MathF.Max(BoundingBox.Maximum.Z, BoundingBox.Size.Z) * 3, 5)); //MeshWindHeight
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+            Textures = new Texture[5];
+            Textures[3] = Noise.Perm;
+
+            for (int p = 0; p < parms.Length; p++)
+            {
+                var parm = parms[p];
+                if (parm.DataType == 0)
+                {
+                    var tex = parm.Texture;
+                    if (tex != null)
+                    {
+                        switch (parm.Hash)
+                        {
+                            case 0xF1FE2B71: //diffusesampler
+                            case 0x2B5170FD: //texturesampler
+                                Textures[0] = tex;
+                                break;
+                            case 0x46B7C64F: //bumpsampler
+                            case 0x8AC11CB0: //normalsampler
+                                Textures[1] = tex;
+                                break;
+                            case 0x608799C6: //specsampler
+                                Textures[2] = tex;
+                                break;
+                        }
+                    }
+                }
+                else if (parm.Vector != null)
+                {
+                    switch (parm.Hash)
+                    {
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.Vector.X); //BumpScale
+                            break;
+                    }
+                }
+            }
+        }
+
         public override string ToString()
         {
             return VertexCount.ToString() + " verts, " + (ShaderRef?.ToString() ?? "NULL SHADER)");
@@ -1012,7 +1091,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong VFT { get; set; } = 0x01854414;
         public Rsc6PtrArr<Rsc6DrawableGeometry> Geometries { get; set; } //m_Geometries
         public Rsc6RawArr<BoundingBox4> BoundsData { get; set; } //m_AABBs, one for each geometry + one for the whole model (unless there's only one model)
-        public Rsc6RawArr<ushort> ShaderMapping { get; set; } //m_ShaderIndex, requires that for dynamic arrays, the pointer comes before its count in the structure
+        public Rsc6RawArr<ushort> ShaderMapping { get; set; } //m_ShaderIndex
         public byte MatrixCount { get; set; } //m_MatrixCount, bone count
         public byte Flags { get; set; } //m_Flags
         public byte Type { get; set; } = 0xCD; //m_Type, always 0xCD?
@@ -1022,16 +1101,6 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort GeometriesCount { get; set; } //m_Count
 
         public BoundingBox BoundingBox { get; set; } //Created from first GeometryBounds item
-
-        public bool IsModelRelative() //Returns true if model is skinned
-        {
-            return (Flags & (byte)Rsc6ModelFlags.MODEL_RELATIVE) != 0;
-        }
-
-        public bool IsResourced() //Returns true if model is resourced
-        {
-            return (Flags & (byte)Rsc6ModelFlags.MODEL_RELATIVE) != 0;
-        }
 
         public void Read(Rsc6DataReader reader)
         {
@@ -1079,16 +1148,17 @@ namespace CodeX.Games.RDR1.RSC6
                     BoundingBox = new BoundingBox(bb.Min.XYZ(), bb.Max.XYZ());
                 }
             }
+
             Meshes = Geometries.Items;
             RenderInMainView = true;
-            RenderInShadowView = true;
+            RenderInShadowView = SkinFlag == 0;
             RenderInEnvmapView = true;
         }
 
         public void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x00EF0B04 : (uint)VFT);
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
+            writer.WriteUInt32(wfd ? 0x00D30B04 : (uint)VFT);
             writer.WritePtrArr(Geometries);
             writer.WriteRawArrPtr(BoundsData);
             writer.WriteRawArrPtr(ShaderMapping);
@@ -1104,7 +1174,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             Type = reader.ReadByte("Mask", 0xCD);
-            Flags = reader.ReadByte("Flags");
             SkinFlag = reader.ReadByte("HasSkin");
             MatrixIndex = reader.ReadByte("BoneIndex");
             MatrixCount = reader.ReadByte("BoneCount");
@@ -1129,6 +1198,7 @@ namespace CodeX.Games.RDR1.RSC6
                 gbnds[i + bndoff] = geoms[i].AABB;
             }
 
+            Flags = (SkinFlag == 1) ? (byte)Rsc6ModelFlags.MODEL_RELATIVE : (byte)0;
             BoundsData = new(gbnds);
             ShaderMapping = new(smaps);
             GeometriesCount = (ushort)gcnt;
@@ -1137,7 +1207,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(MetaNodeWriter writer)
         {
             if (Type != 0xCD) writer.WriteByte("Mask", Type);
-            if (Flags != 0) writer.WriteByte("Flags", Flags);
             if (SkinFlag == 1) writer.WriteByte("HasSkin", SkinFlag);
             if (MatrixIndex != 0) writer.WriteByte("BoneIndex", MatrixIndex);
             writer.WriteByte("BoneCount", MatrixCount);
@@ -1208,7 +1277,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
             writer.WriteUInt32(wfd ? 0x00D34D6C : VFT);
             writer.WriteUInt16(VertexCount);
             writer.WriteByte(Locked);
@@ -1338,12 +1407,9 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6Ptr<Rsc6ShaderGroup> ShaderGroup { get; set; } //rage::grmShaderGroup
         public Rsc6Ptr<Rsc6SkeletonData> SkeletonRef { get; set; } //rage::crSkeletonData
-        public Vector3 BoundingCenter { get; set; } //m_CullSphere
-        public float Unknown_1Ch { get; set; } = float.NaN;
-        public Vector3 BoundingBoxMin { get; set; } //m_BoxMin
-        public float Unknown_2Ch { get; set; } = float.NaN;
-        public Vector3 BoundingBoxMax { get; set; } //m_BoxMax
-        public float Unknown_3Ch { get; set; } = float.NaN;
+        public Vector4 BoundingCenter { get; set; } //m_CullSphere
+        public Vector4 BoundingBoxMin { get; set; } //m_BoxMin
+        public Vector4 BoundingBoxMax { get; set; } //m_BoxMax
         public Rsc6Ptr<Rsc6DrawableLod> LodHigh { get; set; } //m_Lod[0]
         public Rsc6Ptr<Rsc6DrawableLod> LodMed { get; set; } //m_Lod[1]
         public Rsc6Ptr<Rsc6DrawableLod> LodLow { get; set; } //m_Lod[2]
@@ -1358,6 +1424,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint DrawBucketMaskVlow { get; set; } //m_BucketMask[3]
         public float BoundingSphereRadius { get; set; } //m_CullRadius
         public uint PpuOnly { get; set; } = 0; //m_PpuOnly, 0 or 1 if PPU is set as default processor
+        public JenkHash NameHash { get; set; }
 
         public virtual void Read(Rsc6DataReader reader)
         {
@@ -1365,12 +1432,9 @@ namespace CodeX.Games.RDR1.RSC6
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             ShaderGroup = reader.ReadPtr<Rsc6ShaderGroup>();
             SkeletonRef = reader.ReadPtr<Rsc6SkeletonData>();
-            BoundingCenter = reader.ReadVector3();
-            Unknown_1Ch = reader.ReadSingle();
-            BoundingBoxMin = reader.ReadVector3();
-            Unknown_2Ch = reader.ReadSingle();
-            BoundingBoxMax = reader.ReadVector3();
-            Unknown_3Ch = reader.ReadSingle();
+            BoundingCenter = reader.ReadVector4();
+            BoundingBoxMin = reader.ReadVector4();
+            BoundingBoxMax = reader.ReadVector4();
             LodHigh = reader.ReadPtr<Rsc6DrawableLod>();
             LodMed = reader.ReadPtr<Rsc6DrawableLod>();
             LodLow = reader.ReadPtr<Rsc6DrawableLod>();
@@ -1401,8 +1465,8 @@ namespace CodeX.Games.RDR1.RSC6
             if (LodVlow.Item != null) LodVlow.Item.LodDist = LodDistVlow;
 
             UpdateAllModels();
-            SetSkeleton(SkeletonRef.Item);
             AssignShaders();
+            SetSkeleton(SkeletonRef.Item);
             CreateTexturePack(reader.FileEntry);
 
             UpdateBounds();
@@ -1411,17 +1475,14 @@ namespace CodeX.Games.RDR1.RSC6
 
         public virtual void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
-            writer.WriteUInt32(wfd ? 0x01023DF0 : (uint)VFT);
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
+            writer.WriteUInt32(wfd ? 0x00E63DF0 : (uint)VFT);
             writer.WritePtr(BlockMap);
             writer.WritePtr(ShaderGroup);
             writer.WritePtr(SkeletonRef);
-            writer.WriteVector3(BoundingCenter);
-            writer.WriteSingle(Unknown_1Ch);
-            writer.WriteVector3(BoundingBoxMin);
-            writer.WriteSingle(Unknown_2Ch);
-            writer.WriteVector3(BoundingBoxMax);
-            writer.WriteSingle(Unknown_3Ch);
+            writer.WriteVector4(BoundingCenter);
+            writer.WriteVector4(BoundingBoxMin);
+            writer.WriteVector4(BoundingBoxMax);
             writer.WritePtr(LodHigh);
             writer.WritePtr(LodMed);
             writer.WritePtr(LodLow);
@@ -1440,11 +1501,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
+            var nan = Rpf6Crypto.GetNaN();
             Name = reader.ReadString("Name");
-            BoundingCenter = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingSphereCenter"));
+            BoundingCenter = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingSphereCenter")), nan);
             BoundingSphereRadius = reader.ReadSingle("BoundingSphereRadius");
-            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
-            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            BoundingBoxMin = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin")), nan);
+            BoundingBoxMax = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax")), nan);
             LodDistHigh = reader.ReadSingle("LodDistHigh");
             LodDistMed = reader.ReadSingle("LodDistMed");
             LodDistLow = reader.ReadSingle("LodDistLow");
@@ -1477,10 +1539,10 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(MetaNodeWriter writer)
         {
             if (Name != null) writer.WriteString("Name", Name);
-            if (BoundingCenter != default) writer.WriteVector3("BoundingSphereCenter", BoundingCenter);
+            if (BoundingCenter != default) writer.WriteVector3("BoundingSphereCenter", BoundingCenter.XYZ());
             if (BoundingSphereRadius != default) writer.WriteSingle("BoundingSphereRadius", BoundingSphereRadius);
-            if (BoundingBoxMin != default) writer.WriteVector3("BoundingBoxMin", BoundingBoxMin);
-            if (BoundingBoxMax != default) writer.WriteVector3("BoundingBoxMax", BoundingBoxMax);
+            if (BoundingBoxMin != default) writer.WriteVector3("BoundingBoxMin", BoundingBoxMin.XYZ());
+            if (BoundingBoxMax != default) writer.WriteVector3("BoundingBoxMax", BoundingBoxMax.XYZ());
             if (LodDistHigh != 0) writer.WriteSingle("LodDistHigh", LodDistHigh);
             if (LodDistMed != 0) writer.WriteSingle("LodDistMed", LodDistMed);
             if (LodDistLow != 0) writer.WriteSingle("LodDistLow", LodDistLow);
@@ -1535,21 +1597,64 @@ namespace CodeX.Games.RDR1.RSC6
         public void SetSkeleton(Rsc6SkeletonData skel)
         {
             Skeleton = skel;
-            if (AllModels != null)
+            if (AllModels == null) return;
+
+            var bones = skel?.Bones;
+            if (bones == null) return;
+
+            var origbones = (skel != SkeletonRef.Item) ? SkeletonRef.Item?.Bones : null;
+            foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
             {
-                var bones = skel?.Bones;
-                foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
+                if (model == null) continue;
+                if (model.Meshes == null) continue;
+
+                var boneidx = model.MatrixIndex;
+                if ((model.SkinFlag == 0) && (boneidx < bones.Length))
                 {
-                    var boneidx = model.MatrixIndex;
-                    if ((model.SkinFlag == 0) && (bones != null) && (boneidx < bones.Length))
+                    if (model.Meshes != null)
                     {
-                        if (model.Meshes != null)
+                        foreach (var mesh in model.Meshes)
                         {
-                            foreach (var mesh in model.Meshes)
-                            {
-                                mesh.BoneIndex = boneidx;
-                            }
+                            mesh.BoneIndex = boneidx;
                         }
+                    }
+                }
+                else if (model.SkinFlag == 1)
+                {
+                    foreach (var mesh in model.Meshes)
+                    {
+                        if (mesh is not Rsc6DrawableGeometry geom) continue;
+                        var boneids = geom.BoneIds.Items;
+                        if (boneids != null)
+                        {
+                            var boneinds = new int[boneids.Length];
+                            for (int i = 0; i < boneinds.Length; i++)
+                            {
+                                if (origbones != null) //Make sure to preseve original bone ordering!
+                                {
+                                    var origbone = (Rsc6BoneData)origbones[boneids[i]];
+                                    if ((origbone != null) && skel.BonesMap.TryGetValue(origbone.BoneId, out var newbone))
+                                    {
+                                        boneinds[i] = newbone.Index;
+                                    }
+                                    else
+                                    {
+                                        boneinds[i] = boneids[i];
+                                    }
+                                }
+                                else
+                                {
+                                    boneinds[i] = boneids[i];
+                                }
+                            }
+                            geom.Rig = new SkeletonRig(skel, true, boneinds);
+                        }
+                        else
+                        {
+                            geom.Rig = new SkeletonRig(skel, true);
+                        }
+                        geom.RigMode = MeshRigMode.MeshRig;
+                        geom.IsSkin = true;
                     }
                 }
             }
@@ -1641,6 +1746,8 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown6 { get; set; } //Padding
         public uint Unknown7 { get; set; } //Padding
 
+        public Dictionary<Rsc6BoneIdEnum, Rsc6BoneData> BonesMap { get; set; } //For convienience finding bones by tag
+
         public void Read(Rsc6DataReader reader)
         {
             BoneData = reader.ReadRawLstPtr<Rsc6BoneData>();
@@ -1687,12 +1794,9 @@ namespace CodeX.Games.RDR1.RSC6
                 var fc = bone.FirstChild;
                 var pr = bone.ParentRef;
 
-                if (reader.BlockPool.TryGetValue(ns.Position, out var nsi))
-                    ns.Item = nsi as Rsc6BoneData;
-                if (reader.BlockPool.TryGetValue(fc.Position, out var fci))
-                    fc.Item = fci as Rsc6BoneData;
-                if (reader.BlockPool.TryGetValue(pr.Position, out var pri))
-                    pr.Item = pri as Rsc6BoneData;
+                if (reader.BlockPool.TryGetValue(ns.Position, out var nsi)) ns.Item = nsi as Rsc6BoneData;
+                if (reader.BlockPool.TryGetValue(fc.Position, out var fci)) fc.Item = fci as Rsc6BoneData;
+                if (reader.BlockPool.TryGetValue(pr.Position, out var pri)) pr.Item = pri as Rsc6BoneData;
 
                 bone.NextSibling = ns;
                 bone.FirstChild = fc;
@@ -1700,20 +1804,23 @@ namespace CodeX.Games.RDR1.RSC6
                 bone.Parent = pr.Item;
             }
 
+            var tr = InverseJointScaleOrients.Items;
             var bonesSorted = Bones.ToList();
+            bonesSorted.Sort((a, b) => a.Index.CompareTo(b.Index));
+
             for (int i = 0; i < bonesSorted.Count; i++)
             {
                 var bone = bonesSorted[i];
                 bone.UpdateAnimTransform();
                 bone.AbsTransform = bone.AnimTransform;
-                bone.BindTransformInv = Matrix4x4.Identity;
+                bone.BindTransformInv = (i < (tr?.Length ?? 0)) ? tr[i] : Matrix4x4Ext.Invert(bone.AnimTransform);
                 bone.BindTransformInv.M44 = 1.0f;
                 bone.UpdateSkinTransform();
             }
 
+            BuildBoneTags();
             UpdateBoneTransforms();
             BuildBonesDictionary();
-            BuildBoneTags();
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -1834,7 +1941,7 @@ namespace CodeX.Games.RDR1.RSC6
             for (int i = 0; i < BoneCount; i++)
             {
                 var bone = (Rsc6BoneData)Bones[i];
-                if (bone.BoneId != i)
+                if ((ushort)bone.BoneId != i)
                 {
                     return true;
                 }
@@ -1844,6 +1951,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void BuildBoneTags()
         {
+            BonesMap = new Dictionary<Rsc6BoneIdEnum, Rsc6BoneData>();
             var tags = new List<Rsc6SkeletonBoneTag>();
             var bones = BoneData.Items;
 
@@ -1854,9 +1962,10 @@ namespace CodeX.Games.RDR1.RSC6
                     var bone = bones[i];
                     var tag = new Rsc6SkeletonBoneTag
                     {
-                        BoneTag = bone.BoneId,
+                        BoneTag = (ushort)bone.BoneId,
                         BoneIndex = (ushort)i
                     };
+                    BonesMap[bone.BoneId] = bone;
                     tags.Add(tag);
                 }
             }
@@ -2025,7 +2134,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6BoneData> NextSibling { get; set; } //m_Next, pointer to the bone's next sibling, or NULL if no more siblings
         public Rsc6Ptr<Rsc6BoneData> FirstChild { get; set; } //m_Child, pointer to the bone's first child, or NULL if no children
         public Rsc6Ptr<Rsc6BoneData> ParentRef { get; set; } //m_Parent, pointer to the bone's parent, or NULL if no parent
-        public ushort BoneId { get; set; } //m_BoneId, the bone id of this bone (or if bone ids not used, returns the bone's index)
+        public Rsc6BoneIdEnum BoneId { get; set; } //m_BoneId, the bone id of this bone (or if bone ids not used, returns the bone's index)
         public ushort MirrorIndex { get; set; } //m_MirrorIndex, index of the bone that is a mirror to this bone (used to mirror animations/frames)
         public byte NumTransChannels { get; set; } //m_NumTransChannels, related to TranslationMin and TranslationMax
         public byte NumRotChannels { get; set; } //m_NumRotChannels, related to RotationMin and RotationMax
@@ -2063,7 +2172,7 @@ namespace CodeX.Games.RDR1.RSC6
             FirstChild = new Rsc6Ptr<Rsc6BoneData>() { Position = reader.ReadUInt32() };
             ParentRef = new Rsc6Ptr<Rsc6BoneData>() { Position = reader.ReadUInt32() };
             Index = reader.ReadUInt16();
-            BoneId = reader.ReadUInt16();
+            BoneId = (Rsc6BoneIdEnum)reader.ReadUInt16();
             MirrorIndex = reader.ReadUInt16();
             NumTransChannels = reader.ReadByte();
             NumRotChannels = reader.ReadByte();
@@ -2095,9 +2204,25 @@ namespace CodeX.Games.RDR1.RSC6
             AnimTranslation = Position;
             AnimScale = Scale;
 
-            if (Dofs == 525198)
+            //Let's write the unknown BoneIds in a text file
+            if (!Enum.IsDefined(typeof(Rsc6BoneIdEnum), BoneId))
             {
-                Debug.WriteLine(Name);
+                var path = @"C:\Users\fumol\OneDrive\Bureau\boneids.txt";
+                var lines = File.ReadAllLines(path);
+
+                bool alreadyContains = false;
+                foreach (string line in lines)
+                {
+                    if (line.Contains(BoneId.ToString()))
+                    {
+                        alreadyContains = true;
+                        break;
+                    }
+                }
+
+                if (alreadyContains) return;
+                using var writer = File.AppendText(path);
+                writer.WriteLine($"{Name.ToUpper()} = {BoneId},");
             }
         }
 
@@ -2122,7 +2247,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtrEmbed(child, child, (ulong)(224 * child?.Index ?? 0));
             writer.WritePtrEmbed(parent, parent, (ulong)(224 * parent?.Index ?? 0));
             writer.WriteUInt16((ushort)Index);
-            writer.WriteUInt16(BoneId);
+            writer.WriteUInt16((ushort)BoneId);
             writer.WriteUInt16(MirrorIndex);
             writer.WriteByte(NumTransChannels);
             writer.WriteByte(NumRotChannels);
@@ -2150,7 +2275,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             NameStr = new(reader.ReadString("Name"));
             Index = reader.ReadInt32("Index");
-            BoneId = reader.ReadUInt16("BoneId");
+            BoneId = (Rsc6BoneIdEnum)reader.ReadUInt16("BoneId");
             MirrorIndex = reader.ReadUInt16("MirrorIndex");
             DefaultTranslation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultTranslation"));
             DefaultRotation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultRotation"));
@@ -2180,7 +2305,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteString("Name", Name);
             writer.WriteInt32("Index", Index);
-            writer.WriteUInt16("BoneId", BoneId);
+            writer.WriteUInt16("BoneId", (ushort)BoneId);
             writer.WriteUInt16("MirrorIndex", MirrorIndex);
             writer.WriteVector4("DefaultTranslation", DefaultTranslation);
             writer.WriteVector4("DefaultRotation", DefaultRotation);
@@ -2202,7 +2327,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public uint GetSignatureNonChiral() //Skeleton signature, insensitive to chirality, it cares only about the dofs and ids present in the skeleton (not their order)
         {
-            return (uint)(BoneId << 32) |
+            return (uint)((ushort)BoneId << 32) |
                    (((Dofs & ((uint)Rsc6DoFs.TRANSLATE_X | (uint)Rsc6DoFs.TRANSLATE_Y | (uint)Rsc6DoFs.TRANSLATE_Z)) != 0 ? 0x1U : 0x0U) |
                    ((Dofs & ((uint)Rsc6DoFs.ROTATE_X | (uint)Rsc6DoFs.ROTATE_Y | (uint)Rsc6DoFs.ROTATE_Z)) != 0 ? 0x2U : 0x0U) |
                    ((Dofs & ((uint)Rsc6DoFs.SCALE_X | (uint)Rsc6DoFs.SCALE_Y | (uint)Rsc6DoFs.SCALE_Z)) != 0 ? 0x4U : 0x0U));
@@ -2412,7 +2537,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
             writer.WriteUInt32(wfd ? 0x00EEB23C : VFT);
             writer.WriteUInt32(0); //Unused
             writer.WritePtrArr(Shaders);
@@ -2500,6 +2625,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Unknown_3h { get; set; }
         public uint DataPointer { get; set; }
         public JenkHash Hash { get; set; }
+
         public Rsc6TextureBase Texture { get; set; }
         public Rsc6Vector4 Vector { get; set; }
         public Rsc6Vector4 Array { get; set; }
@@ -2513,7 +2639,7 @@ namespace CodeX.Games.RDR1.RSC6
             DataPointer = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public void Write(Rsc6DataWriter writer, Rsc6ShaderParametersBlock pramBlock, uint pos)
         {
             writer.WriteByte((byte)DataType);
             writer.WriteByte(RegisterIndex);
@@ -2524,10 +2650,10 @@ namespace CodeX.Games.RDR1.RSC6
             if (Texture != null)
             {
                 object block = writer.BlockList[0];
-                if (block is Rsc6FragDrawable<Rsc6Drawable> wfd)
+                if (block is Rsc6FragDrawable wfd)
                     texture = wfd.TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
                 else
-                    texture = ((Rsc6VisualDictionary<Rsc6Drawable>)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                    texture = ((Rsc6VisualDictionary)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
             }
 
             switch (DataType)
@@ -2539,10 +2665,10 @@ namespace CodeX.Games.RDR1.RSC6
                         writer.WritePtrEmbed(texture, texture, 0); //Embedded texture
                     break;
                 case Rsc6ShaderParamType.CBuffer:
-                    writer.WritePtr(new Rsc6Ptr<Rsc6Vector4>(Vector));
+                    writer.WritePtrEmbed(pramBlock, pramBlock, pos);
                     break;
                 default:
-                    writer.WritePtr(new Rsc6Ptr<Rsc6Vector4>(Array));
+                    writer.WritePtrEmbed(pramBlock, pramBlock, pos);
                     break;
             }
         }
@@ -2819,24 +2945,31 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            //Update DataPointer for each param
-            for (int i = 0; i < Parameters.Length; i++)
+            var headerBlockSize = (uint)Parameters.Length * 8;
+            if (headerBlockSize % 16 != 0)
             {
-                var param = Parameters[i];
-                if (param.Texture == null) continue;
+                headerBlockSize += (ushort)(16 - (ushort)(headerBlockSize % 16));
+            }
 
-                if (param.DataType == 0)
-                    param.DataPointer = (uint)param.Texture.FilePosition;
-                else if (param.DataType == Rsc6ShaderParamType.CBuffer)
-                    param.DataPointer = (uint)param.Vector.FilePosition;
-                else
-                    param.DataPointer = (uint)param.Array.FilePosition;
+            var parameters = Parameters;
+            var positions = new uint[parameters.Length];
+            var position = headerBlockSize;
+            var size = 0u;
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                var pram = parameters[i];
+                if (pram.DataType == Rsc6ShaderParamType.Texture) continue;
+                positions[i] = position + size;
+                size += (uint)pram.DataType * 16;
             }
 
             //Write parameters
-            foreach (var param in Parameters)
+            for (int i = 0; i < Parameters.Length; i++)
             {
-                param.Write(writer);
+                var param = Parameters[i];
+                var paramPos = positions[i];
+                param.Write(writer, this, paramPos);
             }
 
             //Write padding
@@ -2963,15 +3096,15 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6ShaderParametersBlock> ParametersList { get; set; } //Data
         public JenkHash Name { get; set; } //BasisHashCode
         public byte ParameterCount { get; set; } //Count
-        public byte RenderBucket { get; set; } = 1; //DrawBucket
-        public byte PhysMtl { get; set; } //PhysMtl
-        public byte Flags { get; set; } //Flags
+        public byte RenderBucket { get; set; } //DrawBucket
+        public byte PhysMtl { get; set; } //PhysMtl, always 0
+        public byte Flags { get; set; } //Flags, always 0 (can be 0x01 or 0x80 in other games)
         public ushort ParameterSize { get; set; } //SpuSize
         public ushort ParameterDataSize { get; set; } //TotalSize
-        public JenkHash FileName { get; set; } //MaterialHashCode
+        public JenkHash FileName { get; set; } //MaterialHashCode, valid at resource time if we inherited from material, in RDR1 always 0
         public uint RenderBucketMask { get; set; } //DrawBucketMask, always 0
-        public ushort LastFrame { get; set; } //LastFrame
-        public byte TextureDmaListSize { get; set; } //TextureDmaListSize
+        public ushort LastFrame { get; set; } //LastFrame, mostly 0 or sometimes 8 with a few WVD's
+        public byte TextureDmaListSize { get; set; } //TextureDmaListSize, always 0
         public byte TextureParametersCount { get; set; } //TextureCount
         public uint SortKey { get; set; } //SortKey
 
@@ -3010,7 +3143,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Flags);
             writer.WriteUInt16(ParameterSize);
             writer.WriteUInt16(ParameterDataSize);
-            writer.WriteUInt32(0);
+            writer.WriteUInt32(0); //Unused
             writer.WriteUInt32(RenderBucketMask);
             writer.WriteUInt16(LastFrame);
             writer.WriteByte(TextureDmaListSize);
@@ -3432,4 +3565,668 @@ namespace CodeX.Games.RDR1.RSC6
         TRANSLATION = TRANSLATE_X | TRANSLATE_Y | TRANSLATE_Z,
         SCALE = SCALE_X | SCALE_Y | SCALE_Z,*/
     };
+
+    public enum Rsc6BoneIdEnum : ushort
+    {
+        ROOT = 0,
+        SPINE00 = 13194,
+        SPINE01 = 13195,
+        SPINE02 = 13196,
+        SPINE03 = 13197,
+        NECK = 12832,
+        HEAD = 53384,
+        FACIAL_ROOT = 39051,
+        FOREHEAD_C = 9695,
+        EYEBROW_A_L = 8878,
+        EYEBROW_A_R = 8852,
+        JAW_C = 57105,
+        TONGUE_A = 44579,
+        TONGUE_B = 44580,
+        LOWERLIP_L = 7601,
+        LOWERLIP_R = 7703,
+        CHIN_C = 26230,
+        NOSTRIL_L = 2015,
+        NOSTRIL_R = 1893,
+        UPPERLIP_R = 27318,
+        UPPERLIP_L = 27440,
+        UPPERCHEEK_L = 28732,
+        LOWERCHEEK_L = 25373,
+        EAR_L = 53989,
+        EYEBROW_B_L = 8622,
+        EYEBROW_B_R = 8596,
+        UPPERCHEEK_R = 28674,
+        LOWERCHEEK_R = 25315,
+        EAR_R = 53995,
+        UPPEREYELID_R = 55953,
+        EYEPIVOT_R = 3929,
+        LOWEREYELID_R = 15424,
+        EYEPIVOT_L = 3859,
+        LOWEREYELID_L = 15450,
+        UPPEREYELID_L = 55979,
+        LIPCORNER_L = 29172,
+        LIPCORNER_R = 29178,
+        HEAD_ATTACHMENT = 33509,
+        NECK_ATTACHMENT = 40551,
+        CLAVICLE_L = 16240,
+        ARM_L = 55698,
+        ARMROLL_L = 59203,
+        ELBOW_L = 55089,
+        WRISTROLL_L = 682,
+        WRIST_L = 36956,
+        THUMB_01_L = 62597,
+        THUMB_02_L = 62341,
+        THUMB_03_L = 61061,
+        FINGER_11_L = 36451,
+        FINGER_12_L = 36707,
+        FINGER_13_L = 37987,
+        FINGER_21_L = 40547,
+        FINGER_22_L = 40803,
+        FINGER_23_L = 42083,
+        FINGER_31_L = 28259,
+        FINGER_32_L = 28515,
+        FINGER_33_L = 29795,
+        FINGER_41_L = 32355,
+        FINGER_42_L = 32611,
+        FINGER_43_L = 33891,
+        WRIST_L_ATTACHMENT = 24642,
+        ELBOW_L_ATTACHMENT = 62455,
+        ARM_L_ATTACHMENT = 4722,
+        CLAVICLE_L_ATTACHMENT = 38572,
+        CLAVICLE_R = 16182,
+        ARM_R = 55704,
+        ARMROLL_R = 59177,
+        ELBOW_R = 54967,
+        WRISTROLL_R = 688,
+        WRIST_R = 36866,
+        THUMB_01_R = 62667,
+        THUMB_02_R = 62411,
+        THUMB_03_R = 61131,
+        FINGER_11_R = 36553,
+        FINGER_12_R = 36809,
+        FINGER_13_R = 38089,
+        FINGER_21_R = 40649,
+        FINGER_22_R = 40905,
+        FINGER_23_R = 42185,
+        FINGER_31_R = 28361,
+        FINGER_32_R = 28617,
+        FINGER_33_R = 29897,
+        FINGER_41_R = 32457,
+        FINGER_42_R = 32713,
+        FINGER_43_R = 33993,
+        WRIST_R_ATTACHMENT = 29877,
+        ELBOW_R_ATTACHMENT = 11772,
+        ARM_R_ATTACHMENT = 63762,
+        CLAVICLE_R_ATTACHMENT = 13618,
+        BREAST_TOP_L = 32064,
+        BREAST_L = 7260,
+        BREAST_TOP_R = 32070,
+        BREAST_R = 7234,
+        SPINE03_ATTACHMENT = 35461,
+        SPINE02_ATTACHMENT = 12068,
+        SPINE01_ATTACHMENT = 47269,
+        SPINE00_ATTACHMENT = 53173,
+        PELVIS = 50708,
+        HIP_L = 22185,
+        HIPROLL_L = 18440,
+        KNEE_L = 56997,
+        ANKLE_L = 1301,
+        BALL_L = 29528,
+        TOE_L = 48373,
+        ANKLE_L_ATTACHMENT = 47349,
+        KNEE_L_ATTACHMENT = 5254,
+        HIP_L_ATTACHMENT = 47554,
+        HIP_R = 22191,
+        HIPROLL_R = 18382,
+        KNEE_R = 57003,
+        ANKLE_R = 1179,
+        BALL_R = 29534,
+        TOE_R = 48379,
+        ANKLE_R_ATTACHMENT = 14601,
+        KNEE_R_ATTACHMENT = 17062,
+        HIP_R_ATTACHMENT = 41427,
+        PELVIS_ATTACHMENT = 42977,
+        ROOT_ATTACHMENT = 57638,
+        AXLE_R_00_JOINT = 63384,
+        WHEEL_07_JOINT = 32475,
+        WHEEL_06_JOINT = 42053,
+        WHEEL_05_JOINT = 12756,
+        WHEEL_04_JOINT = 48626,
+        AXLE_F_00_JOINT = 47000,
+        WHEEL_03_JOINT = 19329,
+        WHEEL_02_JOINT = 28907,
+        WHEEL_01_JOINT = 64777,
+        WHEEL_00_JOINT = 35480,
+        JMP_BCK_TUNA0 = 22256,
+        JMP_BCK_TUNA1 = 22257,
+        HITCHFRONT = 4815,
+        HITCHFRONT_ATTACH = 657,
+        HITCHBACK = 30483,
+        HITCHBACK_ATTACH = 58489,
+        CHASSISMAIN_JOINT = 6493,
+        BODY_JOINT = 25813,
+        LF_DOOR_JOINT = 46191,
+        RT_DOOR_JOINT = 1189,
+        AXLE_FR_JOINT = 53623,
+        AXLE_RR_JOINT = 52151,
+        ARM_FR_LF_JOINT = 37399,
+        ARM_FR_RT_JOINT = 31834,
+        ARM_RR_LF_JOINT = 15036,
+        ARM_RR_RT_JOINT = 9471,
+        HUB_FR_LF_JOINT = 19040,
+        WHEEL_FR_LF_JOINT = 771,
+        HUB_FR_RT_JOINT = 26173,
+        WHEEL_FR_RT_JOINT = 57909,
+        HUB_RR_LF_JOINT = 61844,
+        WHEEL_RR_LF_JOINT = 43798,
+        HUB_RR_RT_JOINT = 3810,
+        WHEEL_RR_RT_JOINT = 35769,
+        CRANK_JOINT = 31965,
+        STEER_JOINT = 58567,
+        BREAK_JOINT01 = 20949,
+        BREAK_JOINT02 = 20950,
+        CATTLEDOOR_JOINT01 = 46031,
+        CATTLEDOOR_JOINT02 = 46032,
+        BODY = 31437,
+        LEVER = 8403,
+        SLIDING = 15344,
+        TRIGGER = 26541,
+        HAMMER = 3727,
+        LATCH = 56632,
+        BREAKJOINT = 63591,
+        BREAKJOINT3 = 36654,
+        BREAKJOINT2 = 36653,
+        BREAKJOINT1 = 36652,
+        BREAKJOINT01 = 1342,
+        BREAKJOINT02 = 1343,
+        BREAKJOINT03 = 1344,
+        BREAKJOINT04 = 1345,
+        BREAKJOINT05 = 1346,
+        BREAKJOINT06 = 1347,
+        BREAKABLEFRAME02 = 25260,
+        BREAKABLEFRAME07 = 25265,
+        BREAKABLEFRAME03 = 25261,
+        BREAKABLEFRAME01 = 25259,
+        BREAKABLEFRAME04 = 25262,
+        BREAKABLEFRAME05 = 25263,
+        BREAKABLEFRAME06 = 25264,
+        BREAKJOINT07 = 1348,
+        BREAKJOINT08 = 1349,
+        BREAKJOINT09 = 1350,
+        BREAKJOINT10 = 1325,
+        BREAKJOINT11 = 1326,
+        BREAKJOINT12 = 1327,
+        BREAKJOINT13 = 1328,
+        BREAKJOINT14 = 1329,
+        BREAKJOINT15 = 1330,
+        BREAKJOINT16 = 1331,
+        BREAKJOINT17 = 1332,
+        BREAKJOINT18 = 1333,
+        BREAKABLEFRAME08 = 25266,
+        BREAKABLEFRAME27 = 25297,
+        BREAKABLEFRAME10 = 25274,
+        BREAKABLEFRAME13 = 25277,
+        BREAKABLEFRAME14 = 25278,
+        BREAKABLEFRAME11 = 25275,
+        BREAKABLEFRAME15 = 25279,
+        BREAKABLEFRAME12 = 25276,
+        BREAKABLEFRAME16 = 25280,
+        BREAKABLEFRAME09 = 25267,
+        BREAKABLEFRAME28 = 25298,
+        BREAKABLEFRAME17 = 25281,
+        BREAKABLEFRAME24 = 25294,
+        BREAKABLEFRAME19 = 25283,
+        BREAKABLEFRAME21 = 25291,
+        BREAKABLEFRAME22 = 25292,
+        BREAKABLEFRAME23 = 25293,
+        BREAKABLEFRAME26 = 25296,
+        BREAKABLEFRAME25 = 25295,
+        BREAKABLEFRAME20 = 25290,
+        BOX_BOUND011 = 62888,
+        BREAK_JOINT03 = 20951,
+        BREAK_JOINT04 = 20952,
+        BREAK_JOINT05 = 20953,
+        BREAK_JOINT06 = 20954,
+        BREAK_JOINT07 = 20955,
+        BREAK_JOINT08 = 20956,
+        JOINT01 = 20725,
+        JOINT_BOTTOM = 38303,
+        JOINT_TOP = 43086,
+        JOINT1 = 4780,
+        JOINT_MIN_A = 19759,
+        JOINT_HR_A = 29229,
+        JOINT_MIN_B = 19760,
+        JOINT_HR_B = 29230,
+        JOINT4 = 4783,
+        JOINT2 = 4781,
+        JOINT3 = 4782,
+        JOINT_BLADE = 27806,
+        LID_JOINT = 19138,
+        CAPSULE_BOUND01 = 21356,
+        HOR = 20146,
+        VER01 = 10700,
+        VER02 = 10701,
+        HANDPIECE_PROPTRANS = 35269,
+        HANDPIECEBRACKET = 47556,
+        LATCH_JOINT = 17400,
+        HANDLE_JOINT = 15796,
+        BOUND = 45547,
+        BOX_BOUND01 = 42362,
+        JOINT01_LIGHT = 39153,
+        JOINT02_LIGHT = 9856,
+        JOINT03_LIGHT = 45726,
+        JOINT04_LIGHT = 16429,
+        JOINT05_LIGHT = 52299,
+        JOINT06_LIGHT = 23002,
+        JOINT07_LIGHT = 58872,
+        JOINT08_LIGHT = 29575,
+        JOINT2_BODY = 896,
+        JOINT3_GLASS = 58096,
+        JOINT02 = 20726,
+        JOINT03 = 20727,
+        JOINT_BODY = 60629,
+        JOINT_LID_PROPTRANS = 4053,
+        JOINTROOT1 = 2186,
+        JOINTROOT2 = 2187,
+        JOINTROOT3 = 2188,
+        JOINTROOT4 = 2189,
+        JOINTROOT5 = 2190,
+        GLASSBREAK01 = 34175,
+        GLASSBREAK02 = 34176,
+        GLASSBREAK04 = 34178,
+        GLASSBREAK06 = 34180,
+        GLASSBREAK07 = 34181,
+        GLASSBREAK08 = 34182,
+        JOINT_CRANK = 34993,
+        JOINT_RECIEVER_PROPTRANS = 41327,
+        MESH01 = 57650,
+        MESH02 = 57651,
+        TOPJOINT = 31129,
+        JOINT00 = 20724,
+        CANDEL_01 = 5487,
+        CANDEL_02 = 5488,
+        CANDEL_03 = 5489,
+        HANDLE_JOINT_PROPTRANS = 61075,
+        POT_FRAGMENT = 11833,
+        LID_FRAGMENT = 38032,
+        HANDLE_FRAGMENT = 56695,
+        DOOR_JOINT = 39483,
+        BODY_FRAGMENT = 61385,
+        RT_JOINT = 5410,
+        MAP_JOINT_PROPTRANS = 32633,
+        BOOK_JOINT01 = 54315,
+        BOOK_JOINT02 = 54316,
+        BOOK_JOINT03 = 54317,
+        SWIVEL_JOINT = 8787,
+        LID_PROPTRANS = 44124,
+        GLOBEJOINT = 37449,
+        CENTER_JOINT = 14367,
+        RIGHT_JOINT = 445,
+        RIGHT_JOINT_EXTREME = 17224,
+        LEFT_JOINT = 3343,
+        LEFT_JOINT_EXTREME = 63515,
+        BREAKJOINT4 = 36655,
+        BREAKJOINT5 = 36656,
+        BREAKJOINT6 = 36657,
+        BREAKJOINT7 = 36658,
+        JOINT07_LIGHTMAIN = 27645,
+        JOINT5 = 4784,
+        JOINT6 = 4785,
+        JOINT7 = 4786,
+        ROTATION_JOINT = 23610,
+        BOUNDS_SHOOTER = 54665,
+        MAIN_JOINT = 20070,
+        LEVER03_JOINT = 32439,
+        LEVER02_JOINT = 3142,
+        LEVER01_JOINT = 39012,
+        WHEEL04_JOINT = 26082,
+        WHEEL03_JOINT = 55379,
+        WHEEL02_JOINT = 58384,
+        WHEEL01_JOINT = 22514,
+        ARM_JOINT = 12984,
+        ARMWHEEL01_JOINT = 29950,
+        ARMWHEEL02_JOINT = 653,
+        CHAIN01_JOINT = 13093,
+        CHAIN02_JOINT = 48963,
+        CHAIN03_JOINT = 19778,
+        CHAIN04_JOINT = 2952,
+        DOOR_FRAGMENT = 35338,
+        JOINT_COVER = 41994,
+        JOINT_DOOR = 52734,
+        JOINT_HANDLE = 17463,
+        BREAK_JOINT09 = 20957,
+        BREAK_JOINT10 = 20932,
+        BREAK_JOINT11 = 20933,
+        BREAK_JOINT12 = 20934,
+        BREAK_JOINT13 = 20935,
+        BREAK_JOINT14 = 20936,
+        BREAK_JOINT15 = 20937,
+        BREAK_JOINT16 = 20938,
+        BREAK_JOINT17 = 20939,
+        BREAK_JOINT18 = 20940,
+        BREAK_JOINT19 = 20941,
+        BREAK_JOINT20 = 20916,
+        BREAK_JOINT21 = 20917,
+        BREAK_JOINT22 = 20918,
+        BREAK_JOINT23 = 20919,
+        BREAK_JOINT24 = 20920,
+        BREAK_JOINT25 = 20921,
+        BREAK_JOINT26 = 20922,
+        BREAK_JOINT27 = 20923,
+        BREAK_JOINT28 = 20924,
+        BREAK_JOINT29 = 20925,
+        BREAK_JOINT30 = 20900,
+        JOINT_FIRECIRCLE = 62813,
+        JOINT_UPRIGHTS = 40666,
+        JOINT_KETTLE = 45176,
+        JOINT_ROOT = 58345,
+        SIDEJOINT = 60367,
+        NULL = 17073,
+        WHEEL_JOINT = 29134,
+        PEDAL_JOINT = 10691,
+        BREAKJOINT00 = 1341,
+        BREAKJOINT010 = 8097,
+        BREAKJOINT011 = 8098,
+        BREAKJOINT012 = 8099,
+        BREAKJOINT013 = 8100,
+        SHOCK_FR_LF_JOINT = 63703,
+        SHOCK_FR_RT_JOINT = 4613,
+        YOKE_JOINT = 11057,
+        HITCH_JOINT = 51644,
+        HANDLEBRAKE_JOINT = 31691,
+        CRATE01_JOINT = 63155,
+        TRUNK01_JOINT = 31017,
+        STEP_JOINT = 49529,
+        CHASSISSUPPORT_LF_JOINT = 2317,
+        CHASSISSUPPORT_RT_JOINT = 23457,
+        CHASSISBRAKE_JOINT = 62315,
+        SHOCK_RR_LF_JOINT = 50419,
+        SHOCK_RR_RT_JOINT = 56496,
+        GOURD_JOINT03 = 26080,
+        GOURD_JOINT02 = 26079,
+        GOURD_JOINT01 = 26078,
+        RL_DOOR_JOINT = 19124,
+        RR_DOOR_JOINT = 12997,
+        JMP_BCK_TUNA3 = 22259,
+        JMP_BCK_TUNA2 = 22258,
+        BREAKJOINT014 = 8101,
+        BREAKJOINT015 = 8102,
+        BREAKJOINT016 = 8103,
+        BREAKJOINT017 = 8104,
+        HINGE = 21282,
+        CYLINDER = 35988,
+        SPINE04 = 13198,
+        SPINE05 = 13199,
+        SPINE06 = 13200,
+        SPINE07 = 13201,
+        SPINE08 = 13202,
+        SPINE09 = 13203,
+        SPINE10 = 13114,
+        SPINE11 = 13115,
+        SPINE12 = 13116,
+        JAW = 20439,
+        TONGUE01 = 43811,
+        TONGUE02 = 43812,
+        TONGUE03 = 43813,
+        PELVIS01 = 35322,
+        PELVIS02 = 35323,
+        PELVIS03 = 35324,
+        PELVIS04 = 35325,
+        PELVIS05 = 35326,
+        PELVIS06 = 35327,
+        PELVIS07 = 35328,
+        PELVIS08 = 35329,
+        PELVIS09 = 35330,
+        PELVIS10 = 35209,
+        PELVIS11 = 35210,
+        PELVIS12 = 35211,
+        PELVIS13 = 35212,
+        PELVIS14 = 35213,
+        PELVIS15 = 35214,
+        WHEELSFRONT_L_JOINT = 20334,
+        WHEELFRONT_L_02_JOINT = 12661,
+        WHEELFRONT_L_00_JOINT = 58784,
+        WHEELSFRONT_R_JOINT = 679,
+        WHEELFRONT_R_03_JOINT = 40436,
+        WHEELFRONT_R_01_JOINT = 7571,
+        WHEELSREAR_L_JOINT = 62324,
+        WHEELREAR_L_04_JOINT = 6304,
+        WHEELREAR_L_06_JOINT = 12877,
+        ARM00_L_JOINT = 6479,
+        ARM00ROTATE_L_JOINT = 61284,
+        ARM01PISTON_L_JOINT = 52683,
+        WHEELREAR_L_08_JOINT = 58325,
+        ARM02_L_JOINT = 4943,
+        ARM02ROTATE_L_JOINT = 30052,
+        WHEELSREAR_R_JOINT = 3826,
+        WHEELREAR_R_05_JOINT = 55463,
+        WHEELREAR_R_07_JOINT = 35744,
+        ARM01_R_JOINT = 25814,
+        ARM01ROTATE_R_JOINT = 22743,
+        ARM01PISTON_R_JOINT = 20365,
+        WHEELREAR_R_09_JOINT = 42317,
+        ARM03_R_JOINT = 24278,
+        ARM03ROTATE_R_JOINT = 26327,
+        LEVER01 = 40268,
+        LEVER02 = 40269,
+        NECK01 = 63953,
+        NECK02 = 63954,
+        NECK03 = 63955,
+        SHOULDER_L = 28488,
+        FTH_01_01_L = 26346,
+        FTH_08_01_L = 2507,
+        FTH_10_01_L = 49739,
+        FTH_11_01_L = 55643,
+        SHOULDER_R = 28366,
+        FTH_01_01_R = 26416,
+        FTH_08_01_R = 2577,
+        FTH_10_01_R = 49809,
+        FTH_11_01_R = 55713,
+        TOE_11_L = 41187,
+        TOE_12_L = 40931,
+        TOE_13_L = 43747,
+        TOE_31_L = 49379,
+        TOE_32_L = 49123,
+        TOE_33_L = 51939,
+        TOE_11_R = 41225,
+        TOE_12_R = 40969,
+        TOE_13_R = 43785,
+        TOE_31_R = 49417,
+        TOE_32_R = 49161,
+        TOE_33_R = 51977,
+        TAIL = 36481,
+        TAIL_01 = 17563,
+        TAIL_02 = 17564,
+        RIFLE = 23004,
+        PISTOL = 15266,
+        THROWER = 7686,
+        ROPE = 31978,
+        MELEE = 6199,
+        RIGHTMIDJOINT = 22107,
+        RIGHTTOPJOINT = 42814,
+        LEFTMIDJOINT = 58344,
+        LEFTFRONTJOINT = 23242,
+        RIGHTFRONTJOINT = 62951,
+        JOINT_CHAIN = 11110,
+        CAPSULE_BOUND041 = 25209,
+        CAPSULE_BOUND02 = 21357,
+        CAPSULE_BOUND03 = 21358,
+        CAPSULE_BOUND04 = 21359,
+        CAPSULE_BOUND05 = 21360,
+        CAPSULE_BOUND06 = 21361,
+        CAPSULE_BOUND07 = 21362,
+        CAPSULE_BOUND08 = 21363,
+        CAPSULE_BOUND09 = 21364,
+        CAPSULE_BOUND010 = 25160,
+        CAPSULE_BOUND011 = 25161,
+        CAPSULE_BOUND012 = 25162,
+        CAPSULE_BOUND013 = 25163,
+        CAPSULE_BOUND014 = 25164,
+        JOINT_CANDLE01 = 65032,
+        JOINT_CANDLE02 = 65033,
+        JOINT_01 = 19210,
+        JOINT_02 = 19211,
+        JOINT_03 = 19212,
+        LEFT_POLE = 1514,
+        RT_POLE = 26884,
+        TOP_SLAT = 58414,
+        MID_SLAT = 19740,
+        BOT_SLAT = 16383,
+        YAW = 24279,
+        PITCH = 25709,
+        BARRELS = 45875,
+        CRANK = 53091,
+        MAGDRUM = 36938,
+        BREAK_JOINT31 = 20901,
+        BREAK_JOINT32 = 20902,
+        JOINT_02_PROPTRANS = 36595,
+        JOINT_03_PROPTRANS = 34012,
+        LATHE_JOINT = 60019,
+        LATHE_JOINT2 = 34497,
+        LATHE_JOINT3 = 34498,
+        ROOT_JOINT = 8703,
+        JOINT_PLANK01 = 53406,
+        JOINT_PLANK02 = 53407,
+        JOINT_PLANK03 = 53408,
+        JOINT_PLANK04 = 53409,
+        JOINT_PLANK05 = 53410,
+        JOINT_PLANK06 = 53411,
+        JOINT_PLANK07 = 53412,
+        JOINT_PLANK08 = 53413,
+        JOINT_PLANK09 = 53414,
+        JOINTCENTER = 61220,
+        JOINTRIGHT = 22091,
+        JOINTLEFT = 58609,
+        PAGEJOINT = 17540,
+        PCYLINDER1 = 5114,
+        GRAB = 52614,
+        OFFSETA = 52465,
+        GATE01_WHEEL = 2927,
+        OFFSETB = 52466,
+        GATE01_WHEEL1 = 3564,
+        JOINT8 = 4787,
+        JOINT9 = 4788,
+        ARROWJOINT = 14422,
+        FAN_JOINT = 41273,
+        JOINT04 = 20728,
+        TOMATO_JOINT01 = 55421,
+        TOMATO_JOINT02 = 55422,
+        TOMATO_JOINT03 = 55423,
+        TOMATO_JOINT04 = 55424,
+        TOMATO_JOINT05 = 55425,
+        TOMATO_JOINT06 = 55426,
+        TOMATO_JOINT07 = 55427,
+        TOMATO_JOINT08 = 55428,
+        TOMATO_JOINT09 = 55429,
+        TOMATO_JOINT010 = 26190,
+        TOMATO_JOINT011 = 26191,
+        TOMATO_JOINT012 = 26192,
+        TOMATO_JOINT013 = 26193,
+        STATICJOINT = 52926,
+        CANJOINT = 12908,
+        WADJOINT = 18843,
+        COREJOINT = 4477,
+        BOTTLEBOTTOMJOINT = 13592,
+        CAN01JOINT = 10996,
+        BOTTLETOP01JOINT = 13781,
+        BOTTLETOP02JOINT = 19685,
+        CAN02JOINT = 16900,
+        STONE_JOINT_PROPTRANS = 65489,
+        SIDEB_1 = 63508,
+        SIDEB_2 = 63509,
+        LOWERCORNERA_R = 12615,
+        LOWERCORNERB_R = 12359,
+        LOWERCORNER_NULL01 = 44702,
+        LOWERCORNERA_L = 12705,
+        LOWERCORNERB_L = 12449,
+        LOWERCORNER_NULL = 40093,
+        SIDEA_1 = 63252,
+        SIDEA_2 = 63253,
+        UPPERCORNERA_R = 24344,
+        UPPERCORNERN_R = 27160,
+        UPPERCORNER_NULL01 = 9682,
+        UPPERCORNERA_L = 24402,
+        UPPERCORNERB_L = 24146,
+        UPPERCORNER_NULL = 4318,
+        LF_JOINT_PROPTRANS = 39461,
+        MIDJOINT = 57622,
+        BOTTOMJOINT = 50548,
+        LEFTBOTTOMJOINT = 4524,
+        RIGHTBOTTOMJOINT = 47621,
+        LBOTJOINT = 3050,
+        MBOTJOINT = 2794,
+        RBOTJOINT = 2538,
+        RMIDJOINT = 5255,
+        MTOPJOINT = 45209,
+        LMIDJOINT = 5767,
+        LTOPJOINT = 44441,
+        RTOPJOINT = 43929,
+        JOINTCANDLE1 = 52679,
+        JOINTCANDLE2 = 52680,
+        JOINTCANDLE3 = 52681,
+        JOINTCANDLE4 = 52682,
+        GLASS_JOINT = 61348,
+        CANDLEEBREAKJOINT = 39500,
+        JOINT_LEG01 = 62255,
+        JOINT_LEG02 = 62256,
+        JOINT_LEG03 = 62257,
+        BASKET_JOINT = 4498,
+        HANDLE = 5618,
+        _NULL1 = 46573,
+        TAIL_R = 58351,
+        TAUNG00 = 24038,
+        TAUNG01 = 24039,
+        TAUNG02 = 24040,
+        TAUNG03 = 24041,
+        JAW_ATTACHMENT = 52905,
+        FINGER_L = 12364,
+        FINGER_R = 12434,
+        TAIL_00 = 17562,
+        TAIL_03 = 17565,
+        UPLIP1 = 15870,
+        LOWLIP1 = 61390,
+        NAIL_L = 22921,
+        NAIL_R = 22927,
+        THIGHT_L = 33338,
+        THIGHT_R = 33344,
+        TAIL_L_01 = 55945,
+        TAIL_L_02 = 55946,
+        BREAK_JOINT33 = 20903,
+        BREAK_JOINT34 = 20904,
+        BREAK_JOINT35 = 20905,
+        BREAK_JOINT36 = 20906,
+        BREAK_JOINT37 = 20907,
+        BREAK_JOINT38 = 20908,
+        BREAK_JOINT39 = 20909,
+        BREAK_JOINT40 = 20884,
+        BRANCH = 55972,
+        SKULL = 35412,
+        AMMO = 26963,
+        ROOT_JOINT1 = 8043,
+        ROOT_JOINT2 = 8044,
+        ROOT_JOINT3 = 8045,
+        ROOT_JOINT4 = 8046,
+        LID = 21060,
+        BASE_TRANS01 = 11528,
+        BASE_TRANS02 = 11529,
+        BASE_TRANS03 = 11530,
+        BREACH = 3861,
+        ROPE01 = 12637,
+        ROPE02 = 12638,
+        ROPE03 = 12639,
+        ROPE04_PROPTRANS = 19593,
+        FRONT_WHEEL = 16059,
+        REAR_WHEEL = 44070,
+        JOINTLBOT = 59617,
+        JOINTLMID = 64849,
+        JOINTLTOP = 63197,
+        JOINTR = 4813,
+        JOINTMBOT = 63713,
+        JOINTMMID = 3778,
+        JOINTMTOP = 2126,
+        JOINTRBOT = 51425,
+        JOINTRTOP = 55005,
+        BREAKPOINT_BOT = 40214,
+        BREAKPOINT_TOP = 44818,
+        JOINT_LID = 12595,
+    }
 }

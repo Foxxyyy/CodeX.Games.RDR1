@@ -4,7 +4,6 @@ using CodeX.Core.Physics.Vehicles;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
-using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -114,7 +113,7 @@ namespace CodeX.Games.RDR1.Prefabs
                 }
             }
 
-            var entry = FileManager.DataFileMgr.TryGetStreamEntry(hash, Rpf6FileExt.wtd);
+            var entry = FileManager.DataFileMgr.TryGetStreamEntry(hash, Rpf6FileExt.wtd_wtx);
             if (entry == null) return null;
 
             Console.Write("RDR1Peds", entry.Name);
@@ -156,7 +155,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             WfdEntry = dfman.TryGetStreamEntry(new(name + "_hilod"), Rpf6FileExt.generic);
             WftEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.wft);
-            WtdEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.wtd);
+            WtdEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.wtd_wtx);
         }
 
         public override Entity CreateInstance(string preset = null)
@@ -171,13 +170,6 @@ namespace CodeX.Games.RDR1.Prefabs
         public WfdFile Wfd;
         public WftFile Wft;
         public WtdFile Wtd;
-
-        public string[] DrawableNames { get; set; } = new string[12];
-        public Rsc6Drawable[] Drawables { get; set; } = new Rsc6Drawable[12];
-        public Rsc6Texture[] TexturesD { get; set; } = new Rsc6Texture[12];
-        public Rsc6Texture[] TexturesN { get; set; } = new Rsc6Texture[12];
-        public Rsc6Texture[] TexturesS { get; set; } = new Rsc6Texture[12];
-
         public PieceLod[] Lods;
 
         public RDR1Vehicle(RDR1VehiclePrefab prefab, bool buildPiece = true)

@@ -30,8 +30,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary<Rsc6Drawable>;
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary;
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
 
             writer.WriteUInt32((uint)(wvd ? 0x01831108 : wfd ? 0x00ECE5FC : 0x00A9C028));
             writer.WritePtr(BlockMapPointer);
@@ -230,7 +230,7 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class Rsc6Texture : Rsc6TextureBase
     {
-        public override ulong BlockLength => 84;
+        public override ulong BlockLength => base.BlockLength + 52;
 
         public long MemoryUsage
         {
@@ -562,19 +562,19 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
         public uint VFT { get; set; }
-        public uint Unknown_4h { get; set; }
+        public uint BlockMap { get; set; }
         public uint RefCount { get; set; } = 1; //m_RefCount
-        public ushort ResourceType { get; set; } //m_ResourceType, 0 for embedded textures or 2 for externals
-        public ushort LayerCount { get; set; } //m_LayerCount, mostly 0 or sometimes 5 for interior textures
+        public ushort ResourceType { get; set; } //m_ResourceType, 0 for embedded textures or 2 for seperated
+        public ushort LayerCount { get; set; } //m_LayerCount, 0 for standard/volume/depth textures or 5 for cubemaps
         public uint Unknown_10h { get; set; }
-        public int TextureSize { get; set; } //m_PhysicalSize
+        public int TextureSize { get; set; } //m_PhysicalSize, 0 for seperated textures
         public Rsc6Str NameRef { get; set; }
         public Rsc6Ptr<Rsc6BlockMap> D3DBaseTexture { get; set; }
 
         public virtual void Read(Rsc6DataReader reader)
         {
             VFT = reader.ReadUInt32();
-            Unknown_4h = reader.ReadUInt32();
+            BlockMap = reader.ReadUInt32();
             RefCount = reader.ReadUInt32();
             ResourceType = reader.ReadUInt16();
             LayerCount = reader.ReadUInt16();
@@ -587,8 +587,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public virtual void Write(Rsc6DataWriter writer)
         {
-            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary<Rsc6Drawable>;
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable<Rsc6Drawable>;
+            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary;
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
 
             if (!Name.EndsWith(".dds"))
                 Name += ".dds";
@@ -599,11 +599,11 @@ namespace CodeX.Games.RDR1.RSC6
             else if(wvd) 
                 writer.WriteUInt32(0x01848890); //WVD texture
             else if (wfd)
-                writer.WriteUInt32(0x00EE53E4); //WFD texture
+                writer.WriteUInt32(0x00D253E4); //WFD texture
             else
                 writer.WriteUInt32(0x00AB3704);
 
-            writer.WriteUInt32(Unknown_4h);
+            writer.WriteUInt32(BlockMap);
             writer.WriteUInt32(RefCount);
             writer.WriteUInt16((ushort)(TextureSize == 0 ? 2 : ResourceType));
             writer.WriteUInt16(LayerCount);

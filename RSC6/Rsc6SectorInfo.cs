@@ -16,6 +16,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 480;
         public List<WsiEntity> RootEntities { get; set; } = new List<WsiEntity>();
+        public Rsc6SectorInfo Parent { get; set; }
 
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6Str Name { get; set; } //Only for scoped sectors, otherwise NULL
@@ -1670,6 +1671,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public new string Name => ModelName.ToString();
         public JenkHash ModelName;
+        public bool ResetPos = false;
         public string ParentName; //Used for lights
         public Vector3 ParentPosition; //Used for lights
 
@@ -1678,12 +1680,24 @@ namespace CodeX.Games.RDR1.RSC6
             ModelName = JenkHash.GenHash(modelName);
         }
 
+        public WsiEntity(Rpf6StoreItem item)
+        {
+            ModelName = item.Hash;
+            Position = item.Box.Center;
+        }
+
         public WsiEntity(Rsc6PropInstanceInfo entity) //Fragments, props
         {
+            var name = entity.EntityName.Value.ToLowerInvariant();
+            if (name.Contains('/'))
+            {
+                name = name[(name.LastIndexOf("/") + 1)..];
+            }
+
             Position = entity.EntityPosition.XYZ();
             Orientation = Quaternion.CreateFromYawPitchRoll((float)entity.RotationZ, (float)entity.RotationX, (float)entity.RotationY);
             OrientationInv = Quaternion.Inverse(Orientation);
-            ModelName = JenkHash.GenHash(entity.EntityName.Value.ToLowerInvariant());
+            ModelName = JenkHash.GenHash(name);
             LodDistMax = 100.0f;
         }
 
@@ -1695,14 +1709,13 @@ namespace CodeX.Games.RDR1.RSC6
             ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
             LodDistMax = 100.0f;
 
-            Lights = new Light[]
-            {
-                Light.CreatePoint(light.Position.XYZ(),
-                    new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f),
-                    0.05f,
-                    5.0f,
-                    1.0f)
-            };
+            var pos = light.Position.XYZ();
+            var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
+            var ty = dir.GetPerpVec();
+            var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
+            var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
+            var l = Light.CreateSpot(pos, dir, tx, ty, col, 1.0f, 10.0f, 5.0f, 0.3f, 1.5f);
+            Lights = new Light[] { l };
         }
 
         public override string ToString()

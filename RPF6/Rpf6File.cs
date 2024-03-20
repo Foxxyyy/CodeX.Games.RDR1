@@ -982,7 +982,7 @@ namespace CodeX.Games.RDR1.RPF6
                     e.FlagInfos = flagInfo;
 
                     byte[] numArray = reader.ReadBytes((int)(reader.Length - reader.Position));
-                    if (e.ResourceType == Rpf6FileExt.wtd && e.FlagInfos.IsRSC85)
+                    if (e.ResourceType == Rpf6FileExt.wtd_wtx && e.FlagInfos.IsRSC85)
                     {
                         numArray = DecryptAES(numArray);
                     }
@@ -1517,13 +1517,13 @@ namespace CodeX.Games.RDR1.RPF6
         generic = 1, //also wst, wfd, wcs & wprp
         wsc = 2,
         was = 6,
-        wtd = 10, //also wtx
+        wtd_wtx = 10,
         wedt = 11,
-        wsg = 18, //also wgd
+        wsg_wgd = 18,
         wcg = 26,
         wat = 30,
-        wbd = 31, //also wcdt
-        wsf = 33, //also wnm
+        wbd_wcdt = 31,
+        wsf_wnm = 33,
         wtb = 36,
         wpdt = 39,
         wpfl = 50,

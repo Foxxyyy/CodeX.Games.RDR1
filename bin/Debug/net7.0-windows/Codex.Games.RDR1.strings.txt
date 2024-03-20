@@ -1,3 +1,15 @@
+rage__cutfCutsceneFile2
+mexarmy02_cs02_seq
+coloralphatint
+overridespawndistance
+offsettranslation
+offsetrotation
+userzoomscale
+canbeculled
+invertaxis
+colortint
+lodscale
+velocity
 rdr2_im.fxc
 template_base_bird.xml
 template_base_cow.xml

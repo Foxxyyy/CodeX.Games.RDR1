@@ -285,7 +285,7 @@ namespace CodeX.Games.RDR1.RPF6
         //Swap the axis from XYZ to ZXY
         public static Matrix4x4 ToZXY(Matrix4x4 m)
         {
-            var m44 = float.IsNaN(m.M44) ? 1.0f : m.M44;
+            var m44 = float.IsNaN(m.M44) ? 0.0f : m.M44;
             var translation = m.Translation;
 
             return new Matrix4x4(
@@ -320,15 +320,6 @@ namespace CodeX.Games.RDR1.RPF6
         {
             var vector = Xml.GetChildVector4Attributes(node, name);
             return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
-        }
-
-        //Converts a Vector3 (XYZ to ZXY/YZX) to Dec3N
-        public static uint GetDec3N(Vector3 val, bool zxy = true)
-        {
-            if (zxy) //XYZ > ZXY (RDR1 to CX)
-                return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20);
-            else     //XYZ > YZX (CX to RDR1)
-                return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20);
         }
 
         //Swap the axis and writes a Vector3 at the given offset in a buffer
@@ -384,52 +375,6 @@ namespace CodeX.Games.RDR1.RPF6
             return values;
         }
 
-        //Rescale and writes UV coords in a given byte array
-        //UV coords are normalized by dividing each coordinate by the range (difference between max and min values)
-        //After this step, they should lie in the range [0, 1].
-        public static void NormalizeUVs(List<float> uvX, List<float> uvY, List<int> uvOffset, ref byte[] buffer)
-        {
-            if (uvX.Count <= 0 || uvY.Count <= 0 || uvOffset.Count <= 0) return;
-
-            var minU = uvX.Min();
-            var maxU = uvX.Max();
-            var minV = uvY.Min();
-            var maxV = uvY.Max();
-
-            //Shift the values to the origin
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                uvX[i] -= minU;
-                uvY[i] -= minV;
-            }
-
-            //Normalize the values
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                uvX[i] /= maxU - minU;
-                uvY[i] /= maxV - minV;
-            }
-
-            //Convert to bytes and update buffer
-            for (int i = 0; i < uvX.Count; i++)
-            {
-                var x1 = (ushort)(uvX[i] / 3.05185094e-005f);
-                var y1 = (ushort)(uvY[i] / 3.05185094e-005f);
-                var xBuf = BitConverter.GetBytes(x1);
-                var yBuf = BitConverter.GetBytes(y1);
-                BufferUtil.WriteArray(buffer, uvOffset[i], xBuf);
-                BufferUtil.WriteArray(buffer, uvOffset[i] + 2, yBuf);
-            }
-        }
-
-        //Converts a floating point number into a fixed point number
-        //It's simply multiplying the float by a constant value and discarding the extra bits
-        public static uint PackFixedPoint(float value, uint size, uint shift) //Vector3::Pack1010102
-        {
-            float scale = ((1u << (int)(size - 1)) - 1);
-            return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
-        }
-
         //Creates a Colour from a string representing RGB values, ie "255, 255, 255"
         public static Colour ParseRGBString(string rgbString)
         {
@@ -441,24 +386,15 @@ namespace CodeX.Games.RDR1.RPF6
             return Colour.Red;
         }
 
-        //A hacky function to adjust the bounds correctly for peds (not animals, trees, props, etc)
-        //They seem to always be elevated, or one of the bound meshes consistently has its Z-axis value set to 0.0f
-        public static void ResizeBoundsForPeds(Piece piece, bool fragment, bool prefab = false)
+        //A hacky function to adjust the bounds correctly for fragments, used for the prefabs
+        public static void ResizeBoundsForPeds(Piece piece)
         {
             if (piece == null) return;
-            var min = fragment ? ((Rsc6FragDrawable)piece).BoundingBoxMin : ((Rsc6Drawable)piece).BoundingBoxMin;
-            var max = fragment ? ((Rsc6FragDrawable)piece).BoundingBoxMax : ((Rsc6Drawable)piece).BoundingBoxMax;
+            var min = ((Rsc6Drawable)piece).BoundingBoxMin.XYZ();
+            var max = ((Rsc6Drawable)piece).BoundingBoxMax.XYZ();
 
-            if (prefab)
-            {
-                min = new Vector3(min.X, min.Y, min.Z - 2.0f);
-                max = new Vector3(max.X, max.Y, max.Z - 2.0f);
-            }
-            else
-            {
-                min = new Vector3(min.X, min.Y, min.Z + 1.0f);
-                max = new Vector3(max.X, max.Y, max.Z + 1.0f);
-            }
+            min = new Vector3(min.X, min.Y, min.Z - 2.0f);
+            max = new Vector3(max.X, max.Y, max.Z - 2.0f);
 
             piece.BoundingBox = new BoundingBox(min, max);
             piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
@@ -476,6 +412,43 @@ namespace CodeX.Games.RDR1.RPF6
                 vector.W
             }, 0, buffer, 0, buffer.Length);
             return buffer;
+        }
+
+        //Checks if a specified value is present in an enum
+        public static bool IsDefinedInEnumRange<TEnum>(byte value) where TEnum : Enum
+        {
+            foreach (byte enumValue in Enum.GetValues(typeof(TEnum)))
+            {
+                if (enumValue == value)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        //Returns NaN as 0x0100807F, float.NaN returns 0x0000C0FF
+        public static float GetNaN()
+        {
+            return BitConverter.ToSingle(BitConverter.GetBytes(0x7F800001), 0);
+        }
+
+        //Converts a floating point number into a fixed point number
+        //It's simply multiplying the float by a constant value and discarding the extra bits
+        public static uint PackFixedPoint(float value, uint size, uint shift) //Vector3::Pack1010102
+        {
+            float scale = ((1u << (int)(size - 1)) - 1);
+            return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
+        }
+
+        //Converts a Vector4 (XYZ to ZXY/YZX) to Dec3N
+        public static uint GetDec3N(Vector4 val, bool zxy = true)
+        {
+            var wPack = val.W > 0.5f ? 1 << 30 : val.W < -0.5f ? -1 << 30 : 0;
+            if (zxy) //XYZ > ZXY (RDR1 to CX)
+                return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20) | (uint)wPack;
+            else     //XYZ > YZX (CX to RDR1)
+                return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20) | (uint)wPack;
         }
     }
 }

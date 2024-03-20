@@ -57,7 +57,7 @@ namespace CodeX.Games.RDR1
 
         public override Setting[] GetMapSettings()
         {
-            return new[] { RDR1Map.StartPositionSetting, RDR1Map.OnlyTerrainSetting, RDR1Map.NoPropsSetting };
+            return new[] { RDR1Map.StartPositionSetting, RDR1Map.EnabledSetting, RDR1Map.NoPropsSetting };
         }
 
         private bool AutoDetectFolder(out Dictionary<string, string> matches)

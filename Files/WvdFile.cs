@@ -1,4 +1,5 @@
 ﻿using CodeX.Core.Engine;
+using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
@@ -8,16 +9,17 @@ namespace CodeX.Games.RDR1.Files
 {
     public class WvdFile : PiecePack
     {
-        public Rsc6VisualDictionary<Rsc6Drawable> VisualDictionary;
+        public Rsc6VisualDictionary VisualDictionary;
         public List<Entity> RootEntities;
         public WvdFile Parent;
+        public BoundingBox BoundingBox;
 
         public WvdFile(Rpf6FileEntry file) : base(file)
         {
             
         }
 
-        public WvdFile(Rsc6VisualDictionary<Rsc6Drawable> visualDict) : base(null)
+        public WvdFile(Rsc6VisualDictionary visualDict) : base(null)
         {
             VisualDictionary = visualDict;
         }
@@ -32,21 +34,27 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
             };
 
-            VisualDictionary = r.ReadBlock<Rsc6VisualDictionary<Rsc6Drawable>>();
+            VisualDictionary = r.ReadBlock<Rsc6VisualDictionary>();
             Pieces = new Dictionary<JenkHash, Piece>();
 
             if ((VisualDictionary?.Drawables.Items != null) && (VisualDictionary?.Hashes.Items != null))
             {
                 var drawables = VisualDictionary.Drawables.Items;
                 var hashes = VisualDictionary.Hashes.Items;
+                BoundingBox = drawables[0].BoundingBox;
 
                 for (int i = 0; i < drawables.Length; i++)
                 {
                     var drawable = drawables[i];
-                    var hash = (i < hashes.Length) ? hashes[i] : 0;
+                    if (drawable != null)
+                    {
+                        drawable.FilePack = this;
+                    }
 
-                    if (i == 0) Piece = drawable;
+                    var hash = (i < hashes.Length) ? hashes[i] : 0;
+                    Piece = drawable;
                     Pieces[hash] = drawable;
+                    BoundingBox = BoundingBox.Merge(BoundingBox, drawable.BoundingBox); //Expand the global bounding box to encompass all pieces
                 }
             }
         }

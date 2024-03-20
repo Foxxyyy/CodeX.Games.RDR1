@@ -8,6 +8,7 @@ using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RPF6;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -80,6 +81,9 @@ namespace CodeX.Games.RDR1.RSC6
         public JenkHash NameHash { get; set; } //m_TypeHash
         public uint Unknown_6Ch { get; set; } = 0xCDCDCDCD; //m_Pad1
 
+        public List<EntityBatchInstance3> Batchs { get; set; }
+        public byte[] BatchData { get; set; }
+
         public const int MAX_PATCHES_PER_FIELD = 64000;
         public const float MINIMUM_PATCH_HEIGHT = 0.2f;
         public const float SPAWN_KIDS_HEIGHT = 0.1f;
@@ -103,27 +107,32 @@ namespace CodeX.Games.RDR1.RSC6
             NameHash = reader.ReadUInt32();
             Unknown_6Ch = reader.ReadUInt32();
 
-            var min = AABBMin.XYZ();
-            var max = AABBMax.XYZ();
-            var siz = max - min;
+            Batchs = new List<EntityBatchInstance3>();
+            var data = VertexBuffer.Item?.VertexData.Items;
+            var br = new BinaryReader(new  MemoryStream(data));
 
-            float divisionsf = 64.0f;
-            Vector4 extents = Extents;
-            float fWidthDiff = (extents.Y - extents.X) / divisionsf;
-            float fDepthDiff = (extents.W - extents.Z) / divisionsf;
-            uint patchesCreated = 0;
-
-            var texture = Rsc6GrassManager.Textures.FirstOrDefault(t => t.Name.Contains(Name.Value));
-            if (texture != null)
+            for (int i = 0; i < data.Length; i += 4)
             {
-                for (float xf = extents.X; xf < extents.Y; xf += fWidthDiff)
+                var d = FloatUtil.Dec3NToVector4(br.ReadUInt32());
+                var loc = (d * AABBScale) + AABBOffset;
+
+                var batch = new EntityBatchInstance3
                 {
-                    for (float zf = extents.Z; zf < extents.W; zf += fDepthDiff)
-                    {
-                        var subFieldExtents = new Vector4(xf, xf + fWidthDiff, zf, zf + fDepthDiff);
-                        patchesCreated += this.Create(texture, subFieldExtents, 64, Vector4.One, new Vector2(1.0f, 1.0f), 1);
-                    }
-                }
+                    Position = loc
+                };
+                Batchs.Add(batch);
+            }
+
+            BatchData = new byte[Batchs.Count * 64];
+            for (int i = 0; i < Batchs.Count; i++)
+            {
+                var batch = Batchs[i];
+                var temp = new byte[64];
+                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Position), 0, temp, 0, 16);
+                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Extents), 0, temp, 16, 16);
+                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Colour), 0, temp, 32, 16);
+                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Params), 0, temp, 48, 16);
+                Buffer.BlockCopy(temp, 0, BatchData, i * 64, temp.Length);
             }
         }
 
@@ -150,6 +159,16 @@ namespace CodeX.Games.RDR1.RSC6
         {
 	        var center = AABBMin + AABBMax;
             return center * 0.5f;
+        }
+
+        public BoundingBox GetAABB()
+        {
+            return new BoundingBox(AABBMin.XYZ(), AABBMax.XYZ());
+        }
+
+        public Vector4 GetAABBSize()
+        {
+            return new Vector4(GetAABB().Size, 0.0f);
         }
 
         public void SetBounds(Vector4 min, Vector4 max)
@@ -331,7 +350,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public static void Init(Rpf6FileManager fman)
         {
-            Core.Engine.Console.Write("Rsc6GrassManager", "Initialising Grass Manager...");
+            Core.Engine.Console.Write("Rsc6GrassManager", "Initialising grass manager...");
 
             var textures = new List<Rsc6Texture>();
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "grassres.rpf");
