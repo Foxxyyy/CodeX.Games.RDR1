@@ -296,6 +296,7 @@ namespace CodeX.Games.RDR1.RSC6
             var elems = VertexLayout.Elements;
             var elemcount = elems.Length;
             var terrainMesh = reader.FileEntry.Name.StartsWith("tile");
+            var highTerrainLOD = reader.FileEntry.EntryParent.Name == "resource_0";
 
             for (int index = 0; index < numArray.Length; index += VertexStride)
             {
@@ -321,6 +322,9 @@ namespace CodeX.Games.RDR1.RSC6
                             var half2 = BufferUtil.ReadStruct<Half2>(numArray, index + elemoffset);
                             half2 = Rpf6Crypto.RescaleHalf2(half2, 2.0f);
                             BufferUtil.WriteStruct(numArray, index + elemoffset, ref half2);
+                            break;
+                        case VertexElementFormat.UShort2N: //Scale terrain UVs
+                            Rpf6Crypto.ReadRescaleUShort2N(numArray, index + elemoffset, highTerrainLOD);
                             break;
                         default:
                             break;
@@ -482,7 +486,7 @@ namespace CodeX.Games.RDR1.RSC6
             return (DoubleBuffered ? 1 : 0) & ~(int)Rsc6VertexBufferType.USE_SECONDARY_BUFFER_INDICES;
         }
 
-        public void SetShader(Rsc6ShaderFX shader)
+        public void SetShader(Rsc6ShaderFX shader, string model)
         {
             ShaderRef = shader;
             if (shader != null)
@@ -524,7 +528,10 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0xC714B86E: //rdr2_alpha_foliage
                     case 0x592D7DC2: //rdr2_alpha_foliage_no_fade
                     case 0x18C56B10: //rdr2_treerock_prototype
-                        SetupTreesShader(shader);
+                        if (model == "roc_rockcluster01x")
+                            SetupDefaultShader(shader);
+                        else
+                            SetupTreesShader(shader);
                         break;
                     default:
                         SetupDefaultShader(shader);
@@ -565,7 +572,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x7668B157: //rdr2_glass_nodistortion_bump_spec_ao_shared
                     case 0x72A21FFE: //rdr2_glass_nodistortion_bump_spec_ao
-                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 0, 0)); //"DecalMasks"
+                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 0, 0)); //DecalMasks
                         ShaderInputs.SetUInt32(0x0188ECE8, 1u);  //"DecalMode"
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
@@ -1465,8 +1472,8 @@ namespace CodeX.Games.RDR1.RSC6
             if (LodVlow.Item != null) LodVlow.Item.LodDist = LodDistVlow;
 
             UpdateAllModels();
-            AssignShaders();
             SetSkeleton(SkeletonRef.Item);
+            AssignShaders();
             CreateTexturePack(reader.FileEntry);
 
             UpdateBounds();
@@ -1585,7 +1592,7 @@ namespace CodeX.Games.RDR1.RSC6
                             if (model.Meshes[j] is Rsc6DrawableGeometry mesh)
                             {
                                 var shader = (mesh.ShaderID < shaders.Length) ? shaders[mesh.ShaderID] : null;
-                                mesh.SetShader(shader);
+                                mesh.SetShader(shader, Name);
                             }
                         }
                     }

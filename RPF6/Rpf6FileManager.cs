@@ -695,7 +695,7 @@ namespace CodeX.Games.RDR1.RPF6
 
                             foreach (var smic in smicContent)
                             {
-                                dfm.StreamEntries[Rpf6FileExt.wtd_wtx].TryGetValue(JenkHash.GenHash(smic), out Rpf6FileEntry smicFile);
+                                dfm.StreamEntries[Rpf6FileExt.wtd_wtx].TryGetValue(JenkHash.GenHash(smic.ToLower()), out Rpf6FileEntry smicFile);
                                 if (smicFile != null && !smicFile.Name.Contains("blur"))
                                 {
                                     var r = LoadTexturePack(smicFile);

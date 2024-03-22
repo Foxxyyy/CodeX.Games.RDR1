@@ -307,7 +307,12 @@ namespace CodeX.Games.RDR1
                 var upd = ent.Piece == null;
                 if (ent.Position == Vector3.Zero || upd) //Buildings, props and lights
                 {
-                    var name = ent.Name ?? ((WsiEntity)ent).ModelName.Str;
+                    var name = "";
+                    if (ent is WsiEntity wsiEnt)
+                        name = ent.Name ?? wsiEnt.ModelName.Str;
+                    else if (ent is RDR1GrassBatch grassEnt)
+                        name = "p_" + grassEnt.Name + "x";
+
                     var hash = new JenkHash(name);
                     var pieces = Cache.GetPieces(hash, IsObjectProp(hash.Str));
 
@@ -333,15 +338,23 @@ namespace CodeX.Games.RDR1
                         }
                     }
 
-                    if (upd && (ent.Piece != null) && ent is WsiEntity objEntity)
+                    if (upd && ent.Piece != null)
                     {
+                        var objEntity = ent as WsiEntity;
                         var pos = ent.Position;
-                        if (objEntity.ResetPos) ent.Position = Vector3.Zero;
+
+                        if (objEntity != null && objEntity.ResetPos)
+                        {
+                            ent.Position = Vector3.Zero;
+                        }
 
                         ent.EnsurePieceLightInstances();
                         ent.UpdateBounds();
 
-                        ent.Position = pos;
+                        if (objEntity != null)
+                        {
+                            ent.Position = pos;
+                        }
                     }
                 }
             }
@@ -366,7 +379,7 @@ namespace CodeX.Games.RDR1
 
             foreach (var ent in ents) //Update lights
             {
-                if (ent is WsiEntity objEntity && objEntity.Lights != null && objEntity.ParentName != string.Empty)
+                if ((ent is WsiEntity objEntity) && (objEntity.Lights != null) && (objEntity.ParentName != string.Empty))
                 {
                     var parent = ents.FirstOrDefault(e => e.Position == objEntity.ParentPosition);
                     if (parent != null && parent.Position != Vector3.Zero && parent.Piece.Name.StartsWith("p_gen"))
@@ -469,10 +482,20 @@ namespace CodeX.Games.RDR1
         public float CellSize;
         public sbyte GridSizeX;
         public sbyte GridSizeY;
+        public string GrassFieldName;
 
         public RDR1GrassBatch(Rsc6GrassField field)
         {
             if (field == null) return;
+            var aabb = field.GetAABB();
+
+            GrassFieldName = field.Name.Value;
+            Name = GrassFieldName;
+            LodDistMax = 100.0f;
+            Position = aabb.Center;
+            BoundingBox = aabb;
+            BoundingSphere = new BoundingSphere(aabb.Center, aabb.Size.Length() * 0.5f);
+
             var b = new EntityBatch(this)
             {
                 InstanceCount = field.Batchs.Count,
@@ -510,6 +533,7 @@ namespace CodeX.Games.RDR1
             {
                 Level = Level,
                 Piece = p,
+                Name = GrassFieldName,
                 PieceLodOverride = pieceLod,
                 CurrentDistance = lod.LodDist,
                 BoundingBox = BoundingBox,
