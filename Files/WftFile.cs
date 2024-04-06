@@ -3,7 +3,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
-using System.Text;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -39,8 +38,12 @@ namespace CodeX.Games.RDR1.Files
 
                 Piece = d;
                 Piece.Name = e.Name;
-                //Piece.Collider = b;
                 Piece.FilePack = this;
+
+                if (!RDR1Map.LoadingMap)
+                {
+                    Piece.Collider = b;
+                }
                 Pieces.Add(e.ShortNameHash, d);
             }
         }

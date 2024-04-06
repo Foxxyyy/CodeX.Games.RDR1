@@ -1,7 +1,5 @@
-﻿using BepuPhysics.Collidables;
-using CodeX.Core.Numerics;
+﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.RPF6;
 using System;
 using System.Numerics;
 
@@ -63,18 +61,19 @@ namespace CodeX.Games.RDR1.RSC6
             LoadedMeshes = reader.ReadBoolean();
             StreamRadius = reader.ReadSingle();
 
-            /////////////////////// Tests ///////////////////////
+            /////////////////////// Tests /////////////////////// 
             var min = GridMin.XYZ();
             var max = GridMax.XYZ();
-            var siz = max - min;
+            var bb = new BoundingBox(min, max);
 
             for (int i = 0; i < GridCells.Items.Length; i++)
             {
                 for (int i1 = 0; i1 < GridCells.Items[i].CombinedInstanceListPos.Count; i1++)
                 {
-                    var t = GridCells.Items[i].CombinedInstanceListPos[i1];
+                    var cell = GridCells.Items[i];
+                    var t = cell.CombinedInstanceListPos[i1];
                     var pos = new Vector3(t.Z, t.X, t.Y) / 65535.0f;
-                    t.Position = min + (siz * pos); //wrong
+                    t.Position = bb.Minimum + (bb.Size * pos); //wrong
                 }
             }
 

@@ -308,13 +308,18 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (elem.Format)
                     {
                         case VertexElementFormat.Float3:
-                            var newVert = BufferUtil.ReadVector3(numArray, index + elemoffset);
-                            Rpf6Crypto.WriteVector3AtIndex(newVert, numArray, index + elemoffset); //Convert Vector3 from RDR axis
+                            var v3 = BufferUtil.ReadVector3(numArray, index + elemoffset);
+                            Rpf6Crypto.WriteVector3AtIndex(v3, numArray, index + elemoffset);
+                            break;
+                        case VertexElementFormat.Float4:
+                            var v4 = BufferUtil.ReadVector4(numArray, index + elemoffset);
+                            Rpf6Crypto.WriteVector4AtIndex(v4, numArray, index + elemoffset);
                             break;
                         case VertexElementFormat.Dec3N: //10101012
                             var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
                             var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
                             var np1 = FloatUtil.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N from RDR axis
+                            var pv1 = FloatUtil.Dec3NToVector4(np1);
                             BufferUtil.WriteUint(numArray, index + elemoffset, np1);
                             break;
                         case VertexElementFormat.Half2: //Scale terrain UVs
@@ -1285,7 +1290,15 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-            writer.WriteUInt32(wfd ? 0x00D34D6C : VFT);
+            bool wsg = writer.BlockList[0] is Rsc6SectorGrass;
+
+            if (wfd)
+                writer.WriteUInt32(0x00D34D6C);
+            else if (wsg)
+                writer.WriteUInt32(0x04A3E26C);
+            else
+                writer.WriteUInt32(VFT);
+
             writer.WriteUInt16(VertexCount);
             writer.WriteByte(Locked);
             writer.WriteByte(Flags);
@@ -1571,7 +1584,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
             {
-                if (model.SkinFlag == 1) return true;
+                if (model.SkinFlag == 1 && !Name.Contains("p_gen")) return true;
             }
             return false;
         }
@@ -1623,6 +1636,10 @@ namespace CodeX.Games.RDR1.RSC6
                         foreach (var mesh in model.Meshes)
                         {
                             mesh.BoneIndex = boneidx;
+                            if ((boneidx < 0) && (bones.Length > 1))
+                            {
+                                mesh.Enabled = false;
+                            }
                         }
                     }
                 }
@@ -3541,8 +3558,9 @@ namespace CodeX.Games.RDR1.RSC6
 
     public enum Rsc6VertexDeclarationTypes : ulong
     {
-        RDR1_1 = 0xAA1111111199A996, //12254594826059229590 - Used by most drawables
-        RDR1_2 = 0xAAEEEEEEEE99A996 //12317044740877560214 - Used by terrain tiles
+        RDR1_1 = 0xAA1111111199A996, //Used for most drawables
+        RDR1_2 = 0xAAEEEEEEEE99A996, //Used for terrain
+        RDR1_3 = 0x0000000000080000  //Used for grass patches
     }
 
     public enum Rsc6LightmapTypes : uint
@@ -3557,20 +3575,20 @@ namespace CodeX.Games.RDR1.RSC6
         ROTATE_X = 1, //Can rotate on x-axis
         ROTATE_Y = 2, // Can rotate on y-axis
         ROTATE_Z = 4, //Can rotate on z-axis
-        //HAS_ROTATE_LIMITS = 8, //Is rotation limited?
+        HAS_ROTATE_LIMITS = 8, //Is rotation limited?
         TRANSLATE_X = 16, //Can translate in x-axis
         TRANSLATE_Y = 32, //Can translate in y-axis
         TRANSLATE_Z = 64, //Can translate in z-axis
-        //HAS_TRANSLATE_LIMITS = 128, //Is translation limited?
+        HAS_TRANSLATE_LIMITS = 128, //Is translation limited?
         SCALE_X = 256, //Can scale in x-axis
         SCALE_Y = 512, //Can scale in y-axis
         SCALE_Z = 1024, //Can scale in z-axis
-        /*HAS_SCALE_LIMITS = 2048, //Is scale limited?
+        HAS_SCALE_LIMITS = 2048, //Is scale limited?
         HAS_CHILD = 4096, //Children?
         IS_SKINNED = 8192, //Bone is skinned to
         ROTATION = ROTATE_X | ROTATE_Y | ROTATE_Z,
         TRANSLATION = TRANSLATE_X | TRANSLATE_Y | TRANSLATE_Z,
-        SCALE = SCALE_X | SCALE_Y | SCALE_Z,*/
+        SCALE = SCALE_X | SCALE_Y | SCALE_Z,
     };
 
     public enum Rsc6BoneIdEnum : ushort
@@ -4235,5 +4253,184 @@ namespace CodeX.Games.RDR1.RSC6
         BREAKPOINT_BOT = 40214,
         BREAKPOINT_TOP = 44818,
         JOINT_LID = 12595,
+        BREAK1 = 3966,
+        BASE = 28073,
+        RIGHTTOP = 35281,
+        RIGHTBOTTOM = 16075,
+        JOINT1DAMAGE = 6415,
+        CANDLEJOINT01 = 45904,
+        CANDLEJOINT02 = 45905,
+        HEAD_JOINT = 52094,
+        ARM_RT_JOINT = 55362,
+        ARM_LF_JOINT = 36174,
+        PADDLE_JOINT = 27329,
+        JOINT_TOOL01 = 39267,
+        JOINT_TOOL02 = 39268,
+        JOINT_TOOL03 = 39269,
+        JOINT_TOOL04 = 39270,
+        JOINT_TOOL05 = 39271,
+        HIP_L_JOINTROTTRANS = 43362,
+        HIP_R_JOINTROTTRANS = 40802,
+        BIGWHEEL_JOINT = 13183,
+        BEAM_JOINT = 1540,
+        SHAFT_JOINT = 5326,
+        DUALWHEEL_JOINT = 36774,
+        MOTORWHEEL_JOINT = 58174,
+        FEATHER_L = 28242,
+        FTH_01_02_L = 26602,
+        FTH_01_03_L = 25834,
+        FTH_02_01_L = 32250,
+        FTH_02_02_L = 32506,
+        FTH_02_03_L = 31738,
+        FTH_03_01_L = 20219,
+        FTH_03_02_L = 20475,
+        FTH_03_03_L = 19707,
+        FTH_04_01_L = 26123,
+        FTH_04_02_L = 26379,
+        FTH_04_03_L = 25611,
+        FTH_05_01_L = 32027,
+        FTH_05_02_L = 32283,
+        FTH_05_03_L = 31515,
+        FTH_06_01_L = 37931,
+        FTH_06_02_L = 38187,
+        FTH_06_03_L = 37419,
+        FTH_07_01_L = 61770,
+        FTH_07_02_L = 62026,
+        FTH_07_03_L = 61258,
+        FTH_09_01_L = 8411,
+        FTH_12_01_L = 61547,
+        FEATHER_R = 28280,
+        FTH_01_02_R = 26672,
+        FTH_01_03_R = 25904,
+        FTH_02_01_R = 32320,
+        FTH_02_02_R = 32576,
+        FTH_02_03_R = 31808,
+        FTH_03_01_R = 20289,
+        FTH_03_02_R = 20545,
+        FTH_03_03_R = 19777,
+        FTH_04_02_R = 26449,
+        FTH_04_03_R = 25681,
+        FTH_05_01_R = 32097,
+        FTH_05_02_R = 32353,
+        FTH_05_03_R = 31585,
+        FTH_06_01_R = 38001,
+        FTH_06_02_R = 38257,
+        FTH_06_03_R = 37489,
+        FTH_07_01_R = 61840,
+        FTH_07_02_R = 62096,
+        FTH_07_03_R = 61328,
+        FTH_09_01_R = 8481,
+        FTH_12_01_R = 61617,
+        TOE_21_L = 45283,
+        TOE_22_L = 45027,
+        TOE_23_L = 47843,
+        TOE_21_R = 45321,
+        TOE_22_R = 45065,
+        TOE_23_R = 47881,
+        TAIL_M = 58346,
+        EYELID_R = 41158,
+        EYELID_L = 41088,
+        EYE_R = 18637,
+        EYE_L = 18631,
+        NOSE_L = 2088,
+        BITEMUSCLE_L = 62170,
+        BITEMUSCLE_R = 62240,
+        UPLIP1_L = 35153,
+        UPLIP1_R = 35223,
+        LOWLIP1_L = 58011,
+        LOWLIP1_R = 57889,
+        HAIR01 = 53421,
+        HAIR02 = 53422,
+        HAIR03 = 53423,
+        HAIR04 = 53424,
+        HAIR05 = 53425,
+        HAIR06 = 53426,
+        CHEST_01_L = 54686,
+        CHEST_02_L = 54942,
+        CHEST_01_R = 54756,
+        CHEST_02_R = 55012,
+        TAIL_M_01 = 3066,
+        TAIL_M_02 = 3067,
+        TAIL_M_03 = 3068,
+        TAIL_L_03 = 55947,
+        TAIL_R_01 = 47753,
+        TAIL_R_02 = 47754,
+        TAIL_R_03 = 47755,
+        BELLY_01_L = 13957,
+        BELLY_02_L = 14213,
+        BELLY_01_R = 13995,
+        BELLY_02_R = 14251,
+        PAN01 = 56245,
+        PAN02 = 56246,
+        TAIL_04 = 17566,
+        TAIL_05 = 17567,
+        TAUNG04 = 24042,
+        FTH_01_L = 5499,
+        FTH_02_L = 5755,
+        FTH_01_R = 5601,
+        FTH_02_R = 5857,
+        HAIR01_02 = 954,
+        HAIR02_01_L = 13695,
+        HAIR02_02_L = 13951,
+        HAIR02_04_L = 13439,
+        HAIR02_01_R = 13605,
+        HAIR02_02_R = 13861,
+        HAIR02_04_R = 13349,
+        HAIR03_01_L = 1664,
+        HAIR03_02_L = 1920,
+        HAIR03_03_L = 1152,
+        HAIR03_04_L = 1408,
+        HAIR03_01_R = 1574,
+        HAIR03_02_R = 1830,
+        HAIR03_03_R = 1062,
+        HAIR04_01_L = 7568,
+        HAIR04_02_L = 7824,
+        HAIR04_03_L = 7056,
+        HAIR04_04_L = 7312,
+        HAIR04_01_R = 7478,
+        HAIR04_02_R = 7734,
+        HAIR04_03_R = 6966,
+        HAIR04_04_R = 7222,
+        HAIR05_01_L = 13472,
+        HAIR05_02_L = 13728,
+        HAIR05_03_L = 12960,
+        HAIR05_04_L = 13216,
+        HAIR05_01_R = 13382,
+        HAIR05_02_R = 13638,
+        HAIR05_03_R = 12870,
+        HAIR05_04_R = 13126,
+        HAIR06_01_L = 19376,
+        HAIR06_02_L = 19632,
+        HAIR06_03_L = 18864,
+        HAIR06_04_L = 19120,
+        HAIR06_01_R = 19286,
+        HAIR06_02_R = 19542,
+        HAIR06_03_R = 18774,
+        HAIR06_04_R = 19030,
+        STIRRUP01_R = 19641,
+        STIRRUP02_R = 19897,
+        STIRRUP01_L = 19667,
+        STIRRUP02_L = 19923,
+        STRING02_01_R = 11208,
+        STRING02_02_R = 11464,
+        STRING02_03_R = 12744,
+        STRING02_01_L = 11234,
+        STRING02_02_L = 11490,
+        STRING02_03_L = 12770,
+        STRING03_01_R = 64790,
+        STRING03_02_R = 65046,
+        STRING03_03_R = 1159,
+        STRING03_01_L = 64816,
+        STRING03_02_L = 65072,
+        STRING03_03_L = 1185,
+        NOSE_R = 2094,
+        HAIR03_04_R = 1318,
+        GENITLE_01 = 19226,
+        TESTRT_01 = 20581,
+        TESTRT_02_JOINTROTTRANS = 61049,
+        TESTLT_01 = 18367,
+        TESTLT_02_JOINTROTTRANS = 28731,
+        BOTTOM_FRAGMENT = 23595,
+        TOP_PART_ARTICULATION = 20102,
     }
 }

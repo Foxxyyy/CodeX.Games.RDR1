@@ -438,6 +438,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public new void Read(MetaNodeReader reader)
         {
+            base.Read(reader);
             BoundMatrix = reader.ReadMatrix4x4("BoundMatrix");
             Bound = new(reader.ReadNode<Rsc6Bounds>("Bound"));
             ExtraBounds = new(reader.ReadUInt32Array("ExtraBounds"));
@@ -453,6 +454,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public new void Write(MetaNodeWriter writer)
         {
+            base.Write(writer);
             writer.WriteMatrix4x4("BoundMatrix", BoundMatrix);
             if (Bound.Item != null) writer.WriteNode("Bound", Bound.Item);
             if (ExtraBounds.Items != null) writer.WriteUInt32Array("ExtraBounds", ExtraBounds.Items);
@@ -1073,6 +1075,38 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32("CollisionEventPlayer", CollisionEventPlayer);
             writer.WriteUInt32("BreakEventPlayer", BreakEventPlayer);
             writer.WriteUInt32("BreakFromRootEventPlayer", BreakFromRootEventPlayer);
+        }
+    }
+
+    public class Rsc6PhysicsInstance : Rsc6BlockBase //rage::phInst
+    {
+        /*
+         * Basic instance class for all physical objects, storing a matrix for position and
+         * orientation, a pointer to the physics archetype (which contains physical information),
+         * flags and the index used by the physics level
+         */
+
+        public override ulong BlockLength => 80;
+        public uint VFT { get; set; } = 0x04E0A528;
+        public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_Archetype
+        public ushort LevelIndex { get; set; } //m_LevelIndex, the "handle" for this instance in the level
+        public ushort Flags { get; set; } //m_Flags
+        public uint UserData { get; set; } //m_UserData
+        public Matrix4x4 Matrix { get; set; } //m_Matrix, orientation (3x3 part) and position (d-vector) for the physics instance
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            Archetype = reader.ReadPtr<Rsc6FragArchetype>();
+            LevelIndex = reader.ReadUInt16();
+            Flags = reader.ReadUInt16();
+            UserData = reader.ReadUInt32();
+            Matrix = reader.ReadMatrix4x4();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+
         }
     }
 

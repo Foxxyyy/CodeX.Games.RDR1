@@ -13,15 +13,20 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6TextureDictionary TextureDictionary;
         public Dictionary<uint, Rsc6Texture> Dict { get; set; }
 
+        public WtdFile(Rpf6FileEntry file) : base(file)
+        {
+
+        }
+
         public WtdFile()
         {
             TextureDictionary = new Rsc6TextureDictionary();
             Textures = new Dictionary<string, Texture>();
         }
 
-        public WtdFile(Rpf6FileEntry file) : base(file)
+        public WtdFile(Rsc6TextureDictionary td) : base(null)
         {
-
+            TextureDictionary = td;
         }
 
         public WtdFile(List<Rsc6Texture> textures)

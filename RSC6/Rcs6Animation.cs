@@ -1383,9 +1383,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void EvaluateVector(int frame, int c, ref Vector4 v)
         {
-            v.X = Value.Item.X;
-            v.Y = Value.Item.Y;
-            v.Z = Value.Item.Z;
+            v.X = Value.Item.Y;
+            v.Y = Value.Item.Z;
+            v.Z = Value.Item.X;
         }
     }
 
@@ -1457,6 +1457,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             if (c != 0) return;
             v = Value.Item.ToVector4();
+            v = new Vector4(v.Y, v.Z, v.X, v.W);
         }
     }
 

@@ -19,6 +19,11 @@ namespace CodeX.Games.RDR1.Files
             Hash = JenkHash.GenHash(file?.NameLower ?? "");
         }
 
+        public WsgFile(Rsc6SectorGrass field) : base(null)
+        {
+            GrassField = field;
+        }
+
         public override void Load(byte[] data)
         {
             var e = (Rpf6ResourceFileEntry)FileEntry;
@@ -31,7 +36,11 @@ namespace CodeX.Games.RDR1.Files
 
         public override byte[] Save()
         {
-            throw new System.NotImplementedException();
+            if (GrassField == null) return null;
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(GrassField);
+            byte[] data = writer.Build(18);
+            return data;
         }
 
         public override string ToString()

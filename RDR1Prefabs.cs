@@ -8,7 +8,7 @@ namespace CodeX.Games.RDR1
     {
         public Rpf6FileManager FileManager;
         public RDR1Peds Peds;
-        public RDR1Weapons Weapons;
+        public RDR1Animals Animals;
         public RDR1Vehicles Vehicles;
 
         public RDR1Prefabs(RDR1Game game)
@@ -25,7 +25,7 @@ namespace CodeX.Games.RDR1
 
         public override string[] GetTypeList()
         {
-            return new[] { "Peds", "Vehicles", "Weapons" };
+            return new[] { "Peds", "Vehicles", "Animals" };
         }
 
         public override string[] GetPrefabList(string type)
@@ -34,13 +34,13 @@ namespace CodeX.Games.RDR1
             {
                 case "Peds":
                     EnsurePeds();
-                    return Peds?.PedNames;
+                    return Peds?.PedNames.ToArray();
                 case "Vehicles":
                     EnsureVehicles();
                     return Vehicles?.VehicleNames;
-                case "Weapons":
-                    EnsureWeapons();
-                    return Weapons?.WeaponNames;
+                case "Animals":
+                    EnsureAnimals();
+                    return Animals?.AnimalNames;
             }
             return null;
         }
@@ -53,8 +53,8 @@ namespace CodeX.Games.RDR1
                     return Peds?.GetPrefab(id);
                 case "Vehicles":
                     return Vehicles?.GetPrefab(id);
-                case "Weapons":
-                    return Weapons?.GetPrefab(id);
+                case "Animals":
+                    return Animals?.GetPrefab(id);
             }
             return null;
         }
@@ -73,11 +73,11 @@ namespace CodeX.Games.RDR1
             Vehicles.Init(FileManager);
         }
 
-        private void EnsureWeapons()
+        private void EnsureAnimals()
         {
-            if (Weapons != null) return;
-            Weapons = new RDR1Weapons();
-            Weapons.Init(FileManager);
+            if (Animals != null) return;
+            Animals = new RDR1Animals();
+            Animals.Init(FileManager);
         }
     }
 }

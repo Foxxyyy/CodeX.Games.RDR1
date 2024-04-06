@@ -1,5 +1,6 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RPF6;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace CodeX.Games.RDR1
         public override FileTypeIcon Icon => FileTypeIcon.Cowboy;
         public override string HashAlgorithm => "Jenkins";
 
-        public static Setting GameFolderSetting = Settings.Register("RDR1.GameFolder", SettingType.String, @"C:\XboxGames\RDR Nintendo Switch\Dump");
+        public static Setting GameFolderSetting = Settings.Register("RDR1.GameFolder", SettingType.String, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "yuzu", "yuzu-windows-msvc"));
         public static Setting GameEnabledSetting = Settings.Register("RDR1.Enabled", SettingType.Bool, true);
 
         public override bool CheckGameFolder(string folder)
@@ -57,7 +58,14 @@ namespace CodeX.Games.RDR1
 
         public override Setting[] GetMapSettings()
         {
-            return new[] { RDR1Map.StartPositionSetting, RDR1Map.EnabledSetting, RDR1Map.NoPropsSetting };
+            return new[]
+            {
+                RDR1Map.StartPositionSetting,
+                RDR1Map.LoadBoundsSetting,
+                RDR1Map.EnabledSetting,
+                RDR1Map.EnablePropsSetting,
+                RDR1Map.EnableLightsSetting
+            };
         }
 
         private bool AutoDetectFolder(out Dictionary<string, string> matches)

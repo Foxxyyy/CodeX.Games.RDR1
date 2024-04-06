@@ -311,7 +311,7 @@ namespace CodeX.Games.RDR1.RPF6
             return new Vector3(vector.Y, vector.Z, vector.X);
         }
 
-        public static Vector4 ToYZX(Vector4 vector)
+        public static Vector4 ToYZX(Vector4 vector, bool wNaN = false)
         {
             return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
         }
@@ -340,6 +340,35 @@ namespace CodeX.Games.RDR1.RPF6
                 Buffer.BlockCopy(y, 0, buffer, offset, sizeof(float));
                 Buffer.BlockCopy(z, 0, buffer, offset + 4, sizeof(float));
                 Buffer.BlockCopy(x, 0, buffer, offset + 8, sizeof(float));
+            }
+        }
+
+        //Swap the axis and writes a Vector4 at the given offset in a buffer
+        public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
+        {
+            if (float.IsNaN(vec.W))
+            {
+                vec.W = 0.0f;
+            }
+
+            var x = BitConverter.GetBytes(vec.X);
+            var y = BitConverter.GetBytes(vec.Y);
+            var z = BitConverter.GetBytes(vec.Z);
+            var w = BitConverter.GetBytes(vec.W);
+
+            if (zxy) //XYZ > ZXY (RDR1 to CX)
+            {
+                Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
+                Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
+                Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
+                Buffer.BlockCopy(w, 0, buffer, offset + 12, sizeof(float));
+            }
+            else //XYZ > YZX (CX to RDR1)
+            {
+                Buffer.BlockCopy(y, 0, buffer, offset, sizeof(float));
+                Buffer.BlockCopy(z, 0, buffer, offset + 4, sizeof(float));
+                Buffer.BlockCopy(x, 0, buffer, offset + 8, sizeof(float));
+                Buffer.BlockCopy(w, 0, buffer, offset + 12, sizeof(float));
             }
         }
 
@@ -427,10 +456,16 @@ namespace CodeX.Games.RDR1.RPF6
             return false;
         }
 
-        //Returns NaN as 0x0100807F, float.NaN returns 0x0000C0FF
+        //Returns NaN as 0x0100807F, (float.NaN = 0x0000C0FF)
         public static float GetNaN()
         {
             return BitConverter.ToSingle(BitConverter.GetBytes(0x7F800001), 0);
+        }
+
+        //Returns a Vector4 of NaN as 0x0100807F, (float.NaN = 0x0000C0FF)
+        public static Vector4 GetVec4NaN()
+        {
+            return new Vector4(GetNaN(), GetNaN(), GetNaN(), GetNaN());
         }
 
         //Converts a floating point number into a fixed point number

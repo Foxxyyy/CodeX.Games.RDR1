@@ -6,11 +6,10 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Numerics;
 using Console = CodeX.Core.Engine.Console;
 
 namespace CodeX.Games.RDR1.Prefabs
@@ -18,15 +17,12 @@ namespace CodeX.Games.RDR1.Prefabs
     public class RDR1Peds
     {
         public Rpf6FileManager FileManager;
-        public Dictionary<JenkHash, Rpf6FileEntry> PedStreamWfts = new();
-        public Dictionary<JenkHash, Dictionary<string, Rpf6FileEntry>> PedStreamFiles = new();
 
         //CodeX stuff
-        public string[] PedNames;
+        public List<string> PedNames;
         public string[] WasNames;
         public string[] ClipsNames;
         public Dictionary<string, RDR1PedPrefab> Prefabs = new();
-        public SimpleCache<JenkHash, WtdFile> WtdCache = new();
         public SimpleCache<JenkHash, WasFile> WasCache = new();
         public object CacheSyncRoot = new();
 
@@ -39,6 +35,7 @@ namespace CodeX.Games.RDR1.Prefabs
             FileManager = fman;
             var dfm = fman?.DataFileMgr;
             dfm.StreamEntries.TryGetValue(Rpf6FileExt.generic, out var entries);
+            dfm.StreamEntries.TryGetValue(Rpf6FileExt.wft, out var fragments);
 
             Console.Write("RDR1Peds", "Loading Clips names...");
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "animationres.rpf");
@@ -51,11 +48,31 @@ namespace CodeX.Games.RDR1.Prefabs
 
             Console.Write("RDR1Peds", "Building Prefabs...");
             var peds = entries
-                .Where(entry => entry.Value.Name.EndsWith(".wfd") && !entry.Value.Name.Contains("medlod"))
-                .Select(entry => entry.Value.Name.Replace(".wfd", ""))
+                .Where(e =>  e.Value.Name.EndsWith(".wfd") && !e.Value.Name.Contains("medlod") && !e.Value.Name.Contains("x_hilod"))
+                .Select(e => e.Value.Name.Replace(".wfd", ""))
                 .ToList();
 
-            PedNames = peds.ToArray();
+            var frags = fragments
+                .Where(e => e.Value.Name.EndsWith(".wft")
+                        && !e.Value.Name.EndsWith("x.wft")
+                        && !e.Value.Name.Contains("anim.wft")
+                        && !e.Value.Name.Contains("hat")
+                        && !e.Value.Name.Contains("p_gen")
+                        && !e.Value.Name.Contains("rocks")
+                        &&  e.Value.Name.Contains('_'))
+                .Select(e => e.Value.Name.Replace(".wft", ""))
+                .ToList();
+
+            PedNames = peds.ToList();
+            for (int i = 0; i < frags.Count; i++)
+            {
+                var f = frags[i];
+                if (!PedNames.Any(name => name.Contains(f)))
+                {
+                    PedNames.Add(f);
+                }
+            }
+
             foreach (var name in PedNames)
             {
                 Prefabs[name] = new RDR1PedPrefab(this, name);
@@ -99,7 +116,7 @@ namespace CodeX.Games.RDR1.Prefabs
             if (entry == null) return null;
             if (FileManager?.DataFileMgr == null) return null;
             Console.Write("RDR1Peds", entry.Name);
-            if (FileManager.LoadPiecePack(entry) is not WftFile wft) return null;
+            if (FileManager.LoadPiecePack(entry, null, true) is not WftFile wft) return null;
             return wft;
         }
 
@@ -108,40 +125,8 @@ namespace CodeX.Games.RDR1.Prefabs
             if (entry == null) return null;
             if (FileManager?.DataFileMgr == null) return null;
             Console.Write("RDR1Peds", entry.Name);
-            if (FileManager.LoadPiecePack(entry) is not WfdFile wfd) return null;
+            if (FileManager.LoadPiecePack(entry, null, true) is not WfdFile wfd) return null;
             return wfd;
-        }
-
-        public WtdFile LoadWtd(Rpf6FileEntry entry)
-        {
-            if (entry == null) return null;
-            if (FileManager?.DataFileMgr == null) return null;
-            Console.Write("RDR1Peds", entry.Name);
-            if (FileManager.LoadTexturePack(entry) is not WtdFile wtd) return null;
-            return wtd;
-        }
-
-        public WtdFile LoadStreamWtd(JenkHash hash)
-        {
-            lock (CacheSyncRoot)
-            {
-                if (WtdCache.TryGet(hash, out var exwtd))
-                {
-                    return exwtd;
-                }
-            }
-
-            var entry = FileManager.DataFileMgr.TryGetStreamEntry(hash, Rpf6FileExt.wtd_wtx);
-            if (entry == null) return null;
-
-            Console.Write("RDR1Peds", entry.Name);
-            var wtd = FileManager.LoadTexturePack(entry) as WtdFile;
-
-            lock (CacheSyncRoot)
-            {
-                WtdCache.Create(hash, wtd);
-            }
-            return wtd;
         }
 
         public WasFile LoadStreamWas(JenkHash hash)
@@ -167,14 +152,6 @@ namespace CodeX.Games.RDR1.Prefabs
             return was;
         }
 
-        public void BeginWtdCacheFrame()
-        {
-            lock (CacheSyncRoot)
-            {
-                WtdCache.BeginFrame();
-            }
-        }
-
         public void BeginWasCacheFrame()
         {
             lock (CacheSyncRoot)
@@ -190,7 +167,6 @@ namespace CodeX.Games.RDR1.Prefabs
         public RDR1Peds Peds;
         public Rpf6FileEntry WfdEntry;
         public Rpf6FileEntry WftEntry;
-        public Rpf6FileEntry WtdEntry;
 
         public RDR1PedPrefab(RDR1Peds peds, string name)
         {
@@ -205,7 +181,6 @@ namespace CodeX.Games.RDR1.Prefabs
             var fragmentHash = new JenkHash(GetFragFromFragDrawable(name));
             WfdEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.generic);
             WftEntry = dfman.TryGetStreamEntry(fragmentHash, Rpf6FileExt.wft);
-            WtdEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.wtd_wtx);
 
             var slots = new List<PrefabSlot>();
             var wasSlot = new PrefabSlot("WAS", PrefabSlotType.String, "Animations");
@@ -238,9 +213,9 @@ namespace CodeX.Games.RDR1.Prefabs
         public RDR1PedPrefab Prefab;
         public WfdFile Wfd;
         public WftFile Wft;
-        public WtdFile Wtd;
         public WasFile Was;
         public string ClipName;
+        public static string PreviousWas;
 
         public RDR1Ped(RDR1PedPrefab prefab, bool buildPiece = true) : base(false)
         {
@@ -260,35 +235,24 @@ namespace CodeX.Games.RDR1.Prefabs
                 BuildPiece();
             }
         }
-
+        
         public void BuildPiece()
         {
             var peds = Prefab?.Peds;
             if (peds == null) return;
 
-            peds.BeginWtdCacheFrame();
             Wft = peds.LoadWft(Prefab.WftEntry);
             Wfd = peds.LoadWfd(Prefab.WfdEntry);
-            Wtd = peds.LoadWtd(Prefab.WtdEntry);
 
             var skel = Wfd?.FragDrawable?.Drawable.Item?.Skeleton ?? Wft?.Fragment?.Drawable.Item?.Skeleton;
             SetSkeleton(skel);
 
             var piece = Wfd?.Piece ?? Wft.Piece;
-            foreach (var model in piece.AllModels)
-            {
-                foreach (var mesh in model.Meshes)
-                {
-                    var quaternion = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, FloatUtil.HalfPi);
-                    mesh.MeshTransformMode = 1;
-                    mesh.MeshTransform = Matrix3x4.CreateTransform(new Vector3(0f, 0f, 0f), quaternion);
-                    Rpf6Crypto.ResizeBoundsForPeds(piece);
-                }
-            }
+            piece.ImmediateLoad = true;
 
             SetPiece(piece);
             UpdateBounds();
-            LoadWas("angrymob"); //stand_ambient
+            LoadWas(PreviousWas ?? "stand_ambient");
         }
 
         public string[] GetWasClipNames(out string defaultval)
@@ -302,11 +266,16 @@ namespace CodeX.Games.RDR1.Prefabs
             {
                 if (kvp.Value == null) continue;
                 var name = kvp.Value.Name;
-                list.Add(name);
+                list.Add(Path.GetFileName(name));
 
-                if (name == "angrymob") //stand_ambient
+                if (name == "stand_ambient")
                 {
-                    defaultval = "angrymob";
+                    defaultval = "stand_ambient";
+                }
+                else
+                {
+                    var firstClip = dict.Keys.First();
+                    defaultval = dict[firstClip].ClipName.Value;
                 }
             }
 
@@ -347,6 +316,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             peds.BeginWasCacheFrame();
             Was = peds.LoadStreamWas(new JenkHash(name));
+            PreviousWas = name;
 
             var clipdict = Was?.AnimSet?.ClipDictionary.Item?.Dict;
             var firstClip = clipdict.Keys.First();
@@ -357,10 +327,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
         public void PlayClip(string name)
         {
-            var actualName = name[(name.LastIndexOf('\\') + 1)..];
-            actualName = actualName[(actualName.LastIndexOf('/') + 1)..];
-
-            ClipName = actualName;
+            ClipName = name;
             if (Animator is not RDR1Animator animator) return;
 
             var clip = (Rsc6Clip)null;
@@ -370,7 +337,8 @@ namespace CodeX.Games.RDR1.Prefabs
             {
                 foreach (var entry in clipDict)
                 {
-                    if (entry.Value.Name.EndsWith(actualName))
+                    var entryName = entry.Value.Name;
+                    if (Path.GetFileName(entryName) == Path.GetFileName(ClipName))
                     {
                         clip = entry.Value;
                         break;
@@ -412,12 +380,12 @@ namespace CodeX.Games.RDR1.Prefabs
                 if (slot.Name == "WAS")
                 {
                     options = peds.WasNames;
-                    defaultOption = "angrymob"; //stand_ambient
+                    defaultOption = PreviousWas ?? "stand_ambient";
                 }
                 else if (slot.Name == "Clip")
                 {
                     options = GetWasClipNames(out var defaultstr);
-                    defaultOption = defaultstr;
+                    defaultOption = Path.GetFileName(defaultstr);
                 }
                 /*else if (slot.Name == "Anim")
                 {

@@ -14,6 +14,163 @@ using System.IO;
 
 namespace CodeX.Games.RDR1.RSC6
 {
+    public class Rsc6TerrainBound : Rsc6BlockBase //terrainBoundTile
+    {
+        public override ulong BlockLength => 40; //terrainBoundTile + terrainTileScanData
+        public uint VFT { get; set; } = 0x04A007B8;
+        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public Rsc6Ptr<Rsc6TerrainDictBoundResource> ResourceDict { get; set; } //m_ResourceDict
+        public uint PointMaterials_AND { get; set; } //m_PointMaterials_AND
+        public uint Unknown_10h { get; set; } //Always 0
+        public uint PointMaterials_OR { get; set; } //m_PointMaterials_OR
+        public float MinElevation { get; set; } //m_MinElevation
+        public float ElevationRange { get; set; } //m_ElevationRange
+        public Rsc6ManagedArr<Rsc6ScanData> ScanData { get; set; } //m_ScanData
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            ResourceDict = reader.ReadPtr<Rsc6TerrainDictBoundResource>();
+            PointMaterials_AND = reader.ReadUInt32();
+            Unknown_10h = reader.ReadUInt32();
+            PointMaterials_OR = reader.ReadUInt32();
+            MinElevation = reader.ReadSingle();
+            ElevationRange = reader.ReadSingle();
+            ScanData = reader.ReadArr<Rsc6ScanData>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(VFT);
+            writer.WritePtr(BlockMap);
+            writer.WritePtr(ResourceDict);
+            writer.WriteUInt32(PointMaterials_AND);
+            writer.WriteUInt32(Unknown_10h);
+            writer.WriteUInt32(PointMaterials_OR);
+            writer.WriteSingle(MinElevation);
+            writer.WriteSingle(ElevationRange);
+            writer.WriteArr(ScanData);
+        }
+    }
+
+    public class Rsc6TerrainDictBoundResource : Rsc6BlockBase //pgDictionary<terrainBoundResource>
+    {
+        public override ulong BlockLength => 32;
+        public uint VFT { get; set; } = 0x04A007D0;
+        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public uint Unknown_8h { get; set; } //Always 0?
+        public uint RefCount { get; set; } //m_RefCount
+        public Rsc6Arr<JenkHash> Codes { get; set; } //m_Codes
+        public Rsc6PtrArr<Rsc6TerrainBoundResource> Entries { get; set; } //m_Entries
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            Unknown_8h = reader.ReadUInt32();
+            RefCount = reader.ReadUInt32();
+            Codes = reader.ReadArr<JenkHash>();
+            Entries = reader.ReadPtrArr<Rsc6TerrainBoundResource>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(VFT);
+            writer.WritePtr(BlockMap);
+            writer.WriteUInt32(Unknown_8h);
+            writer.WriteUInt32(RefCount);
+            writer.WriteArr(Codes);
+        }
+    }
+
+    public class Rsc6TerrainBoundResource : Rsc6BlockBase //terrainBoundResource
+    {
+        public override ulong BlockLength => 12;
+        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound
+        public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_Archetype
+        public Rsc6Ptr<Rsc6TerrainDictBoundInstance> InstanceDict { get; set; } //m_InstanceDict
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            Bounds = reader.ReadPtr(Rsc6Bounds.Create);
+            Archetype = reader.ReadPtr<Rsc6FragArchetype>();
+            InstanceDict = reader.ReadPtr<Rsc6TerrainDictBoundInstance>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            
+        }
+    }
+
+    public class Rsc6TerrainDictBoundInstance : Rsc6BlockBase //pgDictionary<terrainBoundInstance>
+    {
+        public override ulong BlockLength => 32;
+        public uint VFT { get; set; } = 0x04A007D0;
+        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public uint Unknown_8h { get; set; } //Always 0?
+        public uint RefCount { get; set; } //m_RefCount
+        public Rsc6Arr<JenkHash> Codes { get; set; } //m_Codes
+        public Rsc6PtrArr<Rsc6TerrainBoundInstance> Entries { get; set; } //m_Entries
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            Unknown_8h = reader.ReadUInt32();
+            RefCount = reader.ReadUInt32();
+            Codes = reader.ReadArr<JenkHash>();
+            Entries = reader.ReadPtrArr<Rsc6TerrainBoundInstance>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(VFT);
+            writer.WritePtr(BlockMap);
+            writer.WriteUInt32(Unknown_8h);
+            writer.WriteUInt32(RefCount);
+            writer.WriteArr(Codes);
+        }
+    }
+
+    public class Rsc6TerrainBoundInstance : Rsc6BlockBase //terrainBoundInstance
+    {
+        public override ulong BlockLength => 4;
+        public Rsc6Ptr<Rsc6PhysicsInstance> Instance { get; set; } //m_phInst
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            Instance = reader.ReadPtr<Rsc6PhysicsInstance>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WritePtr(Instance);
+        }
+    }
+
+    public class Rsc6ScanData : Rsc6Block //terrainTileScanData
+    {
+        public ulong BlockLength => 8;
+        public bool IsPhysical => false;
+        public ulong FilePosition { get; set; }
+        public uint MaterialId { get; set; } //m_MaterialId
+        public uint PackedElevation { get; set; } //m_PackedElevationSlopeBump
+
+        public void Read(Rsc6DataReader reader)
+        {
+            MaterialId = reader.ReadUInt32();
+            PackedElevation = reader.ReadUInt32();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(MaterialId);
+            writer.WriteUInt32(PackedElevation);
+        }
+    }
+
     public class Rsc6BoundsDictionary : Rsc6BlockBase
     {
         public override ulong BlockLength => 24;
@@ -184,6 +341,7 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6BoundsType.Box => new Rsc6BoundBox(),
                 Rsc6BoundsType.Geometry => new Rsc6BoundGeometry(),
                 Rsc6BoundsType.GeometryBVH => new Rsc6BoundGeometryBVH(),
+                Rsc6BoundsType.Surface => new Rsc6BoundSurface(),
                 Rsc6BoundsType.Composite => new Rsc6BoundComposite(),
                 Rsc6BoundsType.CurvedGeometry => new Rsc6BoundCurvedGeometry(),
                 _ => throw new Exception("Unknown bounds type"),
@@ -876,7 +1034,7 @@ namespace CodeX.Games.RDR1.RSC6
                 var area = br.ReadSingle();
                 ms.Position = offset;
 
-                if ((area > 0.0f && area < 10000.0f) && !Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type))
+                if ((area > 0.0f && area < 50000.0f) && !Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type))
                 {
                     type = Rsc6BoundPolygonType.Triangle;
                     PartShape = EditablePartShape.TriMesh;
@@ -980,6 +1138,8 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_F4h = reader.ReadUInt32();
             Unknown_F8h = reader.ReadUInt32();
             Unknown_FCh = reader.ReadUInt32();
+
+            var t = Rsc6BVHBuilder.Unbuild(BVH.Item);
         }
 
         public override void Read(MetaNodeReader reader) //TODO: finish this
@@ -995,7 +1155,56 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6BoundComposite : Rsc6Bounds
+    public class Rsc6BoundSurface : Rsc6Bounds //rage::phBoundSurface
+    {
+        public override ulong BlockLength => base.BlockLength + 14384;
+        public Vector2[] VelocityGrid { get; set; } //m_VelocityGrid
+        public float[] OffsetGrid { get; set; } //m_OffsetGrid
+        public float PeakWaveHeight { get; set; } //m_PeakWaveHeight
+        public float Spacing { get; set; } //m_Spacing
+        public float MinElevation { get; set; } //m_MinElevation
+        public float MaxElevation { get; set; } //m_MaxElevation
+        public short CellX { get; set; } //m_CellX
+        public short CellY { get; set; } //m_CellY
+        public float MinX { get; set; } = 0xCDCDCDCD; //m_MinX
+        public float MaxX { get; set; } = 0xCDCDCDCD; //m_MaxX
+        public float MinZ { get; set; } = 0xCDCDCDCD; //m_MinZ
+        public float MaxZ { get; set; } = 0xCDCDCDCD; //m_MaxZ
+        public uint Unknown_3024h { get; set; } //Always 0, probably padding
+        public uint Unknown_3028h { get; set; } //Always 0, probably padding
+        public uint Unknown_302Ch { get; set; } //Always 0, probably padding
+        public uint[] SurfaceGrid { get; set; } //m_SurfaceGrid
+
+        public const int GridLength = 32;
+        public const int GridPointCount = 1024; //GridLength²
+
+        public Rsc6BoundSurface() : base(Rsc6BoundsType.Surface)
+        {
+        }
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            VelocityGrid = reader.ReadVector2Arr(GridPointCount);
+            OffsetGrid = reader.ReadSingleArr(GridPointCount);
+            PeakWaveHeight = reader.ReadSingle();
+            Spacing = reader.ReadSingle();
+            MinElevation = reader.ReadSingle();
+            MaxElevation = reader.ReadSingle();
+            CellX = reader.ReadInt16();
+            CellY = reader.ReadInt16();
+            MinX = reader.ReadSingle();
+            MaxX = reader.ReadSingle();
+            MinZ = reader.ReadSingle();
+            MaxZ = reader.ReadSingle();
+            Unknown_3024h = reader.ReadUInt32();
+            Unknown_3028h = reader.ReadUInt32();
+            Unknown_302Ch = reader.ReadUInt32();
+            SurfaceGrid = reader.ReadUInt32Arr(GridPointCount / 2);
+        }
+    }
+
+    public class Rsc6BoundComposite : Rsc6Bounds //rage::phBoundComposite
     {
         public override ulong BlockLength => 144;
         public uint ChildrenPtr { get; set; } //m_Bounds
@@ -1014,7 +1223,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
         }
 
-        public override void Read(Rsc6DataReader reader) //phBoundComposite
+        public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader); //phBounds
             ChildrenPtr = reader.ReadUInt32();
@@ -1892,18 +2101,28 @@ namespace CodeX.Games.RDR1.RSC6
         public short MaxZ { get; set; }
         public short ItemId { get; set; }
         public byte ItemCount { get; set; }
-        public byte Padding1 { get; set; } //is this just ItemCount also?
+        public byte Padding1 { get; set; }
 
         public Vector3 Min
         {
             get { return new Vector3(MinX, MinY, MinZ); }
-            set { MinX = (short)value.X; MinY = (short)value.Y; MinZ = (short)value.Z; }
+            set
+            {
+                MinX = (short)FloatUtil.Clamp(MathF.Floor(value.X), -32767, 32767);
+                MinY = (short)FloatUtil.Clamp(MathF.Floor(value.Y), -32767, 32767);
+                MinZ = (short)FloatUtil.Clamp(MathF.Floor(value.Z), -32767, 32767);
+            }
         }
 
         public Vector3 Max
         {
             get { return new Vector3(MaxX, MaxY, MaxZ); }
-            set { MaxX = (short)value.X; MaxY = (short)value.Y; MaxZ = (short)value.Z; }
+            set
+            {
+                MaxX = (short)FloatUtil.Clamp(MathF.Ceiling(value.X), -32767, 32767);
+                MaxY = (short)FloatUtil.Clamp(MathF.Ceiling(value.Y), -32767, 32767);
+                MaxZ = (short)FloatUtil.Clamp(MathF.Ceiling(value.Z), -32767, 32767);
+            }
         }
 
         public override string ToString()
@@ -1920,24 +2139,214 @@ namespace CodeX.Games.RDR1.RSC6
         public short MaxX { get; set; }
         public short MaxY { get; set; }
         public short MaxZ { get; set; }
-        public short NodeIndex1 { get; set; } //fivem says they are ushorts
-        public short NodeIndex2 { get; set; } //fivem says they are ushorts
+        public short NodeIndex1 { get; set; }
+        public short NodeIndex2 { get; set; }
 
         public Vector3 Min
         {
             get { return new Vector3(MinX, MinY, MinZ); }
-            set { MinX = (short)value.X; MinY = (short)value.Y; MinZ = (short)value.Z; }
+            set
+            {
+                MinX = (short)FloatUtil.Clamp(MathF.Floor(value.X), -32767, 32767);
+                MinY = (short)FloatUtil.Clamp(MathF.Floor(value.Y), -32767, 32767);
+                MinZ = (short)FloatUtil.Clamp(MathF.Floor(value.Z), -32767, 32767);
+            }
         }
         public Vector3 Max
         {
             get { return new Vector3(MaxX, MaxY, MaxZ); }
-            set { MaxX = (short)value.X; MaxY = (short)value.Y; MaxZ = (short)value.Z; }
+            set
+            {
+                MaxX = (short)FloatUtil.Clamp(MathF.Ceiling(value.X), -32767, 32767);
+                MaxY = (short)FloatUtil.Clamp(MathF.Ceiling(value.Y), -32767, 32767);
+                MaxZ = (short)FloatUtil.Clamp(MathF.Ceiling(value.Z), -32767, 32767);
+            }
         }
 
         public override string ToString()
         {
             return NodeIndex1.ToString() + ", " + NodeIndex2.ToString() + "  (" + (NodeIndex2 - NodeIndex1).ToString() + " nodes)";
         }
+    }
+
+    public class Rsc6BVHBuilder
+    {
+        public static int MaxNodeItemCount = 4; //Item threshold: 1 for composites, 4 for geometries
+        public static int MaxTreeNodeCount = 127; //Max number of nodes found in any tree
+
+        public static Rsc6BVHBuilderNode[] Unbuild(Rsc6BoundGeometryBVHRoot bvh)
+        {
+            if ((bvh?.Trees.Items == null) || (bvh?.Nodes.Items == null)) return null;
+            var nodes = new List<Rsc6BVHBuilderNode>();
+
+            foreach (var tree in bvh.Trees.Items)
+            {
+                var bnode = new Rsc6BVHBuilderNode();
+                bnode.Unbuild(bvh, tree.NodeIndex1, tree.NodeIndex2);
+                nodes.Add(bnode);
+            }
+            return nodes.ToArray();
+        }
+    }
+
+    public class Rsc6BVHBuilderNode
+    {
+        public List<Rsc6BVHBuilderNode> Children;
+        public List<Rsc6BVHBuilderItem> Items;
+        public Vector3 Min;
+        public Vector3 Max;
+        public int Index;
+
+        public int TotalNodes
+        {
+            get
+            {
+                int c = 1;
+                if (Children != null)
+                {
+                    foreach (var child in Children)
+                    {
+                        c += child.TotalNodes;
+                    }
+                }
+                return c;
+            }
+        }
+
+        public int TotalItems
+        {
+            get
+            {
+                int c = Items?.Count ?? 0;
+                if (Children != null)
+                {
+                    foreach (var child in Children)
+                    {
+                        c += child.TotalItems;
+                    }
+                }
+                return c;
+            }
+        }
+
+        public void UpdateMinMax()
+        {
+            var min = new Vector3(float.MaxValue);
+            var max = new Vector3(float.MinValue);
+
+            if (Items != null)
+            {
+                foreach (var item in Items)
+                {
+                    min = Vector3.Min(min, item.Min);
+                    max = Vector3.Max(max, item.Max);
+                }
+            }
+            if (Children != null)
+            {
+                foreach (var child in Children)
+                {
+                    child.UpdateMinMax();
+                    min = Vector3.Min(min, child.Min);
+                    max = Vector3.Max(max, child.Max);
+                }
+            }
+            Min = min;
+            Max = max;
+        }
+
+        public void GatherNodes(List<Rsc6BVHBuilderNode> nodes)
+        {
+            Index = nodes.Count;
+            nodes.Add(this);
+
+            if (Children != null)
+            {
+                foreach (var child in Children)
+                {
+                    child.GatherNodes(nodes);
+                }
+            }
+        }
+
+        public void GatherTrees(List<Rsc6BVHBuilderNode> trees)
+        {
+            if ((TotalNodes > Rsc6BVHBuilder.MaxTreeNodeCount) && ((Children?.Count ?? 0) > 0))
+            {
+                foreach (var child in Children)
+                {
+                    child.GatherTrees(trees);
+                }
+            }
+            else
+            {
+                trees.Add(this);
+            }
+        }
+
+        public void Unbuild(Rsc6BoundGeometryBVHRoot bvh, int nodeIndex1, int nodeIndex2)
+        {
+            var q = bvh.BVHQuantum.XYZ();
+            var c = bvh.BoundingBoxCenter.XYZ();
+            var nodeitems = bvh.Nodes.Items;
+            int nodeind = nodeIndex1;
+            int lastind = nodeIndex2;
+
+            while (nodeind < lastind)
+            {
+                var node = nodeitems[nodeind];
+                if (node.ItemCount <= 0) //intermediate node with child nodes
+                {
+                    Children = new List<Rsc6BVHBuilderNode>();
+                    var cind1 = nodeind + 1;
+                    var lcind = nodeind + node.ItemId; //(child node count)
+
+                    while (cind1 < lcind)
+                    {
+                        var cnode = nodeitems[cind1];
+                        var ccount = (cnode.ItemCount <= 0) ? cnode.ItemId : 1;
+                        var cind2 = cind1 + ccount;
+                        var chi = new Rsc6BVHBuilderNode();
+                        chi.Unbuild(bvh, cind1, cind2);
+                        Children.Add(chi);
+                        cind1 = cind2;
+                    }
+                    nodeind += node.ItemId;
+                }
+                else //leaf node, with polygons
+                {
+                    Items = new List<Rsc6BVHBuilderItem>();
+                    for (int i = 0; i < node.ItemCount; i++)
+                    {
+                        var item = new Rsc6BVHBuilderItem();
+                        item.Index = node.ItemId + i;
+                        Items.Add(item);
+                    }
+                    nodeind++;
+                }
+                Min = node.Min * q + c;
+                Max = node.Max * q + c;
+            }
+        }
+
+        public override string ToString()
+        {
+            var fstr = (Children != null) ? (TotalNodes.ToString() + ", 0 - ") : (Items != null) ? ("i, " + TotalItems.ToString() + " - ") : "error!";
+            var cstr = (Children != null) ? (Children.Count.ToString() + " children") : "";
+            var istr = (Items != null) ? (Items.Count.ToString() + " items") : "";
+            if (string.IsNullOrEmpty(cstr)) return fstr + istr;
+            if (string.IsNullOrEmpty(istr)) return fstr + cstr;
+            return cstr + ", " + istr;
+        }
+    }
+
+    public class Rsc6BVHBuilderItem
+    {
+        public Vector3 Min;
+        public Vector3 Max;
+        public int Index;
+        public Rsc6Bounds Bounds;
+        public Rsc6BoundPolygon Polygon;
     }
 
     [TC(typeof(EXP))] public struct Rsc6BoundMaterial : MetaNode

@@ -3,30 +3,32 @@ using CodeX.Core.Utilities;
 using System.Drawing;
 using System;
 using System.Numerics;
-using System.Text;
 using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RPF6;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using SharpDX.Direct2D1.Effects;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6SectorGrass : Rsc6FileBase
+    public class Rsc6SectorGrass : Rsc6FileBase, MetaNode
     {
         public override ulong BlockLength => 28;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6PtrArr<Rsc6GrassField> GrassItems { get; set; } //grassField
-
-        public Rsc6SectorGrass()
-        {
-        }
+        public uint Unknown_10h { get; set; } //Always 0
+        public uint Unknown_14h { get; set; } //Always 0
+        public uint Unknown_18h { get; set; } = 65536; //Always 65536
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             GrassItems = reader.ReadPtrArr<Rsc6GrassField>();
+            Unknown_10h = reader.ReadUInt32();
+            Unknown_14h = reader.ReadUInt32();
+            Unknown_18h = reader.ReadUInt32();
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -34,33 +36,27 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(0x049FFD14);
             writer.WritePtr(BlockMap);
             writer.WritePtrArr(GrassItems);
+            writer.WriteUInt32(Unknown_10h);
+            writer.WriteUInt32(Unknown_14h);
+            writer.WriteUInt32(Unknown_18h);
         }
 
-        public override string ToString()
+        public void Read(MetaNodeReader reader)
         {
-            if (GrassItems.Items == null) return string.Empty;
-
-            var sb = new StringBuilder();
-            for (int i = 0; i < GrassItems.Items.Length; i++)
+            var items = reader.ReadNodeArray<Rsc6GrassField>("GrassItems");
+            if (items != null)
             {
-                var item = GrassItems.Items[i];
-                sb.AppendLine($"Item {i + 1} :");
-                sb.AppendLine($"  - AABBMin: {item.AABBMin}");
-                sb.AppendLine($"  - AABBMax: {item.AABBMax}");
-                sb.AppendLine($"  - AABBScale: {item.AABBScale}");
-                sb.AppendLine($"  - AABBOffset: {item.AABBOffset}");
-                sb.AppendLine($"  - TexPlacement: {item.TexPlacement}");
-                sb.AppendLine($"  - VertexBuffer: {item.VertexBuffer.Item?.ToString() ?? "Unknown"}");
-                sb.AppendLine($"  - Zup: {item.Zup}");
-                sb.AppendLine($"  - UseSortedBuffers: {item.UseSortedBuffers}");
-                sb.AppendLine($"  - Name: {item.Name}");
-                sb.AppendLine($"  - NameHash: {item.NameHash}\n");
+                GrassItems = new Rsc6PtrArr<Rsc6GrassField>(items);
             }
-            return sb.ToString();
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteNodeArray("GrassItems", GrassItems.Items);
         }
     }
 
-    public class Rsc6GrassField : Rsc6Block //rage::grassField
+    public class Rsc6GrassField : Rsc6Block, MetaNode //rage::grassField
     {
         public ulong BlockLength => 112;
         public ulong FilePosition { get; set; }
@@ -77,7 +73,8 @@ namespace CodeX.Games.RDR1.RSC6
         public bool UseSortedBuffers { get; set; } //m_useSortedBuffers
         public ushort Pad0 { get; set; } = 0xCDCD; //m_Pad0
         public Rsc6Str Name { get; set; } //m_Type
-        public uint Unknown_64h { get; set; } = 0x0B000C00; //Always 0x0B000C00
+        public ushort NameLength1 { get; set; } //Name length
+        public ushort NameLength2 { get; set; } //Name length + 1 (null terminator)
         public JenkHash NameHash { get; set; } //m_TypeHash
         public uint Unknown_6Ch { get; set; } = 0xCDCDCDCD; //m_Pad1
 
@@ -103,36 +100,59 @@ namespace CodeX.Games.RDR1.RSC6
             UseSortedBuffers = reader.ReadBoolean();
             Pad0 = reader.ReadUInt16();
             Name = reader.ReadStr();
-            Unknown_64h = reader.ReadUInt32();
+            NameLength1 = reader.ReadUInt16();
+            NameLength2 = reader.ReadUInt16();
             NameHash = reader.ReadUInt32();
             Unknown_6Ch = reader.ReadUInt32();
 
-            Batchs = new List<EntityBatchInstance3>();
-            var data = VertexBuffer.Item?.VertexData.Items;
-            var br = new BinaryReader(new  MemoryStream(data));
-
-            for (int i = 0; i < data.Length; i += 4)
+            if (VertexBuffer.Item != null) //Shouldn't be the case
             {
-                var d = FloatUtil.Dec3NToVector4(br.ReadUInt32());
-                var loc = (d * AABBScale) + AABBOffset;
+                Batchs = new List<EntityBatchInstance3>();
+                var data = VertexBuffer.Item?.VertexData.Items;
+                var br = new BinaryReader(new MemoryStream(data));
 
-                var batch = new EntityBatchInstance3
+                for (int i = 0; i < data.Length; i += 4)
                 {
-                    Position = loc
-                };
-                Batchs.Add(batch);
-            }
+                    var d = FloatUtil.Dec3NToVector4(br.ReadUInt32());
+                    d = new Vector4(d.Z, d.X, d.Y, d.Z);
+                    var loc = (d * AABBScale) + AABBOffset;
 
-            BatchData = new byte[Batchs.Count * 64];
-            for (int i = 0; i < Batchs.Count; i++)
-            {
-                var batch = Batchs[i];
-                var temp = new byte[64];
-                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Position), 0, temp, 0, 16);
-                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Extents), 0, temp, 16, 16);
-                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Colour), 0, temp, 32, 16);
-                Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Params), 0, temp, 48, 16);
-                Buffer.BlockCopy(temp, 0, BatchData, i * 64, temp.Length);
+                    /*var x = br.ReadByte();
+                    var y = br.ReadByte();
+                    var z = br.ReadByte();
+                    var scale = br.ReadByte();
+                    var pos = new Vector3(z, x, y);
+
+                    var float16min = new Vector3(6.1035156e-5f, 6.1035156e-5f, 6.1035156e-5f);
+                    var invScale = new Vector3
+                    {
+                        X = Math.Abs(AABBScale.X) < float.Epsilon ? 0 : 1.0f / AABBScale.X,
+                        Y = Math.Abs(AABBScale.Y) < float.Epsilon ? 0 : 1.0f / AABBScale.Y,
+                        Z = Math.Abs(AABBScale.Z) < float.Epsilon ? 0 : 1.0f / AABBScale.Z
+                    };
+
+                    pos = (pos - AABBOffset.XYZ()) * invScale;
+                    pos = Vector3.Max(pos, float16min);
+                    var center = new Vector4(pos.X, pos.Y, pos.Z, scale * 0.9f);*/
+
+                    var batch = new EntityBatchInstance3
+                    {
+                        Position = loc
+                    };
+                    Batchs.Add(batch);
+                }
+
+                BatchData = new byte[Batchs.Count * 64];
+                for (int i = 0; i < Batchs.Count; i++)
+                {
+                    var batch = Batchs[i];
+                    var temp = new byte[64];
+                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Position), 0, temp, 0, 16);
+                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Extents), 0, temp, 16, 16);
+                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Colour), 0, temp, 32, 16);
+                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Params), 0, temp, 48, 16);
+                    Buffer.BlockCopy(temp, 0, BatchData, i * 64, temp.Length);
+                }
             }
         }
 
@@ -150,9 +170,80 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(UseSortedBuffers ? (byte)1 : (byte)0);
             writer.WriteUInt16(Pad0);
             writer.WriteStr(Name);
-            writer.WriteUInt32(Unknown_64h);
+            writer.WriteUInt16(NameLength1);
+            writer.WriteUInt16(NameLength2);
             writer.WriteUInt32(NameHash);
             writer.WriteUInt32(Unknown_6Ch);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Name = new(reader.ReadString("Name"));
+            AABBMax = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBMax"));
+            AABBMin = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBMin"));
+            AABBScale = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBScale"));
+            AABBOffset = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBOffset"));
+            TexPlacement = new(reader.ReadNode<Rsc6TexPlacementValues>("TexPlacement"));
+            Layout = new(reader.ReadNode<Rsc6VertexDeclaration>("Layout"));
+            Zup = reader.ReadBool("Zup");
+            UseSortedBuffers = reader.ReadBool("UseSortedBuffers");
+
+            var vbuf = new Rsc6VertexBuffer();
+            var mesh = new Mesh();
+            mesh.Read(reader);
+
+            var fvf = 0u;
+            var elems = mesh.VertexLayout?.Elements;
+
+            for (int i = 0; i < elems.Length; i++)
+            {
+                var channel = Rsc6VertexComponentTypes.GetChannelFromName(elems[i]);
+                Rsc6VertexComponentTypes.UpdateFVF(channel, ref fvf);
+            }
+
+            var layout = new Rsc6VertexDeclaration()
+            {
+                FVF = fvf,
+                FVFSize = (byte)mesh.VertexStride,
+                ChannelCount = (byte)mesh.VertexLayout.ElementCount,
+                Types = Rsc6VertexDeclarationTypes.RDR1_3 //grass patches
+            };
+
+            vbuf.VertexCount = (ushort)mesh.VertexCount;
+            vbuf.VertexStride = (uint)mesh.VertexStride;
+            vbuf.VertexData = new(mesh.VertexData);
+            vbuf.Layout = new(layout);
+
+            VertexBuffer = new(vbuf);
+            NameHash = new(Name.Value);
+            NameLength1 = (ushort)Name.Value.Length;
+            NameLength2 = (ushort)(NameLength1 + 1);
+            Extents = Rpf6Crypto.GetVec4NaN();
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteString("Name", Name.Value);
+            writer.WriteVector4("AABBMax", AABBMax);
+            writer.WriteVector4("AABBMin", AABBMin);
+            writer.WriteVector4("AABBScale", AABBScale);
+            writer.WriteVector4("AABBOffset", AABBOffset);
+            writer.WriteNode("TexPlacement", TexPlacement.Item);
+            writer.WriteNode("Layout", Layout.Item);
+            writer.WriteBool("Zup", Zup);
+            writer.WriteBool("UseSortedBuffers", UseSortedBuffers);
+
+            if (VertexBuffer.Item != null)
+            {
+                var mesh = new Mesh
+                {
+                    VertexData = VertexBuffer.Item.VertexData.Items,
+                    VertexCount = VertexBuffer.Item.VertexCount,
+                    VertexStride = (int)VertexBuffer.Item.VertexStride,
+                    VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout
+                };
+                mesh.Write(writer);
+            }
         }
 
         public Vector4 GetFieldCenter()
@@ -179,140 +270,13 @@ namespace CodeX.Games.RDR1.RSC6
             AABBOffset = new Vector4(AABBMin.XYZ(), 16000.0f);
         }
 
-        public uint Create(Texture fieldColorMap,
-                   Vector4 maxExtents,
-                   float placementResolution,
-                   Vector4 subImage,
-                   Vector2 cardSize,
-                   int widthTextureVariantCount)
-        {
-            bool toldEm = false;
-            var rnd = new Random();
-            int patchIndex = 0;
-            uint spawnedKids = 0;
-
-            float fWidth = Extents.Y - Extents.X;
-            float fDepth = Extents.W - Extents.Z;
-            int nCellsW = (int)(fWidth / placementResolution);
-            int nCellsD = (int)(fDepth / placementResolution);
-            float maxWidth = maxExtents.Y - maxExtents.X;
-            float maxHeight = maxExtents.W - maxExtents.Z;
-            float stepX = (fWidth * 0.5f) / nCellsW;
-            float stepZ = (fDepth * 0.5f) / nCellsD;
-
-            var tempPositions = new Vector3[MAX_PATCHES_PER_FIELD];
-            var tempHeights = new float[MAX_PATCHES_PER_FIELD];
-            var tempColor = new Color[MAX_PATCHES_PER_FIELD];
-
-            for (int w = 0; w < nCellsW; w++)
-            {
-                for (int d = 0; d < nCellsD; d++)
-                {
-                    bool placeIt = true;
-                    uint spawnCount = 1;
-
-                    float fX = Extents.X + (w * placementResolution);
-                    float fY = Extents.Z + (d * placementResolution);
-                    float u = (fX - maxExtents.X) / maxWidth;
-                    float v = (fY - maxExtents.Z) / maxHeight;
-                    u = Math.Clamp(u, 0.0f, 1.0f);
-                    v = Math.Clamp(v, 0.0f, 1.0f);
-
-                    u = u * (subImage.Y - subImage.X) + subImage.X;
-                    v = v * (subImage.W - subImage.Z) + subImage.Z;
-
-                    //Get the color for this texel
-                    var color = Rsc6Texture.BilinearFilterRead(fieldColorMap, u, v);
-                    var height = color.W;
-
-                    if ((height * cardSize.Y) < MINIMUM_PATCH_HEIGHT)
-                    {
-                        placeIt = false;
-                    }
-                    else if ((height * cardSize.Y) < SPAWN_KIDS_HEIGHT)
-                    {
-                        float scalar = 1.0f / (SPAWN_KIDS_HEIGHT - MINIMUM_PATCH_HEIGHT);
-                        float kids = 1.0f - (SPAWN_KIDS_HEIGHT - MINIMUM_PATCH_HEIGHT) - ((height * cardSize.Y) - MINIMUM_PATCH_HEIGHT) * scalar;
-                        kids += 0.5f;
-                        kids *= SPAWN_KID_MULTIPLIER * kids;
-
-                        uint kidCount = (uint)Math.Floor(rnd.NextDouble() * (kids + 1));
-                        spawnCount += kidCount;
-                        spawnedKids += kidCount;
-                    }
-
-                    if (placeIt)
-                    {
-                        for (uint c = 0; c < spawnCount; c++)
-                        {
-                            if (patchIndex < MAX_PATCHES_PER_FIELD)
-                            {
-                                float fX2 = fX;
-                                float fY2 = fY;
-
-                                if (c == 0)
-                                {
-                                    tempHeights[patchIndex] = height * cardSize.Y;
-                                    fX2 += (float)(rnd.NextDouble() * 2 * stepX - stepX);
-                                    fY2 += (float)(rnd.NextDouble() * 2 * stepZ - stepZ);
-                                }
-                                else
-                                {
-                                    float childHeight = (float)(rnd.NextDouble() * (height * 0.1f) + height * 0.8f);
-                                    childHeight = Math.Max(6.1035156e-5f, childHeight); //float16 min value
-                                    tempHeights[patchIndex] = childHeight * cardSize.Y;
-                                    fX2 += (float)(rnd.NextDouble() * (2 * stepX * 0.75) - stepX * 0.75);
-                                    fY2 += (float)(rnd.NextDouble() * (2 * stepZ * 0.75) - stepZ * 0.75);
-                                }
-
-                                int texNo = patchIndex;
-                                float wOffset = texNo % widthTextureVariantCount / (float)widthTextureVariantCount;
-
-                                tempColor[patchIndex] = Color.FromArgb((int)wOffset, (int)color.X, (int)color.Y, (int)color.Z);
-
-                                if (Zup)
-                                    tempPositions[patchIndex] = new Vector3(fX2, fY2, 0.0f);
-                                else
-                                    tempPositions[patchIndex] = new Vector3(fX2, 0.0f, fY2);
-                                patchIndex++;
-                            }
-                            else if (!toldEm)
-                            {
-                                toldEm = true;
-                                throw new Exception("ERROR: There is too much grass on this field!\nTurn your GridResolution back up, or carve out more of your channel map.\n");
-
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (patchIndex != 0)
-            {
-                TexPlacement = new
-                (
-                    new Rsc6TexPlacementValues()
-                    {
-                        Patches = new Rsc6Arr<Vector3>(new Vector3[patchIndex]),
-                        HeightScales = new Rsc6Arr<float>(new float[patchIndex]),
-                        Colors = new Rsc6Arr<uint>(new uint[patchIndex])
-                    }
-                );
-
-                Array.Copy(tempPositions, TexPlacement.Item.Patches.Items, patchIndex);
-                Array.Copy(tempHeights, TexPlacement.Item.HeightScales.Items, patchIndex);
-                Array.Copy(tempColor, TexPlacement.Item.Colors.Items, patchIndex);
-            }
-            return (uint)patchIndex;
-        }
-
         public override string ToString()
         {
             return Name.Value;
         }
     }
 
-    public class Rsc6TexPlacementValues : Rsc6Block
+    public class Rsc6TexPlacementValues : Rsc6Block, MetaNode
     {
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 21;
@@ -341,6 +305,20 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArr(HeightScales);
             writer.WriteArr(Colors);
             writer.WriteByte(Pad);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Patches = new(reader.ReadVector3Array("Patches"));
+            HeightScales = new(reader.ReadSingleArray("HeightScales"));
+            Colors = new(reader.ReadUInt32Array("Colors"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteVector3Array("Patches", Patches.Items);
+            writer.WriteSingleArray("HeightScales", HeightScales.Items);
+            writer.WriteUInt32Array("Colors", Colors.Items);
         }
     }
 

@@ -9,6 +9,7 @@ using System.Linq;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using CodeX.Games.RDR1.RPF6;
+using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -1675,6 +1676,10 @@ namespace CodeX.Games.RDR1.RSC6
         public string ParentName; //Used for lights
         public Vector3 ParentPosition; //Used for lights
 
+        public WsiEntity()
+        {
+        }
+
         public WsiEntity(string modelName)
         {
             ModelName = JenkHash.GenHash(modelName);
@@ -1708,6 +1713,7 @@ namespace CodeX.Games.RDR1.RSC6
             ParentName = parent;
             ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
             LodDistMax = 100.0f;
+            ResetPos = true;
 
             var pos = light.Position.XYZ();
             var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
@@ -1716,6 +1722,38 @@ namespace CodeX.Games.RDR1.RSC6
             var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
             var l = Light.CreateSpot(pos, dir, tx, ty, col, 1.0f, 10.0f, 5.0f, 0.3f, 1.5f);
             Lights = new Light[] { l };
+        }
+
+        public override void SetPiece(Piece p)
+        {
+            var changed = p != Piece;
+            Piece = p;
+
+            if ((p != null) && changed)
+            {
+                if (Batch == null) //Batch bounds are set directly
+                {
+                    var pos = Position;
+                    if (ResetPos)
+                    {
+                        Position = Vector3.Zero;
+                    }
+                    UpdateBounds();
+                    Position = pos;
+                }
+                EnsurePieceLightInstances();
+            }
+        }
+
+        public void SetFieldBatch(Rsc6GrassField field)
+        {
+            var aabb = field.GetAABB();
+            ModelName = new(field.Name.Value);
+            LodDistMax = 100.0f;
+            Position = aabb.Center;
+            BoundingBox = aabb;
+            BoundingSphere = new BoundingSphere(aabb.Center, aabb.Size.Length() * 0.5f);
+            ResetPos = true;
         }
 
         public override string ToString()

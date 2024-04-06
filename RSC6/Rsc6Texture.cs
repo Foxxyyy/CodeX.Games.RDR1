@@ -1,5 +1,6 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.Files;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -26,6 +27,7 @@ namespace CodeX.Games.RDR1.RSC6
             UsageCount = reader.ReadUInt32();
             Hashes = reader.ReadArr<JenkHash>();
             Textures = reader.ReadPtrArr<Rsc6Texture>();
+            CreateTexturePack(reader.FileEntry);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -50,6 +52,26 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteUInt32("@version", 0);
             writer.WriteNodeArray("Textures", Textures.Items);
+        }
+
+        private void CreateTexturePack(GameArchiveEntry e)
+        {
+            var texs = Textures.Items;
+            var txp = new TexturePack(e)
+            {
+                Textures = new Dictionary<string, Texture>()
+            };
+
+            if (texs != null)
+            {
+                for (int i = 0; i < texs.Length; i++)
+                {
+                    var tex = texs[i];
+                    if (tex == null) continue;
+                    txp.Textures[tex.Name] = tex;
+                    tex.Pack = txp;
+                }
+            }
         }
 
         public void Build(IEnumerable<Rsc6Texture> textures)
@@ -591,7 +613,9 @@ namespace CodeX.Games.RDR1.RSC6
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
 
             if (!Name.EndsWith(".dds"))
+            {
                 Name += ".dds";
+            }
             NameRef = new Rsc6Str(Name);
 
             if (TextureSize == 0)
@@ -616,19 +640,37 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            if (Name.Contains('-'))
-                Name = Name.Replace("-", ":");
+            ResourceType = reader.ReadUInt16("ResourceType");
+            LayerCount = reader.ReadUInt16("LayerCount");
+            TextureSize = reader.ReadInt32("TextureSize");
+
             if (!Name.EndsWith(".dds"))
+            {
                 Name += ".dds";
+            }
             NameRef = new Rsc6Str(Name);
         }
 
         public override void Write(MetaNodeWriter writer)
         {
-            if (Name.Contains(':'))
-                Name = Name.Replace(":", "-");
+            string[] separators = { ":", "/" };
+            foreach (var separator in separators)
+            {
+                int lastIndex = Name.LastIndexOf(separator);
+                if (lastIndex != -1)
+                {
+                    Name = Name[(lastIndex + 1)..];
+                }
+            }
+
             if (Name.EndsWith(".dds"))
+            {
                 Name = Name.Replace(".dds", "");
+            }
+
+            writer.WriteUInt16("ResourceType", ResourceType);
+            writer.WriteUInt16("LayerCount", LayerCount);
+            writer.WriteInt32("TextureSize", TextureSize);
             base.Write(writer);
         }
 

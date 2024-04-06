@@ -101,6 +101,16 @@ namespace CodeX.Games.RDR1.RSC6
             return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
         }
 
+        public float[] ReadSingleArr(int count)
+        {
+            var floats = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                floats[i] = ReadSingle();
+            }
+            return floats;
+        }
+
         public string ReadString()
         {
             var bytes = new List<byte>();
@@ -493,8 +503,8 @@ namespace CodeX.Games.RDR1.RSC6
                 vblocks[0].IsRoot = true;
             }
 
-            var vpages = BuildPages(vblocks, 9, 5, 32);
-            var ppages = BuildPages(pblocks, 9, 2, 32);
+            var vpages = BuildPages(vblocks, 9, 5, 4096);
+            var ppages = BuildPages(pblocks, 9, 2, 4096);
             var vlen = vpages.TotalSize;
             var plen = ppages.TotalSize;
             var tlen = vlen + plen;
@@ -874,7 +884,7 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     //Array of unmanaged objects
-    //Sometimes count/capacity can be stored on 4 bytes
+    //Sometimes count + capacity can be stored on 8 bytes instead of 4
     public struct Rsc6Arr<T> where T : unmanaged
     {
         public uint Position;
@@ -1415,16 +1425,6 @@ namespace CodeX.Games.RDR1.RSC6
             var p = reader.Position;
             reader.Position = Position;
             Items = reader.ReadArray<T>(count);
-
-            /*if (tems != null && typeof(T) == typeof(Matrix4x4)) //Convert each matrix from XYZ to ZXY
-            {
-                for (int i = 0; i < Items.Length; i++)
-                {
-                    Matrix4x4 matrix = (Matrix4x4)(object)Items[i];
-                    matrix = Rpf6Crypto.ToZXY(matrix);
-                    Items[i] = (T)(object)matrix;
-                }
-            }*/
             reader.Position = p;
         }
 
@@ -1649,7 +1649,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //A rarely specific-case structure consisting of a pointer + count + capacity pointing to an array of strings
+    //A rarely used structure consisting of a pointer + count + capacity pointing to an array of strings
     //Each string have a maximum size per block, the remaining bytes are padding until the start of the next block
     public struct Rsc6PtrStr
     {
