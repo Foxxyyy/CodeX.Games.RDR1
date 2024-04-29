@@ -1,9 +1,10 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.Files;
+using CodeX.Games.RDR1.RPF6;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -101,8 +102,6 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6TextureScaleForm : Rsc6FileBase
     {
         public override ulong BlockLength => 32;
-        public const ulong FILE_POSITION = 0x50000000;
-
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public uint Stage { get; set; } //m_Stage
         public bool Updating { get; set; } //m_Updating
@@ -125,7 +124,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
 
-            reader.Position = FILE_POSITION + 0x2C;
+            reader.Position = Rpf6Crypto.VIRTUAL_BASE + 0x2C;
             SwfObjectPointer = reader.ReadPtr<Rsc6BlockMap>();
 
             reader.Position = SwfObjectPointer.Position + 0x18;
@@ -297,7 +296,7 @@ namespace CodeX.Games.RDR1.RSC6
             ColorOfsB = reader.ReadSingle();
             PrevTextureOffset = reader.ReadUInt32();
             NextTextureOffset = reader.ReadUInt32();
-            DataRef = reader.ReadPtrPtr<Rsc6TextureData>();
+            DataRef = reader.ReadPtrOnly<Rsc6TextureData>();
 
             DataRef = reader.ReadPtrItem(DataRef, (_) => new Rsc6TextureData((ulong)CalcDataSize()));
             IsSRBG = reader.ReadUInt32();
@@ -564,6 +563,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             var data = reader.ReadBytes((int)DataSize);
             var resultPtr = get_dds_from_crn(data, (uint)data.Length, out int bufferSize);
+            File.WriteAllBytes(@"C:\Users\fumol\OneDrive\Bureau\test.crn", data);
 
             if (resultPtr != IntPtr.Zero)
             {

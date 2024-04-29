@@ -967,45 +967,41 @@ namespace CodeX.Games.RDR1.RPF6
         public static Rpf6ResourceFileEntry Create(ref byte[] data, ref int decompressedSize)
         {
             var e = new Rpf6ResourceFileEntry();
-            using (DataReader reader = new DataReader(new MemoryStream(data), DataEndianess.BigEndian))
+            using DataReader reader = new DataReader(new MemoryStream(data), DataEndianess.BigEndian);
+            uint rsc6 = reader.ReadUInt32();
+
+            if (rsc6 == 2235781970) //RSC6 header present!
             {
-                uint rsc6 = reader.ReadUInt32();
-                if (rsc6 == 2235781970) //RSC6 header present!
+                e.ResourceType = (Rpf6FileExt)reader.ReadInt32();
+
+                FlagInfo flagInfo;
+                if (rsc6 == 2235781970U || rsc6 == 2252559186U)
+                    flagInfo = new FlagInfo(reader.ReadInt32(), reader.ReadInt32());
+                else
+                    flagInfo = new FlagInfo(reader.ReadInt32());
+                e.FlagInfos = flagInfo;
+
+                byte[] numArray = reader.ReadBytes((int)(reader.Length - reader.Position));
+                if (e.ResourceType == Rpf6FileExt.wtd_wtx && e.FlagInfos.IsRSC85)
                 {
-                    e.ResourceType = (Rpf6FileExt)reader.ReadInt32();
-
-                    FlagInfo flagInfo;
-                    if (rsc6 == 2235781970U || rsc6 == 2252559186U)
-                        flagInfo = new FlagInfo(reader.ReadInt32(), reader.ReadInt32());
-                    else
-                        flagInfo = new FlagInfo(reader.ReadInt32());
-                    e.FlagInfos = flagInfo;
-
-                    byte[] numArray = reader.ReadBytes((int)(reader.Length - reader.Position));
-                    if (e.ResourceType == Rpf6FileExt.wtd_wtx && e.FlagInfos.IsRSC85)
-                    {
-                        numArray = DecryptAES(numArray);
-                    }
-
-                    using (DataReader dReader = new DataReader(new MemoryStream(numArray), DataEndianess.BigEndian))
-                    {
-                        data = new byte[flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV];
-                        decompressedSize = data.Length;
-
-                        _ = dReader.ReadUInt32();
-                        int len = dReader.ReadInt32();
-                        data = dReader.ReadBytes(len);
-                    }
+                    numArray = DecryptAES(numArray);
                 }
-                e.Name = "";
-                return e;
+
+                using DataReader dReader = new DataReader(new MemoryStream(numArray), DataEndianess.BigEndian);
+                data = new byte[flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV];
+                decompressedSize = data.Length;
+
+                _ = dReader.ReadUInt32();
+                int len = dReader.ReadInt32();
+                data = dReader.ReadBytes(len);
             }
+            e.Name = "";
+            return e;
         }
 
         public static byte[] AddResourceHeader(byte[] data, uint version, int virtualFlags, int physicalFlags, FlagInfo flag)
         {
-            if (data == null)
-                return null;
+            if (data == null) return null;
 
             bool extendedFlags = flag.IsExtendedFlags;
             byte[] newdata = new byte[data.Length + 16];
@@ -1329,13 +1325,13 @@ namespace CodeX.Games.RDR1.RPF6
         {
             get
             {
-                int[] pageSizesVitrual = RSC85_PageSizesVirtual;
+                int[] pageSizesVirtual = RSC85_PageSizesVirtual;
                 int num = 0;
-                for (int index = 0; index < pageSizesVitrual.Length; ++index)
+                for (int index = 0; index < pageSizesVirtual.Length; ++index)
                 {
-                    if (pageSizesVitrual[index] == RSC85_ObjectStartPageSize)
+                    if (pageSizesVirtual[index] == RSC85_ObjectStartPageSize)
                         return num;
-                    num += pageSizesVitrual[index];
+                    num += pageSizesVirtual[index];
                 }
                 return 0;
             }
@@ -1440,7 +1436,7 @@ namespace CodeX.Games.RDR1.RPF6
             else Flag1 = (int)(Flag1 & 1073741824L | virtOrSize & 3221225471L);
         }
 
-        public int GetCompactSize(int size)
+        public static int GetCompactSize(int size)
         {
             int s = size >> 8;
             int i = 0;
@@ -1453,7 +1449,7 @@ namespace CodeX.Games.RDR1.RPF6
             return ((i & 0xF) << 11) | (s & 0x7FF);
         }
 
-        public int GetFlags(int sysSegSize, int gpuSegSize)
+        public static int GetFlags(int sysSegSize, int gpuSegSize)
         {
             return (GetCompactSize(sysSegSize) & 0x7FFF) | (GetCompactSize(gpuSegSize) & 0x7FFF) << 15 | 3 << 30;
         }
@@ -1465,48 +1461,44 @@ namespace CodeX.Games.RDR1.RPF6
 
         public static byte[] GetDataFromStream(Stream resourceStream)
         {
-            using (var br = new DataReader(resourceStream))
+            using var br = new DataReader(resourceStream);
+            uint num1 = br.ReadUInt32();
+            int num2 = br.ReadInt32();
+            FlagInfo flagInfo;
+
+            if (num1 == 2235781970U || num1 == 2252559186U)
             {
-                uint num1 = br.ReadUInt32();
-                int num2 = br.ReadInt32();
-                FlagInfo flagInfo;
+                flagInfo = new FlagInfo(br.ReadInt32(), br.ReadInt32());
+            }
+            else
+            {
+                if (num1 != 88298322U && num1 != 105075538U)
+                {
+                    return null;
+                }
+                flagInfo = new FlagInfo(br.ReadInt32());
+            }
 
-                if (num1 == 2235781970U || num1 == 2252559186U)
-                {
-                    flagInfo = new FlagInfo(br.ReadInt32(), br.ReadInt32());
-                }
-                else
-                {
-                    if (num1 != 88298322U && num1 != 105075538U)
-                    {
-                        return null;
-                    }
-                    flagInfo = new FlagInfo(br.ReadInt32());
-                }
+            byte[] numArray = br.ReadBytes((int)(br.Length - br.Position));
+            if (num2 == 2 && flagInfo.IsRSC85)
+            {
+                numArray = DecryptAES(numArray);
+            }
 
-                byte[] numArray = br.ReadBytes((int)(br.Length - br.Position));
-                if (num2 == 2 && flagInfo.IsRSC85)
+            using var dr = new DataReader(new MemoryStream(numArray));
+            int length = (int)dr.Length;
+            byte[] data = dr.ReadBytes(length);
+            try
+            {
+                return DecompressZStandard(data);
+            }
+            catch //Some resources still use zlib (.wtx)
+            {
+                try
                 {
-                    numArray = DecryptAES(numArray);
+                    return DecompressDeflate(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
                 }
-
-                using (var dr = new DataReader(new MemoryStream(numArray)))
-                {
-                    int length = (int)dr.Length;
-                    byte[] data = dr.ReadBytes(length);
-                    try
-                    {
-                        return DecompressZStandard(data);
-                    }
-                    catch //Some resources still use zlib (.wtx)
-                    {
-                        try
-                        {
-                            return DecompressDeflate(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
-                        }
-                        catch { return null; }
-                    }
-                }
+                catch { return null; }
             }
         }
     }
@@ -1514,7 +1506,7 @@ namespace CodeX.Games.RDR1.RPF6
     public enum Rpf6FileExt : byte
     {
         binary = 0, //basically all the other files
-        generic = 1, //also wst, wfd, wcs & wprp
+        generic = 1, //wst, wfd, wcs & wprp
         wsc = 2,
         was = 6,
         wtd_wtx = 10,

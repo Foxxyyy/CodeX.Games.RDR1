@@ -341,27 +341,27 @@ namespace CodeX.Games.RDR1.RSC6
 
         public bool IsBreakingDisabled()
         {
-	        return (Flags & Rsc6FragTypeFlags.DISABLE_BREAKING) != 0;
+            return (Flags & Rsc6FragTypeFlags.DISABLE_BREAKING) != 0;
         }
 
         public bool IsActivationDisabled()
         {
-	        return (Flags & Rsc6FragTypeFlags.DISABLE_ACTIVATION) != 0;
+            return (Flags & Rsc6FragTypeFlags.DISABLE_ACTIVATION) != 0;
         }
 
         public bool GetNeedsCacheEntryToActivate()
         {
-	        return (Flags & Rsc6FragTypeFlags.NEEDS_CACHE_ENTRY_TO_ACTIVATE) != 0;
+            return (Flags & Rsc6FragTypeFlags.NEEDS_CACHE_ENTRY_TO_ACTIVATE) != 0;
         }
 
         public bool GetHasAnyArticulatedParts()
         {
-	        return (Flags & Rsc6FragTypeFlags.HAS_ANY_ARTICULATED_PARTS) != 0;
+            return (Flags & Rsc6FragTypeFlags.HAS_ANY_ARTICULATED_PARTS) != 0;
         }
 
         public bool GetIsUserModified()
         {
-	        return (Flags & Rsc6FragTypeFlags.IS_USER_MODIFIED) != 0;
+            return (Flags & Rsc6FragTypeFlags.IS_USER_MODIFIED) != 0;
         }
 
         public bool GetAllocateTypeAndIncludeFlags()
@@ -424,7 +424,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4(BoundMatrix);
             writer.WritePtr(Bound);
             writer.WriteArr(ExtraBounds);
-            writer.WriteRawArrPtr(ExtraBoundsMatrices);
+            writer.WriteRawArr(ExtraBoundsMatrices);
             writer.WriteUInt16(NumExtraBounds);
             writer.WriteBoolean(LoadSkeleton);
             writer.WriteByte(Pad);
@@ -510,7 +510,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WritePtr(Animation);
             writer.WriteInt32(BoneCount);
-            writer.WriteRawArrPtr(BoneIndices);
+            writer.WriteRawArr(BoneIndices);
             writer.WriteStr(Name);
             writer.WriteSingle(PhaseLastFrame);
             writer.WriteBoolean(AutoPlay);
@@ -1078,7 +1078,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6PhysicsInstance : Rsc6BlockBase //rage::phInst
+    public class Rsc6PhysicsInstance : Rsc6FileBase //rage::phInst
     {
         /*
          * Basic instance class for all physical objects, storing a matrix for position and
@@ -1087,7 +1087,6 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 80;
-        public uint VFT { get; set; } = 0x04E0A528;
         public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_Archetype
         public ushort LevelIndex { get; set; } //m_LevelIndex, the "handle" for this instance in the level
         public ushort Flags { get; set; } //m_Flags
@@ -1096,7 +1095,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
+            base.Read(reader);
             Archetype = reader.ReadPtr<Rsc6FragArchetype>();
             LevelIndex = reader.ReadUInt16();
             Flags = reader.ReadUInt16();
@@ -1106,6 +1105,28 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            writer.WriteUInt32(0x04E0A528);
+        }
+    }
+
+    public class Rsc6BoundInstance : Rsc6FileBase //sagBoundInstance
+    {
+        public override ulong BlockLength => 80;
+        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_archetype
+        public Rsc6Ptr<Rsc6FragArchetype> PhysInstance { get; set; } //m_physInstance
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            Archetype = reader.ReadPtr<Rsc6FragArchetype>();
+
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(0x01909C20);
 
         }
     }
@@ -1178,7 +1199,7 @@ namespace CodeX.Games.RDR1.RSC6
         ARCHETYPE_DAMP = 2
     }
 
-    public enum Rsc6FragTypeFlags : int
+    [Flags] public enum Rsc6FragTypeFlags : int
     {
         NEEDS_CACHE_ENTRY_TO_ACTIVATE = 1 << 0,
         HAS_ANY_ARTICULATED_PARTS = 1 << 1,
@@ -1191,25 +1212,26 @@ namespace CodeX.Games.RDR1.RSC6
         DISABLE_BREAKING = 1 << 13  //Disables activation on instances until the user enables
     };
 
-    public enum Rsc6ObjectTypeFlags : uint
+    [Flags] public enum Rsc6ObjectTypeFlags : uint
     {
-        OBJ_SKINNED = 1, //Peds, all p_gen_ropesm's, p_gen_blood03x, p_blk_cityhall_clock01x
-        OBJ_STATIC_STANDARD = 1572869, //All p_gen_doorstandard's, p_gen_basin01x, p_gen_cranedock01x, p_gen_chairtheater01x, all debris_rockclusters
-        OBJ_SPECIAL = 1572999, //Most trees, p_gen_streetclock01x
-        OBJ_WEAPONS = 1572865, //revolver_lemat01x
-        OBJ_PROP_STANDARD = 1572871, //p_gen_cart01x, p_gen_barrel01x, p_gen_chair05x, p_gen_chaircomfy01x, p_gen_debrisboard02x, p_gen_coffin02x, car01x etc...
-        OBJ_SPECIAL2 = 1572997, //st_whitepine01x
-        OBJ_PROP_STANDARD2 = 3670021,
-        OBJ_SPECIAL3 = 3670023, //p_gen_milkcan02x, p_gen_trunk01x
-        OBJ_WINDOW = 3671047,
-        OBJ_SEPERATED_PROPS = 3670149, //p_gen_boxcar0101x
-        OBJ_CARS1 = 18350087, //armoredcar01x, flatcar01x
-        OBJ_CARS2 = 18350215, //northboxcar01x
-        OBJ_WATERTROUGH = 20447237, //p_gen_watertrough01x
-        OBJ_CARTS = 1075314695, //cart001x
+        CARS1 = 18350087, //armoredcar01x, flatcar01x
+        CARS2 = 18350215, //northboxcar01x
+        CARTS = 1075314695, //cart001x
+        PROP_STANDARD = 1572871, //p_gen_cart01x, p_gen_barrel01x, p_gen_chair05x, p_gen_chaircomfy01x, p_gen_debrisboard02x, p_gen_coffin02x, car01x etc...
+        PROP_STANDARD2 = 3670021,
+        SEPERATED_PROPS = 3670149, //p_gen_boxcar0101x
+        SKINNED = 1, //Peds, all p_gen_ropesm's, p_gen_blood03x, p_blk_cityhall_clock01x
+        SPECIAL = 1572999, //Most trees, p_gen_streetclock01x
+        SPECIAL2 = 1572997, //st_whitepine01x
+        SPECIAL3 = 3670023, //p_gen_milkcan02x, p_gen_trunk01x
+        STATIC_STANDARD = 1572869, //All p_gen_doorstandard's, p_gen_basin01x, p_gen_cranedock01x, p_gen_chairtheater01x, most debris_rockclusters
+        STATIC_STANDARD2 = 1572868, //All p_gen_doorstandard's, p_gen_basin01x, p_gen_cranedock01x, p_gen_chairtheater01x, most debris_rockclusters
+        WATERTROUGH = 20447237, //p_gen_watertrough01x
+        WEAPONS = 1572865, //revolver_lemat01x
+        WINDOW = 3671047
     }
 
-    public enum Rsc6FragTypeGroupFlag : byte
+    [Flags] public enum Rsc6FragTypeGroupFlag : byte
     {
         DISAPPEARS_WHEN_DEAD = 1 << 0, //When health reaches zero, this group disappears
         MADE_OF_GLASS = 1 << 1, //This group is made out of glass and will shatter when broken
@@ -1217,5 +1239,19 @@ namespace CodeX.Games.RDR1.RSC6
         DOESNT_AFFECT_VEHICLES = 1 << 3, //When colliding with vehicles, the vehicle is treated as infinitely massive
         DOESNT_PUSH_VEHICLES_DOWN = 1 << 4,
         HAS_CLOTH = 1 << 5, //This group has the cloth (can't have more than one cloth per fragment)
+    }
+
+    [Flags] public enum Rsc6ExcludeFlag : byte
+    {
+        ExcludeVehicle = 0,
+        ExcludeMount,
+        ExcludeInventoryItems,
+        ExcludeRiderIfCreature,
+        ExcludeMoverInsts,
+        ExcludeGameCameraExclusionListInsts,
+        HogTieVictimOnShoulder,
+        ExcludeVehicleRiders,
+        ExcludeVehicleDrafts,
+        ExcludeDuelHostage
     }
 }

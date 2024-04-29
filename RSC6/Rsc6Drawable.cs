@@ -365,7 +365,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt16((ushort)VertexCount);
             writer.WriteByte(PrimitiveType);
             writer.WriteBoolean(DoubleBuffered);
-            writer.WriteRawArrPtr(BoneIds);
+            writer.WriteRawArr(BoneIds);
             writer.WriteUInt16((ushort)VertexStride);
             writer.WriteUInt16(BoneIdsCount);
             writer.WriteUInt32(0xCDCDCDCD); //VertexDataRef
@@ -981,8 +981,6 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
             ShaderInputs.SetUInt32(0x249983FD, 4); //ParamsMapConfig
-
-            ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode, foliage shading mode
             ShaderInputs.SetUInt32(0x65DD2E63, 1); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 1); //MeshWindAmount
             ShaderInputs.SetFloat(0xB52CC88F, BoundingBox.Size.Z); //MeshWindHeight
@@ -1035,8 +1033,6 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
             ShaderInputs.SetUInt32(0x249983FD, 4); //ParamsMapConfig
-
-            ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode, foliage shading mode
             ShaderInputs.SetUInt32(0x65DD2E63, 5); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 0.5f); //MeshWindAmount
             ShaderInputs.SetFloat(0xB52CC88F, MathF.Max(MathF.Max(BoundingBox.Maximum.Z, BoundingBox.Size.Z) * 3, 5)); //MeshWindHeight
@@ -1172,8 +1168,8 @@ namespace CodeX.Games.RDR1.RSC6
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
             writer.WriteUInt32(wfd ? 0x00D30B04 : (uint)VFT);
             writer.WritePtrArr(Geometries);
-            writer.WriteRawArrPtr(BoundsData);
-            writer.WriteRawArrPtr(ShaderMapping);
+            writer.WriteRawArr(BoundsData);
+            writer.WriteRawArr(ShaderMapping);
             writer.WriteByte(MatrixCount);
             writer.WriteByte(Flags);
             writer.WriteByte(Type);
@@ -1302,9 +1298,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt16(VertexCount);
             writer.WriteByte(Locked);
             writer.WriteByte(Flags);
-            writer.WriteRawArrPtr(LockedData); //Should be NULL
+            writer.WriteRawArr(LockedData); //Should be NULL
             writer.WriteUInt32(VertexStride);
-            writer.WriteRawArrPtr(VertexData);
+            writer.WriteRawArr(VertexData);
             writer.WriteUInt32(LockThreadID);
             writer.WritePtr(Layout);
             writer.WriteUInt32(Unknown_1Ch);
@@ -1394,7 +1390,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteUInt32(VFT);
             writer.WriteUInt32(IndicesCount);
-            writer.WriteRawArrPtr(Indices);
+            writer.WriteRawArr(Indices);
             writer.WriteUInt32(Unknown_Ch);
             writer.WriteUInt32(Unknown_10h);
             writer.WriteUInt32(Unknown_14h);
@@ -1852,11 +1848,11 @@ namespace CodeX.Games.RDR1.RSC6
             var bd = new Rsc6SkeletonBoneData(BoneData.Items);
             writer.WriteBlock(bd);
             writer.WritePtrEmbed(bd, bd, 0);
-            writer.WriteRawArrPtr(ParentIndices);
-            writer.WriteRawArrPtr(JointScaleOrients);
-            writer.WriteRawArrPtr(InverseJointScaleOrients);
-            writer.WriteRawArrPtr(DefaultTransforms);
-            writer.WriteRawArrPtr(CumulativeDefaultTransforms);
+            writer.WriteRawArr(ParentIndices);
+            writer.WriteRawArr(JointScaleOrients);
+            writer.WriteRawArr(InverseJointScaleOrients);
+            writer.WriteRawArr(DefaultTransforms);
+            writer.WriteRawArr(CumulativeDefaultTransforms);
             writer.WriteUInt16(BoneCount);
             writer.WriteUInt16(NumTranslationDofs);
             writer.WriteUInt16(NumRotationDofs);
@@ -3134,7 +3130,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            ParametersList = reader.ReadPtrPtr<Rsc6ShaderParametersBlock>();
+            ParametersList = reader.ReadPtrOnly<Rsc6ShaderParametersBlock>();
             Name = reader.ReadUInt32();
             ParameterCount = reader.ReadByte();
             RenderBucket = reader.ReadByte();

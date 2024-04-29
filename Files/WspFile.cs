@@ -8,7 +8,7 @@ namespace CodeX.Games.RDR1.Files
     public class WspFile : FilePack
     {
         public Rpf6FileEntry FileEntry;
-        public Rsc6TreeForestGrid Trees;
+        public Rsc6TreeForestGrid Grid;
         public string Name;
         public JenkHash Hash;
 
@@ -19,24 +19,33 @@ namespace CodeX.Games.RDR1.Files
             Hash = JenkHash.GenHash(file?.NameLower ?? "");
         }
 
+        public WspFile(Rsc6TreeForestGrid grid) : base(null)
+        {
+            Grid = grid;
+        }
+
         public override void Load(byte[] data)
         {
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
-            Trees = r.ReadBlock<Rsc6TreeForestGrid>();
+            Grid = r.ReadBlock<Rsc6TreeForestGrid>();
         }
 
         public override byte[] Save()
         {
-            throw new System.NotImplementedException();
+            if (Grid == null) return null;
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(Grid);
+            byte[] data = writer.Build(116);
+            return data;
         }
 
         public override string ToString()
         {
-            return Trees.ToString();
+            return Grid.ToString();
         }
     }
 }

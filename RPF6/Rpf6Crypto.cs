@@ -9,7 +9,6 @@ using CodeX.Core.Utilities;
 using System.Numerics;
 using System.Xml;
 using CodeX.Core.Numerics;
-using System.Linq;
 using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RSC6;
 
@@ -17,8 +16,11 @@ namespace CodeX.Games.RDR1.RPF6
 {
     public static class Rpf6Crypto
     {
+        public const ulong VIRTUAL_BASE  = 0x50000000;
+        public const ulong PHYSICAL_BASE = 0x60000000;
+
         static Aes AesAlg;
-        static byte[] AES_KEY = new byte[32]
+        static readonly byte[] AES_KEY = new byte[32]
         {
             0xB7, 0x62, 0xDF, 0xB6, 0xE2, 0xB2, 0xC6, 0xDE, 0xAF, 0x72, 0x2A, 0x32, 0xD2, 0xFB, 0x6F, 0x0C, 0x98, 0xA3, 0x21, 0x74, 0x62, 0xC9, 0xC4, 0xED, 0xAD, 0xAA, 0x2E, 0xD0, 0xDD, 0xF9, 0x2F, 0x10
         };
@@ -283,16 +285,37 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         //Swap the axis from XYZ to ZXY
-        public static Matrix4x4 ToZXY(Matrix4x4 m)
+        public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
         {
-            var m44 = float.IsNaN(m.M44) ? 0.0f : m.M44;
+            var m14 = write ? GetNaN() : m.M14;
+            var m24 = write ? GetNaN() : m.M24;
+            var m34 = write ? GetNaN() : m.M34;
+            var m44 = write ? GetNaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
+            var translation = m.Translation;
+            m.Decompose(out var scale, out var rot, out var trans);
+
+            return new Matrix4x4(
+                m.M11, m.M12, m.M13, m14,
+                m.M21, m.M22, m.M23, m24,
+                m.M31, m.M32, m.M33, m34,
+                translation.Z, translation.X, translation.Y, m44
+            );
+        }
+
+        //Swap the axis from XYZ to YZX
+        public static Matrix4x4 ToYZX(Matrix4x4 m, bool write = false)
+        {
+            var m14 = write ? GetNaN() : m.M14;
+            var m24 = write ? GetNaN() : m.M24;
+            var m34 = write ? GetNaN() : m.M34;
+            var m44 = write ? GetNaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
             var translation = m.Translation;
 
             return new Matrix4x4(
-                m.M11, m.M12, m.M13, m.M14,
-                m.M21, m.M22, m.M23, m.M24,
-                m.M31, m.M32, m.M33, m.M34,
-                translation.Z, translation.X, translation.Y, m44
+                m.M11, m.M12, m.M13, m14,
+                m.M21, m.M22, m.M23, m24,
+                m.M31, m.M32, m.M33, m34,
+                translation.Y, translation.Z, translation.X, m44
             );
         }
 

@@ -24,7 +24,7 @@ namespace CodeX.Games.RDR1.Files
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
             Expressions = r.ReadBlock<Rsc6ExpressionDictionary>();
         }

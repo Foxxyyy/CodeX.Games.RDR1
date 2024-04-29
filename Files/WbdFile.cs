@@ -17,12 +17,17 @@ namespace CodeX.Games.RDR1.Files
 
         }
 
+        public WbdFile(Rsc6BoundsDictionary boundsDictionary) : base(null)
+        {
+            BoundsDictionary = boundsDictionary;
+        }
+
         public override void Load(byte[] data)
         {
             var e = FileInfo as Rpf6ResourceFileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
 
             BoundsDictionary = r.ReadBlock<Rsc6BoundsDictionary>();
@@ -54,7 +59,11 @@ namespace CodeX.Games.RDR1.Files
 
         public override byte[] Save()
         {
-            return null;
+            if (BoundsDictionary == null) return null;
+            var w = new Rsc6DataWriter();
+            w.WriteBlock(BoundsDictionary);
+            var data = w.Build(31);
+            return data;
         }
     }
 }

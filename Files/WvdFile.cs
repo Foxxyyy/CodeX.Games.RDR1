@@ -31,7 +31,7 @@ namespace CodeX.Games.RDR1.Files
 
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
 
             VisualDictionary = r.ReadBlock<Rsc6VisualDictionary>();

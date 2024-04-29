@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1
 {
@@ -118,11 +117,9 @@ namespace CodeX.Games.RDR1
                     StreamCollisionsRange = 1000.0f;
                 }
             }
-
-            /*
+    
             this.LoadTrees(dfm);
-            */
-
+            
             /*var grassRpf = this.FileManager.AllArchives.FirstOrDefault(e => e.Name == "grassres.rpf");
             var grassEntries = grassRpf.AllEntries.Where(e => e.Name.EndsWith(".wsg")).ToList();
             this.GrassBatchs = new HashSet<Entity>();
@@ -151,7 +148,7 @@ namespace CodeX.Games.RDR1
                 for (int i = 0; i < this.MainStreamingEntry.StreamingItems.ItemMapChilds.Count; i++)
                 {
                     var child = this.MainStreamingEntry.StreamingItems.ItemMapChilds[i];
-                    if (child.SectorName.StartsWith("cs") || child.SectorName.StartsWith("sw") || child.SectorName.StartsWith("dlc")) continue;
+                    if (child.Name.StartsWith("cs") || child.Name.StartsWith("sw") || child.Name.StartsWith("dlc")) continue;
 
                     var node = new RDR1MapNode(child, this);
                     this.MapNodes.Add(node);
@@ -249,43 +246,64 @@ namespace CodeX.Games.RDR1
         public void LoadTrees(Rpf6DataFileMgr dfm)
         {
             WspFiles = new HashSet<Entity>();
-            dfm.StreamEntries.TryGetValue(Rpf6FileExt.wft, out var files);
-
-            var treeFragment = new KeyValuePair<JenkHash, Rpf6FileEntry>();
-            foreach (var file in files)
-            {
-                if (file.Value.Name != "st_joshuatree01x.wft") continue;
-                treeFragment = file;
-                break;
-            }
-
             var wsps = dfm.WspFiles.Values.ToList();
+
             for (int i = 0; i < dfm.WspFiles.Count; i++)
             {
-                var wsp = wsps[i].Trees;
+                var wsp = wsps[i].Grid;
                 for (int i1 = 0; i1 < wsp.GridCells.Items.Length; i1++)
                 {
-                    for (int i2 = 0; i2 < wsp.GridCells.Items[i1].CombinedInstanceListPos.Count; i2++)
-                    {
-                        var instancePositions = wsp.GridCells.Items[i1].CombinedInstanceListPos[i2];
-                        if (Vector3.Distance(instancePositions.Position, StreamPosition) > 300.0f) continue;
-                        var pieces = Cache.GetPieces(treeFragment.Key, true);
+                    var items = wsp.GridCells.Items[i1];
 
-                        if (pieces != null)
+                    //Trees and random foliages
+                    /*for (int i2 = 0; i2 < items.CombinedInstanceListPos.Count; i2++)
+                    {
+                        var instancePos = items.CombinedInstanceListPos[i2];
+                        var treeName = wsp.TreeNames.Items.FirstOrDefault(e => e.Value.StartsWith("st_")).Value;
+                        if (treeName == null) continue;
+                        treeName = treeName.Replace(".spt", "x"); //to fragment name
+
+                        var pieces = Cache.GetPieces(new JenkHash(treeName), true);
+                        if (pieces == null) continue;
+
+                        foreach (var p in pieces)
                         {
-                            foreach (var p in pieces)
+                            if (p == null) continue;
+                            var entity = new WsiEntity(treeName)
                             {
-                                if (p == null) continue;
-                                var entity = new WsiEntity(treeFragment.Key.Str)
-                                {
-                                    Piece = p,
-                                    ResetPos = true,
-                                    LodDistMax = 50.0f,
-                                    Position = instancePositions.Position,
-                                };
-                                entity.UpdateBounds();
-                                WspFiles.Add(entity);
-                            }
+                                Piece = p,
+                                LodDistMax = 50.0f,
+                                Position = instancePos.Position,
+                            };
+                            entity.UpdateBounds();
+                            WspFiles.Add(entity);
+                        }
+                    }*/
+
+                    //Debris and foliages around buildings and roads
+                    for (int i2 = 0; i2 < items.CombinedInstanceListMatrix.Count; i2++)
+                    {
+                        var instanceMatrix = items.CombinedInstanceListMatrix[i2];
+                        instanceMatrix.Transform.Decompose(out var scale, out var rot, out var trans);
+
+                        var treeName = wsp.TreeNames.Items[instanceMatrix.TreeTypeID].Value;
+                        treeName = treeName.Replace(".spt", "x"); //to fragment name
+
+                        var pieces = Cache.GetPieces(new JenkHash(treeName), true);
+                        if (pieces == null) continue;
+
+                        foreach (var p in pieces)
+                        {
+                            if (p == null) continue;
+                            var entity = new WsiEntity(treeName)
+                            {
+                                Piece = p,
+                                LodDistMax = 50.0f,
+                                Position = trans,
+                                Orientation = new Quaternion(rot.Z, rot.X, rot.Y, rot.W)
+                            };
+                            entity.UpdateBounds();
+                            WspFiles.Add(entity);
                         }
                     }
                 }
@@ -318,11 +336,22 @@ namespace CodeX.Games.RDR1
                     if (n == null) break;
                 }
             }
-
-            //ents.UnionWith(WspFiles);
-            foreach (var batch in GrassBatchs)
+            
+            if (WspFiles != null) //Trees & foliage
             {
-                RecurseAddStreamEntity((WsiEntity)batch, ref spos, ents);
+                foreach (var tree in WspFiles)
+                {
+                    if (Vector3.Distance(tree.Position, StreamPosition) > 300.0f) continue;
+                    ents.Add(tree);
+                }
+            }
+
+            if (GrassBatchs != null) //Grass batches
+            {
+                foreach (var batch in GrassBatchs)
+                {
+                    RecurseAddStreamEntity((WsiEntity)batch, ref spos, ents);
+                }
             }
 
             foreach (var kvp in nodes) //Find current entities for max lod level
@@ -641,7 +670,7 @@ namespace CodeX.Games.RDR1
         public RDR1MapNode(Rsc6SectorChild mapChild, RDR1Map map)
         {
             MapData = new RDR1MapData(mapChild, map);
-            NameHash = new(mapChild.SectorName.ToLower());
+            NameHash = new(mapChild.Name.ToLower());
             StreamingBox = mapChild.SectorBounds;
             BoundingBox = mapChild.SectorBounds;
         }
@@ -692,7 +721,7 @@ namespace CodeX.Games.RDR1
         public RDR1MapData(Rsc6SectorChild mapChild, RDR1Map map)
         {
             var dfm = map.FileManager.DataFileMgr;
-            var mapNode = dfm.WsiFiles.FirstOrDefault(e => e.Key.Equals(new JenkHash(mapChild.SectorName.ToLower()))).Value;
+            var mapNode = dfm.WsiFiles.FirstOrDefault(e => e.Key.Equals(new JenkHash(mapChild.Name.ToLower()))).Value;
 
             var childs = mapNode?.StreamingItems?.ItemChilds.Item;
             if (childs == null) return;

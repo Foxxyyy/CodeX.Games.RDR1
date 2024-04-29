@@ -1,17 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Numerics;
+using System.Collections.Generic;
 using CodeX.Core.Engine;
+using CodeX.Core.Utilities;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using CodeX.Core.Utilities;
-using System.IO;
-using System.Numerics;
 
 namespace CodeX.Games.RDR1.Files
 {
-    [TC(typeof(EXP))]
-    public class RbfFile : DataBagPack
+    [TC(typeof(EXP))] public class RbfFile : DataBagPack
     {
         private const int RBF_IDENT = 0x30464252;
         public RbfStructure Current { get; set; }
@@ -22,18 +21,14 @@ namespace CodeX.Games.RDR1.Files
 
         public override void Load(byte[] data)
         {
-            using (var ms = new MemoryStream(data))
-            {
-                Load(ms);
-            }
+            using var ms = new MemoryStream(data);
+            Load(ms);
         }
 
         public RbfStructure Load(string fileName)
         {
-            using (var fileStream = new FileStream(fileName, FileMode.Open))
-            {
-                return Load(fileStream);
-            }
+            using var fileStream = new FileStream(fileName, FileMode.Open);
+            return Load(fileStream);
         }
 
         public RbfStructure Load(Stream stream)
@@ -43,9 +38,7 @@ namespace CodeX.Games.RDR1.Files
 
             var reader = new DataReader(stream);
             var ident = reader.ReadInt32();
-
-            if (ident != RBF_IDENT)
-                throw new Exception("The file identifier does not match.");
+            if (ident != RBF_IDENT) throw new Exception("The file identifier does not match.");
 
             while (reader.Position < reader.Length)
             {
@@ -53,8 +46,7 @@ namespace CodeX.Games.RDR1.Files
                 if (descriptorIndex == 0xFF) // close tag
                 {
                     var b = reader.ReadByte();
-                    if (b != 0xFF)
-                        throw new Exception("Expected 0xFF but was " + b.ToString("X2"));
+                    if (b != 0xFF) throw new Exception("Expected 0xFF but was " + b.ToString("X2"));
 
                     if (Stack.Count > 0)
                     {
@@ -62,9 +54,7 @@ namespace CodeX.Games.RDR1.Files
                     }
                     else
                     {
-                        if (reader.Position != reader.Length)
-                            throw new Exception("Expected end of stream but was not.");
-
+                        if (reader.Position != reader.Length) throw new Exception("Expected end of stream but was not.");
                         Bag = CreateDataBag();
                         return Current;
                     }
@@ -72,8 +62,7 @@ namespace CodeX.Games.RDR1.Files
                 else if (descriptorIndex == 0xFD) // bytes
                 {
                     var b = reader.ReadByte();
-                    if (b != 0xFF)
-                        throw new Exception("Expected 0xFF but was " + b.ToString("X2"));
+                    if (b != 0xFF) throw new Exception("Expected 0xFF but was " + b.ToString("X2"));
 
                     var dataLength = reader.ReadInt32();
                     if (dataLength == 0)
@@ -81,8 +70,7 @@ namespace CodeX.Games.RDR1.Files
 
                     var data = reader.ReadBytes(dataLength);
                     var datatype = "string";
-                    var contentattr = Current.FindAttribute("content") as RbfString;
-                    if (contentattr != null)
+                    if (Current.FindAttribute("content") is RbfString contentattr)
                     {
                         datatype = contentattr.Value;
                     }

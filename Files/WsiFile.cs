@@ -30,7 +30,7 @@ namespace CodeX.Games.RDR1.Files
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
             StreamingItems = r.ReadBlock<Rsc6SectorInfo>();
         }
@@ -42,40 +42,6 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteBlock(StreamingItems);
             byte[] data = writer.Build(134);
             return data;
-        }
-
-        public override string ToString()
-        {
-            if (StreamingItems == null || StreamingItems.ItemChilds.Item == null || StreamingItems.ItemChilds.Item.Sectors.Items == null)
-            {
-                return "Invalid data";
-            }
-
-            var items = StreamingItems.ItemChilds.Item.Sectors.Items;
-            var sb = new StringBuilder();
-
-            int num = 0;
-            for (int i = 0; i < items.Length; i++)
-            {
-                num += items[i].Entities.Items.Length;
-            }
-
-            sb.AppendLine($"Number of objects referenced : {num}");
-            sb.AppendLine("Sector Name : " + ((StreamingItems.Name.Value == null) ? items[0].Name : StreamingItems.Name.Value));
-            sb.AppendLine($"AABB Min : {StreamingItems.BoundMin}");
-            sb.AppendLine($"AABB Max : {StreamingItems.BoundMax}\n");
-
-            for (int i = 0; i < items.Length; i++)
-            {
-                sb.AppendLine($"Child {i + 1}:");
-                sb.AppendLine(items[i].ToString());
-            }
-
-            if (sb.Length > 0)
-            {
-                return sb.ToString();
-            }
-            return "Invalid data";
         }
     }
 }

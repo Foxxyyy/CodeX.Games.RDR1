@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CodeX.Games.RDR1")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eada85c0c45c3415b0d331f96062990322d1b35e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+41db10f607fb2063d4d9adcb45775019ab42535b")]
 [assembly: System.Reflection.AssemblyProductAttribute("CodeX.Games.RDR1")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CodeX.Games.RDR1")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

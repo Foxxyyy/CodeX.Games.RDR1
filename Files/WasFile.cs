@@ -1,4 +1,5 @@
-﻿using CodeX.Core.Engine;
+﻿using System;
+using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
@@ -27,14 +28,14 @@ namespace CodeX.Games.RDR1.Files
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + 0x50000000
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
             AnimSet = r.ReadBlock<Rsc6AnimationSet>();
         }
 
         public override byte[] Save()
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override string ToString()
