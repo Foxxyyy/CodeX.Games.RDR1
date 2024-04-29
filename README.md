@@ -4,35 +4,53 @@ Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potent
 
 --------------------
 
-You need the main engine to either run this or compile the source.     
-
-Some games are also supported (RDR2/GTAIV/GTAV/MP3/etc) with RDR2 being the main project.
-
-More info here: [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker discord](https://discord.gg/rgU4SbeR)   
+You need the main CodeX engine to either run this or compile the source.     
+More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker discord](https://discord.gg/rgU4SbeR)   
 
 --------------------             
 
-To set up, download the files [here](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them in the CodeX/CodeX Explorer folders, next to the executable.
+After that, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and copy/paste them to the CodeX and CodeX Explorer folders, next to the executable.           
+Be sure this project is still WIP, including the separated engine. If you want to mod RDR1, consider using this [tool](https://github.com/Foxxyyy/Magic-RDR) instead.
 
-Note that everything is work in progress, including the separated engine. If you want to mod RDR1, consider using this [tool](https://github.com/Foxxyyy/Magic-RDR) instead.
+# Udpates
 
---------------------
+I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.            
+Here are some of the noticeable features for RDR1 :
+* You can import, replace, edit and create files or folders as you wish without the need to rebuild the entire .RPFs (unlike MagicRDR)
+* You can view, edit and search files in multiple .RPFs at the same time, they're all accessible in the tree view (unlike MagicRDR)
+* You can search for files, but you can also search for words/text/hex through all the files
+* You can view a certain number of resources, some of them can technically be exported and reimported from XML :
 
-If you want to contribute to this project, feel free to message me on Discord: #imfoxxyyy :-)
+    > Models (.wfd / .wvd)                                 
+    > Collisions (.wbd)                               
+    > Textures (.wtd)                                           
+    > Game strings (.strtbl / .sst)                                                   
+    > Map Data (.wsi)                                
+    > Animations (.was / .wcdt)                               
+    > Tree Data (.wsp)                                                                  
+    > Grass Batches (.wsg)                                                               
 
-# Contributors
-dexyfex     
-nta      
-Disquse       
-alexguirre      
-CP      
-skylumz      
-colton      
-Ktoś      
-Mars (Im Foxxyyy)      
-Neos    
+# CodeX Contributors
+* dexyfex     
+* nta      
+* Disquse       
+* alexguirre      
+* CP      
+* skylumz      
+* colton      
+* Ktoś      
+* Mars (Im Foxxyyy)      
+* Neos
 
-# Pictures
+# Credits for this project
+* Mars (Im Foxxyyy)                              
+* dexyfex                                   
+* revelations                              
+* Disquse                                           
+* LennyH (BadassBaboon)                                     
+* CabooseSayzWTF                                      
+
+# Random Pictures
 ![Screenshot](Files/Properties/codex_explorer.png)
 ![Screenshot](Files/Properties/codex_scene_preview.png)
 ![Screenshot](Files/Properties/map_viewer.png)
