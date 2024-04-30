@@ -19,7 +19,7 @@ Here are some of the noticeable features for RDR1 :
 * You can import, replace, edit and create files or folders as you wish without the need to rebuild the entire .RPFs (unlike MagicRDR)
 * You can view, edit and search files in multiple .RPFs at the same time, they're all accessible in the tree view (unlike MagicRDR)
 * You can search for files, but you can also search for words/text/hex through all the files
-* You can view a certain number of resources, some of them can technically be exported and reimported from XML :
+* You can view a certain number of resources, some of them can technically be exported and reimported from XML
 
     > Models (.wfd / .wvd)                                 
     > Collisions (.wbd)                               

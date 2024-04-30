@@ -1,16 +1,16 @@
-﻿using CodeX.Core.Engine;
-using CodeX.Core.Numerics;
-using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.Files;
-using CodeX.Games.RDR1.RSC6;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
+using System.Xml;
+using System.Text;
 using System.Linq;
 using System.Numerics;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Xml;
+using CodeX.Core.Engine;
+using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RSC6;
+using CodeX.Games.RDR1.Files;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -37,7 +37,6 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".bk2", "Bink Video 2", FileTypeIcon.Movie);
             InitFileType(".dat", "Data File", FileTypeIcon.SystemFile);
             InitFileType(".nvn", "Compiled Shaders", FileTypeIcon.SystemFile, FileTypeAction.ViewHex);
-            InitFileType(".cutbin", "Cutscene Binary", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true);
             InitFileType(".wnm", "Nav Mesh", FileTypeIcon.SystemFile);
             InitFileType(".wfd", "Frag Drawable", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
             InitFileType(".wft", "Fragment", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
@@ -66,11 +65,13 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wedt", "Expressions Dictionary", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".wpdt", "Parametized Motion Dictionary", FileTypeIcon.TextFile);
             InitFileType(".awc", "Audio Wave Container", FileTypeIcon.Audio, FileTypeAction.ViewAudio);
-            InitFileType(".strtbl", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml, true);
         }
 
         private void InitGenericRDR1Types()
         {
+            InitFileType(".cutbin", "Cutscene Binary", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true);
+            InitFileType(".strtbl", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml, true);
+            InitFileType(".fonttex", "Font Data", FileTypeIcon.Canvas, FileTypeAction.ViewXml, true);
             InitFileType(".tr", "AI Programs", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".csv", "Comma-Separated Values File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".cfg", "Config File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
@@ -301,6 +302,11 @@ namespace CodeX.Games.RDR1.RPF6
 
             switch (fileext)
             {
+                case ".fonttex":
+                    var fonttex = new FonttexFile();
+                    fonttex.Load(data);
+                    newfilename = file.Name + ".xml";
+                    return XmlMetaNodeWriter.GetXml("RDR1FontTex", fonttex, GetXmlFileFolder(file, folder));
                 case ".xml":
                 case ".meta":
                     newfilename = file.Name;
@@ -321,9 +327,7 @@ namespace CodeX.Games.RDR1.RPF6
                     Rpf6FileExt.wbd_wcdt => true,
                     _ when (re.ResourceType == Rpf6FileExt.wsg_wgd) && (fileext == ".wsg") => true,
                     _ when (re.ResourceType == Rpf6FileExt.wtd_wtx) && (fileext == ".wtd") => true,
-                    _ => throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 "
-                        + re.ResourceType.ToString()
-                        + " files to XML.\nCodeX is a work in progress and this is a planned future feature."),
+                    _ => throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 " + re.ResourceType.ToString() + " files to XML.\nCodeX is a work in progress and this is a planned future feature."),
                 };
 
                 if ((re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd" && fileext != ".sst") || !isResFilepack)
@@ -336,7 +340,6 @@ namespace CodeX.Games.RDR1.RPF6
                 var fp = LoadFilePack(re, data, false);
                 if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VisualDictionary", wvd.VisualDictionary, GetXmlFileFolder(file, folder));
                 if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.FragDrawable, GetXmlFileFolder(file, folder));
-                //if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, GetXmlFileFolder(file, folder));
                 if (fp is WsiFile wsi) return XmlMetaNodeWriter.GetXml("RDR1SectorInfo", wsi.StreamingItems, GetXmlFileFolder(file, folder));
                 if (fp is WcdtFile wcdt) return XmlMetaNodeWriter.GetXml("RDR1ClipDictionary", wcdt.Clips, GetXmlFileFolder(file, folder));
                 if (fp is WtdFile wtd) return XmlMetaNodeWriter.GetXml("RDR1TextureDictionary", wtd.TextureDictionary, GetXmlFileFolder(file, folder));
@@ -345,6 +348,7 @@ namespace CodeX.Games.RDR1.RPF6
                 if (fp is WspFile wsp) return XmlMetaNodeWriter.GetXml("RDR1SpeedTree", wsp.Grid, GetXmlFileFolder(file, folder));
                 if (fp is WbdFile wbd) return XmlMetaNodeWriter.GetXml("RDR1BoundsDictionary", wbd.BoundsDictionary, GetXmlFileFolder(file, folder));
                 if (fp is SstFile sst) return XmlMetaNodeWriter.GetXml("RDR1StringTable", sst.StringTable, GetXmlFileFolder(file, folder));
+                //if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, GetXmlFileFolder(file, folder));
                 throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
             }
 
@@ -365,6 +369,11 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 var strtbl = new StrtblFile(xml);
                 return strtbl.Save();
+            }
+            if (filename.EndsWith(".fonttex.xml"))
+            {
+                var fonttex = XmlMetaNodeReader.GetMetaNode<FonttexFile>(xml, null, folder);
+                return fonttex?.Save();
             }
             else if (filename.EndsWith(".wvd.xml"))
             {

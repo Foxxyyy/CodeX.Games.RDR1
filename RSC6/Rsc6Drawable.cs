@@ -1,15 +1,15 @@
-﻿using CodeX.Core.Engine;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Collections.Generic;
+using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Shaders;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
 using ICSharpCode.SharpZipLib.Checksum;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
@@ -28,7 +28,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //m_Textures
         public Rsc6Ptr<Rsc6TextureDictionary> DerivedTextures { get; set; } //m_DerivedTextures, unused
         public uint Unknown_30h { get; set; } //Always 0
-        public uint LODLevel { get; set; } //0 for everything, 1 for '_med' or 3 for '_vlow'
+        public Rsc6LodLevel LODLevel { get; set; } 
         public uint Unknown_38h { get; set; } //Always 0
 
         public override void Read(Rsc6DataReader reader)
@@ -36,12 +36,14 @@ namespace CodeX.Games.RDR1.RSC6
             VFT = reader.ReadUInt32();
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
 
-            //Loading textures before drawables so we can bind them properly
+            //Loading textures before geometries so we can bind them properly
+            //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+
             reader.Position += 32;
-            WfdFile.TextureDictionary = TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>(); //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
-            DerivedTextures = reader.ReadPtr<Rsc6TextureDictionary>(); //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+            WfdFile.TextureDictionary = TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
+            DerivedTextures = reader.ReadPtr<Rsc6TextureDictionary>();
             Unknown_30h = reader.ReadUInt32();
-            LODLevel = reader.ReadUInt32();
+            LODLevel = (Rsc6LodLevel)reader.ReadUInt32();
             Unknown_38h = reader.ReadUInt32();
             reader.Position -= 52;
 
@@ -73,7 +75,7 @@ namespace CodeX.Games.RDR1.RSC6
                 foreach (var tex in item.ShaderGroup.Item.TextureDictionary.Item.Textures.Items)
                 {
                     textures.Add(tex);
-                    var name = tex.NameRef.Value.Replace(".dds", ""); //Hashes don't use the extension
+                    var name = tex.NameRef.Value.Replace(".dds", ""); //Hashes don't store the .dds extension
                     hashes.Add(JenkHash.GenHash(name));
                 }
             }
@@ -98,11 +100,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_30h);
 
             if (fileName.Contains("_med"))
-                writer.WriteUInt32(1);
+                writer.WriteUInt32((uint)Rsc6LodLevel.MEDIUM);
             else if (fileName.Contains("_vlow"))
-                writer.WriteUInt32(2);
+                writer.WriteUInt32((uint)Rsc6LodLevel.VLOW);
             else
-                writer.WriteUInt32(LODLevel);
+                writer.WriteUInt32((uint)Rsc6LodLevel.HIGH);
 
             writer.WriteUInt32(Unknown_38h);
         }
@@ -124,7 +126,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 16;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+        public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; }
         public Rsc6Ptr<Rsc6Drawable> Drawable { get; set; }
 
         public override void Read(Rsc6DataReader reader)
@@ -132,7 +134,9 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
 
-            //Loading textures before everything else so we can assign them properly
+            //Loading textures before geometries so we can bind them properly
+            //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+
             reader.Position += 4;
             TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
             WfdFile.TextureDictionary = TextureDictionary;
@@ -148,7 +152,7 @@ namespace CodeX.Games.RDR1.RSC6
             foreach (var tex in Drawable.Item?.ShaderGroup.Item?.TextureDictionary.Item?.Textures.Items)
             {
                 textures.Add(tex);
-                hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't have the extension
+                hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't store the .dds extension
             }
 
 
@@ -1411,8 +1415,6 @@ namespace CodeX.Games.RDR1.RSC6
          * a different bone, allowing complex objects to render with a single draw call.
          * It also contains a shader group, which is an array of all shaders used by all
          * models within the drawable.
-         * 
-         * The only reason it derives from Base is so that the vptr is at a known location for resources.
          */
 
         public ulong BlockLength => 120;
@@ -2223,27 +2225,6 @@ namespace CodeX.Games.RDR1.RSC6
             AnimRotation = Rotation;
             AnimTranslation = Position;
             AnimScale = Scale;
-
-            //Let's write the unknown BoneIds in a text file
-            if (!Enum.IsDefined(typeof(Rsc6BoneIdEnum), BoneId))
-            {
-                var path = @"C:\Users\fumol\OneDrive\Bureau\boneids.txt";
-                var lines = File.ReadAllLines(path);
-
-                bool alreadyContains = false;
-                foreach (string line in lines)
-                {
-                    if (line.Contains(BoneId.ToString()))
-                    {
-                        alreadyContains = true;
-                        break;
-                    }
-                }
-
-                if (alreadyContains) return;
-                using var writer = File.AppendText(path);
-                writer.WriteLine($"{Name.ToUpper()} = {BoneId},");
-            }
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -2547,12 +2528,6 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_14h = reader.ReadUInt32();
             Unknown_18h = reader.ReadUInt32();
             Unknown_1Ch = reader.ReadUInt32();
-
-            //Tests
-            if (Unknown_10h != 0 || Unknown_14h != 0 || Unknown_18h != 0 || Unknown_1Ch != 0)
-            {
-                throw new Exception("Rsc6ShaderGroup: Unknown property");
-            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -3556,7 +3531,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         RDR1_1 = 0xAA1111111199A996, //Used for most drawables
         RDR1_2 = 0xAAEEEEEEEE99A996, //Used for terrain
-        RDR1_3 = 0x0000000000080000  //Used for grass patches
+        RDR1_3 = 0x0000000000080000  //Used for grass batches
     }
 
     public enum Rsc6LightmapTypes : uint
@@ -3564,6 +3539,14 @@ namespace CodeX.Games.RDR1.RSC6
         Lightmap,
         LightmapColorHDR,
         LightmapExpHDR
+    }
+
+    public enum Rsc6LodLevel : uint
+    {
+        HIGH = 0,
+        MEDIUM = 1,
+        LOW = 2,
+        VLOW = 3
     }
 
     [Flags] public enum Rsc6DoFs : uint //Degrees of freedom ({rotate,translate,scale} X {x,y,z}) and limits

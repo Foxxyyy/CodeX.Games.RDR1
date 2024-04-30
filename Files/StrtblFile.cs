@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Linq;
 using System.Numerics;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using CodeX.Core.Engine;
@@ -10,12 +11,10 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Collections;
 
 namespace CodeX.Games.RDR1.Files
 {
-    [TC(typeof(EXP))]
-    public partial class StrtblFile : DataBagPack
+    [TC(typeof(EXP))] public partial class StrtblFile : DataBagPack
     {
         public Rpf6FileEntry Entry { get; set; }
         public DataSchema Schema { get; set; }
@@ -112,13 +111,16 @@ namespace CodeX.Games.RDR1.Files
 
                     //Don't include this part if we're on the last string of this language
                     if (index == Languages[i].NumString - 1) continue;
-                    Languages[i].StringData[index].Character = r.ReadUInt32();
-                    Languages[i].StringData[index].X = r.ReadByte();
-                    Languages[i].StringData[index].Y = r.ReadByte();
-                    Languages[i].StringData[index].W = r.ReadByte();
-                    Languages[i].StringData[index].H = r.ReadByte();
-                    Languages[i].StringData[index].Baseline = r.ReadByte();
-                    Languages[i].StringData[index].AddWidth = r.ReadByte();
+                    Languages[i].StringData[index].FontTex = new Rsc6FontTexGlyph()
+                    {
+                        Character = r.ReadUInt32(),
+                        X = r.ReadByte(),
+                        Y = r.ReadByte(),
+                        W = r.ReadByte(),
+                        H = r.ReadByte(),
+                        Baseline = r.ReadByte(),
+                        AddWidth = r.ReadByte()
+                    };
                 }
             }
             Bag = CreateDataBag();
@@ -181,13 +183,13 @@ namespace CodeX.Games.RDR1.Files
                     writer.Write(strData.OffsetY);
 
                     if (index == language.NumString - 1) continue;
-                    writer.Write(strData.Character);
-                    writer.Write(strData.X);
-                    writer.Write(strData.Y);
-                    writer.Write(strData.W);
-                    writer.Write(strData.H);
-                    writer.Write(strData.Baseline);
-                    writer.Write(strData.AddWidth);
+                    writer.Write(strData.FontTex.Character);
+                    writer.Write(strData.FontTex.X);
+                    writer.Write(strData.FontTex.Y);
+                    writer.Write(strData.FontTex.W);
+                    writer.Write(strData.FontTex.H);
+                    writer.Write(strData.FontTex.Baseline);
+                    writer.Write(strData.FontTex.AddWidth);
                 }
             }
 
@@ -333,7 +335,6 @@ namespace CodeX.Games.RDR1.Files
             string[] identifiers = null;
             int index = 0;
 
-            var tet = 0;
             foreach (var obj in objects)
             {
                 if (obj is string[] arr)
@@ -351,10 +352,16 @@ namespace CodeX.Games.RDR1.Files
                             var values = bag.Objects.Values.ToArray();
                             var hash = (string)values[1];
                             var item = values.Length < 3 ? "" : (string)values[2];
-                            if (hash.StartsWith("0x"))
-                            { }
-                            dict[index].Add(new JenkHash(hash), item);
-                            tet++;
+
+                            if (hash.StartsWith("0x")) //Shouldn't happen I think
+                            {
+                                var hashValue = uint.Parse(hash[2..], NumberStyles.HexNumber);
+                                dict[index].Add(new JenkHash(hashValue), item);
+                            }
+                            else
+                            {
+                                dict[index].Add(new JenkHash(hash), item);
+                            }
                         }
                     }
                     index++;
@@ -405,6 +412,17 @@ namespace CodeX.Games.RDR1.Files
 
                         var strLength = str.Length;
                         var valueData = Encoding.Unicode.GetBytes(str);
+                        var fontTex = new Rsc6FontTexGlyph()
+                        {
+                            Character = id,
+                            X = 1,
+                            Y = 0,
+                            W = 0,
+                            H = 0,
+                            Baseline = 0,
+                            AddWidth = 0
+                        };
+
                         Languages[i].StringData[j] = new Rsc6StringTableData()
                         {
                             Length = strLength,
@@ -413,13 +431,7 @@ namespace CodeX.Games.RDR1.Files
                             Scale = new Vector2(1.0f, 1.0f),
                             OffsetX = 0,
                             OffsetY = 0,
-                            Character = id,
-                            X = 1,
-                            Y = 0,
-                            W = 0,
-                            H = 0,
-                            Baseline = 0,
-                            AddWidth = 0
+                            FontTex = fontTex
                         };
                     }
                 }
@@ -787,21 +799,12 @@ namespace CodeX.Games.RDR1.Files
         public int FontLength { get; set; } //fontLength
         public Rsc6StringTableData[] StringData { get; set; } //stringData
 
-        public string[] Strings
-        {
-            get
-            {
-                if (StringData == null) return null;
-                return StringData.Select(s => s.Value).ToArray();
-            }
-        }
-
         public Dictionary<JenkHash, string> Dict
         {
             get
             {
                 if (StringData == null) return null;
-                return StringData.ToDictionary(s => s.Character, s => s.Value);
+                return StringData.ToDictionary(s => s.FontTex.Character, s => s.Value);
             }
         }
 
@@ -814,23 +817,72 @@ namespace CodeX.Games.RDR1.Files
     [TC(typeof(EXP))] public class Rsc6StringTableData
     {
         public int Length { get; set; } //stringLength
-        public string Value { get; set; } //stringLength
+        public string Value { get; set; } //m_String
         public Vector2 Scale { get; set; } //m_Scale
         public byte OffsetX { get; set; } //m_OffsetX
         public byte OffsetY { get; set; } //m_OffsetY
-        public JenkHash Character { get; set; } //m_Character, used to link the string to its identifier
-        public byte X { get; set; } //m_X
-        public byte Y { get; set; } //m_Y
-        public byte W { get; set; } //m_W
-        public byte H { get; set; } //m_H
-        public byte Baseline { get; set; } //m_Baseline
-        public byte AddWidth { get; set; } //m_AddWidth
+        public Rsc6FontTexGlyph FontTex { get; set; }
 
         public byte[] ValueData; //For writing purpose
 
         public override string ToString()
         {
-            return Character.ToString();
+            return Value;
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6FontTexGlyph : MetaNode
+    {
+        public JenkHash Character { get; set; } //m_Character, used to link strings to identifiers, or serves as glyphs indices for fonts
+        public byte X { get; set; } //m_X, horizontal position
+        public byte Y { get; set; } //m_Y, vertical position
+        public byte W { get; set; } //m_W, width of the glyph
+        public byte H { get; set; } //m_H, height of the glyph
+        public byte Baseline { get; set; } //m_Baseline, for determining the vertical positioning of glyph within text
+        public byte AddWidth { get; set; } //m_AddWidth, additional width
+
+        public Vector4 Position
+        {
+            get => new(X, Y, W, H);
+            set
+            {
+                X = (byte)value.X;
+                Y = (byte)value.Y;
+                W = (byte)value.Z;
+                H = (byte)value.W;
+            }
+        }
+
+        public void Write(DataWriter writer)
+        {
+            writer.Write(Character);
+            writer.Write(X);
+            writer.Write(Y);
+            writer.Write(W);
+            writer.Write(H);
+            writer.Write(Baseline);
+            writer.Write(AddWidth);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Character = reader.ReadUInt32("Character");
+            Position = reader.ReadVector4("Position");
+            Baseline = reader.ReadByte("Baseline");
+            AddWidth = reader.ReadByte("AddWidth");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("Character", Character);
+            writer.WriteVector4("Position", Position);
+            writer.WriteByte("Baseline", Baseline);
+            writer.WriteByte("AddWidth", AddWidth);
+        }
+
+        public override string ToString()
+        {
+            return $"ID: {Character.Dec}, Position: {Position}";
         }
     }
 }
