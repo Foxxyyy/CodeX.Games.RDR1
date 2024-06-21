@@ -1,10 +1,9 @@
-﻿using CodeX.Core.Numerics;
-using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.RPF6;
-using System;
-using System.ComponentModel;
+﻿using System;
 using System.Linq;
 using System.Numerics;
+using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -110,9 +109,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public new void Read(MetaNodeReader reader)
         {
-            GridMin = Rpf6Crypto.ToYZX(reader.ReadVector4("GridMin"));
-            GridMax = Rpf6Crypto.ToYZX(reader.ReadVector4("GridMax"));
-            BoundSphere = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundSphere"));
+            GridMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMin"));
+            GridMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMax"));
+            BoundSphere = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
             Left = reader.ReadInt32("Left");
             Right = reader.ReadInt32("Right");
             Top = reader.ReadInt32("Top");
@@ -179,11 +178,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeForestGridCell : Rsc6Block, MetaNode //rage::speedTreeForestGridCell
+    public class Rsc6TreeForestGridCell : Rsc6BlockBase, MetaNode //rage::speedTreeForestGridCell
     {
-        public ulong BlockLength => 48;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 48;
         public Vector4 BoundSphere { get; set; } //m_BoundSphere, W is the max distance from the center to any instance
         public Rsc6ManagedArr<Rsc6PackedInstancePos> CombinedInstanceListPos { get; set; } //m_CombinedInstanceListPos
         public Rsc6ManagedArr<Rsc6InstanceMatrix> CombinedInstanceListMatrix { get; set; } //m_CombinedInstanceListMtx
@@ -191,7 +188,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //Padding
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             BoundSphere = reader.ReadVector4();
             CombinedInstanceListPos = reader.ReadArr<Rsc6PackedInstancePos>();
@@ -201,7 +198,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_2Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(BoundSphere);
             writer.WriteArr(CombinedInstanceListPos);
@@ -213,7 +210,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundSphere = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundSphere"));
+            BoundSphere = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
             CombinedInstanceListPos = new(reader.ReadNodeArray<Rsc6PackedInstancePos>("CombinedInstanceListPos"));
             CombinedInstanceListMatrix = new(reader.ReadNodeArray<Rsc6InstanceMatrix>("CombinedInstanceListMatrix"));
 
@@ -238,10 +235,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeForest : Rsc6FileBase, MetaNode //rage::TreeForest
+    public class Rsc6TreeForest : Rsc6BlockBaseMap, MetaNode //rage::TreeForest
     {
         public override ulong BlockLength => 96;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x04CA9264;
         public Rsc6Arr<uint> Trees { get; set; } //m_Trees - rage::instanceTreeData
         public Rsc6Arr<JenkHash> TreeHashes { get; set; } //m_TreeSourceHashes, different from TreeNames, they generate a hash based on the tree filename + seed + tree size
         public Rsc6PtrStr TreeNames { get; set; } //m_TreeDebugNames, fixed-size strings
@@ -263,7 +260,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             Trees = reader.ReadArr<uint>();
             TreeHashes = reader.ReadArr<JenkHash>();
             TreeNames = reader.ReadPtrStr(0x10);
@@ -285,8 +281,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x04CA9264);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteArr(Trees);
             writer.WriteArr(TreeHashes);
             writer.WritePtrStr(TreeNames, 0x10);
@@ -343,11 +338,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6PackedInstancePos : Rsc6Block, MetaNode //rage::speedTreePackedInstancePos
+    public class Rsc6PackedInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreePackedInstancePos
     {
-        public ulong BlockLength => 8;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 8;
         public ushort X { get; set; } //x
         public ushort Y { get; set; } //y
         public ushort Z { get; set; } //z
@@ -356,7 +349,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Vector3 Position;
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             X = reader.ReadUInt16();
             Y = reader.ReadUInt16();
@@ -365,7 +358,7 @@ namespace CodeX.Games.RDR1.RSC6
             Seed = reader.ReadByte();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt16(X);
             writer.WriteUInt16(Y);
@@ -418,7 +411,7 @@ namespace CodeX.Games.RDR1.RSC6
         public new void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            Transform = Rpf6Crypto.ToYZX(reader.ReadMatrix4x4("Transform"), true);
+            Transform = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Transform"), true);
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -549,12 +542,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeInstancePos : Rsc6Block, MetaNode //rage::speedTreeInstancePos
+    public class Rsc6TreeInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreeInstancePos
     {
-        public ulong BlockLength => 48;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 48;
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
         public Vector4 Position { get; set; } //m_vPosition, Position.W is the rotation in the Y axis, other axis are 0.0f (radians)
         public ushort Tilt { get; set; } //m_tilt
@@ -565,7 +555,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_20h { get; set; } = 0xCDCDCDCD; //Padding
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             InstanceBase = reader.ReadBlock<Rsc6TreeInstanceBase>();
             Position = reader.ReadVector4();
@@ -578,7 +568,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_20h = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteBlock(InstanceBase);
             writer.WriteVector4(Position);
@@ -594,7 +584,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             InstanceBase = reader.ReadNode<Rsc6TreeInstanceBase>("InstanceBase");
-            Position = Rpf6Crypto.ToYZX(reader.ReadVector4("Position"));
+            Position = Rpf6Crypto.ToXYZ(reader.ReadVector4("Position"));
             Tilt = reader.ReadUInt16("Tilt");
             Width = reader.ReadUInt16("Width");
             Rotation = reader.ReadByte("Rotation");
@@ -649,7 +639,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public enum Rsc6TreeInstanceFlags
+    [Flags] public enum Rsc6TreeInstanceFlags
     {
         FLAG_VISIBLE = (1 << 4),
         FLAG_BILLBOARD_ONLY = (1 << 5),

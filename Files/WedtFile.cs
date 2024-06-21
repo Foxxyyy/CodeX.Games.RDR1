@@ -1,5 +1,4 @@
 ﻿using CodeX.Core.Engine;
-using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 
@@ -9,14 +8,15 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6ExpressionDictionary Expressions;
-        public string Name;
-        public JenkHash Hash;
 
         public WedtFile(Rpf6FileEntry file) : base(file)
         {
             FileEntry = file;
-            Name = file?.NameLower;
-            Hash = JenkHash.GenHash(file?.NameLower ?? "");
+        }
+
+        public WedtFile(Rsc6ExpressionDictionary expressions) : base(null)
+        {
+            Expressions = expressions;
         }
 
         public override void Load(byte[] data)
@@ -31,12 +31,10 @@ namespace CodeX.Games.RDR1.Files
 
         public override byte[] Save()
         {
-            throw new System.NotImplementedException();
-        }
-
-        public override string ToString()
-        {
-            return Expressions.ToString();
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(Expressions);
+            byte[] data = writer.Build(11);
+            return data;
         }
     }
 }

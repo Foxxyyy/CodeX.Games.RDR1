@@ -12,13 +12,14 @@ using CodeX.Games.RDR1.RPF6;
 using ICSharpCode.SharpZipLib.Checksum;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
+using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6VisualDictionary : Rsc6FileBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6VisualDictionary : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 60;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x01908FF8;
         public uint Unknown_8h { get; set; } = 0x01876DE0; //0x01876DE0 (buildings & props) or 0x04A744AC (tiles)
         public uint Unknown_Ch { get; set; } //Always 0
         public uint ParentDictionary { get; set; } //Always 0
@@ -33,20 +34,17 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            //Loading textures before geometries so we can bind them properly -> ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
 
-            //Loading textures before geometries so we can bind them properly
-            //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
-
-            reader.Position += 32;
+            reader.Position += 40;
             WfdFile.TextureDictionary = TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
             DerivedTextures = reader.ReadPtr<Rsc6TextureDictionary>();
             Unknown_30h = reader.ReadUInt32();
             LODLevel = (Rsc6LodLevel)reader.ReadUInt32();
             Unknown_38h = reader.ReadUInt32();
-            reader.Position -= 52;
+            reader.Position -= 60;
 
+            base.Read(reader);
             Unknown_8h = reader.ReadUInt32();
             Unknown_Ch = reader.ReadUInt32();
             ParentDictionary = reader.ReadUInt32();
@@ -66,10 +64,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var fileName = Drawables.Items[0]?.Name ?? "";
             var textures = new List<Rsc6Texture>();
             var hashes = new List<JenkHash>();
-
             foreach (var item in Drawables.Items)
             {
                 foreach (var tex in item.ShaderGroup.Item.TextureDictionary.Item.Textures.Items)
@@ -87,8 +83,7 @@ namespace CodeX.Games.RDR1.RSC6
             };
             TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
 
-            writer.WriteUInt32(0x01908FF8);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(Unknown_Ch);
             writer.WriteUInt32(ParentDictionary);
@@ -98,19 +93,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtr(TextureDictionary);
             writer.WritePtr(DerivedTextures);
             writer.WriteUInt32(Unknown_30h);
-
-            if (fileName.Contains("_med"))
-                writer.WriteUInt32((uint)Rsc6LodLevel.MEDIUM);
-            else if (fileName.Contains("_vlow"))
-                writer.WriteUInt32((uint)Rsc6LodLevel.VLOW);
-            else
-                writer.WriteUInt32((uint)Rsc6LodLevel.HIGH);
-
+            writer.WriteUInt32((uint)LODLevel);
             writer.WriteUInt32(Unknown_38h);
         }
 
         public void Read(MetaNodeReader reader)
         {
+            LODLevel = reader.ReadEnum<Rsc6LodLevel>("LODLevel");
             Drawables = new(reader.ReadNodeArray<Rsc6Drawable>("Drawables"));
             Hashes = new(Drawables.Items.Select(d => new JenkHash(d.Name)).ToArray());
         }
@@ -118,29 +107,27 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteUInt32("@version", 0);
+            writer.WriteEnum("LODLevel", LODLevel);
             writer.WriteNodeArray("Drawables", Drawables.Items);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6FragDrawable : Rsc6FileBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6FragDrawable : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 16;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x00DDC0A0;
         public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; }
         public Rsc6Ptr<Rsc6Drawable> Drawable { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
+            //Loading textures before geometries so we can bind them properly -> ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
+
+            reader.Position += 12;
+            WfdFile.TextureDictionary = TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
+            reader.Position -= 16;
+
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
-
-            //Loading textures before geometries so we can bind them properly
-            //ReadAhead<rage::datOwner<rage::pgDictionary<rage::grcTexture>>>
-
-            reader.Position += 4;
-            TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
-            WfdFile.TextureDictionary = TextureDictionary;
-            reader.Position -= 8;
             Drawable = reader.ReadPtr<Rsc6Drawable>();
         }
 
@@ -155,7 +142,6 @@ namespace CodeX.Games.RDR1.RSC6
                 hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't store the .dds extension
             }
 
-
             var dict = new Rsc6TextureDictionary
             {
                 Textures = new Rsc6PtrArr<Rsc6Texture>(textures.ToArray()),
@@ -163,8 +149,7 @@ namespace CodeX.Games.RDR1.RSC6
             };
             TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
 
-            writer.WriteUInt32(0x00DDC0A0);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WritePtr(Drawable);
             writer.WritePtr(TextureDictionary);
         }
@@ -183,7 +168,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableLod : PieceLod, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6DrawableLod : PieceLod, IRsc6Block
     {
         public ulong BlockLength => 8;
         public ulong FilePosition { get; set; }
@@ -216,7 +201,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableGeometry : Mesh, Rsc6Block //rage::grmGeometry + rage::grmGeometryQB
+    [TC(typeof(EXP))] public class Rsc6DrawableGeometry : Mesh, IRsc6Block //rage::grmGeometry + rage::grmGeometryQB
     {
         /*
          * grmGeometryQB represents a "packet" of vertex data, which is the data sent down to the hardware for rendering.
@@ -323,7 +308,6 @@ namespace CodeX.Games.RDR1.RSC6
                             var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
                             var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
                             var np1 = FloatUtil.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N from RDR axis
-                            var pv1 = FloatUtil.Dec3NToVector4(np1);
                             BufferUtil.WriteUint(numArray, index + elemoffset, np1);
                             break;
                         case VertexElementFormat.Half2: //Scale terrain UVs
@@ -353,7 +337,15 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-            writer.WriteUInt32(wfd ? 0x00D3397C : VFT);
+            bool wft = writer.BlockList[0] is Rsc6Fragment;
+
+            if (wfd)
+                writer.WriteUInt32(0x00D3397C);
+            else if (wft)
+                writer.WriteUInt32(0x00EF397C);
+            else
+                writer.WriteUInt32(VFT);
+
             writer.WriteUInt32(Unknown_4h);
             writer.WriteUInt32(Unknown_8h);
             writer.WritePtr(VertexBuffer);
@@ -380,8 +372,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-            var min = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
-            var max = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            var min = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMin"));
+            var max = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMax"));
             BoundingBox = new BoundingBox(min, max);
             AABB = new BoundingBox4(BoundingBox);
             ShaderID = reader.ReadUInt16("ShaderID");
@@ -431,7 +423,7 @@ namespace CodeX.Games.RDR1.RSC6
                 FVF = fvf,
                 FVFSize = (byte)VertexStride,
                 ChannelCount = (byte)VertexLayout.ElementCount,
-                Types = Rsc6VertexDeclarationTypes.RDR1_1
+                Types = Rsc6VertexDeclarationTypes.DEFAULT
             };
 
             var ibuf = new Rsc6IndexBuffer
@@ -1089,7 +1081,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableModel : Model, Rsc6Block //rage::grmModel
+    [TC(typeof(EXP))] public class Rsc6DrawableModel : Model, IRsc6Block //rage::grmModel
     {
         /*
          * Base class for all new model code rendered by RAGE.
@@ -1132,11 +1124,6 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderMapping = reader.ReadRawArrItems(ShaderMapping, geocount);
             BoundsData = reader.ReadRawArrItems(BoundsData, geocount > 1 ? geocount + 1u : geocount);
 
-            for (int i = 0; i < BoundsData.Items.Length; i++)
-            {
-                BoundsData.Items[i] = Rpf6Crypto.ToZXY(BoundsData.Items[i]);
-            }
-
             var geoms = Geometries.Items;
             if (geoms != null)
             {
@@ -1170,7 +1157,15 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-            writer.WriteUInt32(wfd ? 0x00D30B04 : (uint)VFT);
+            bool wft = writer.BlockList[0] is Rsc6Fragment;
+
+            if (wfd)
+                writer.WriteUInt32(0x00D30B04);
+            else if (wft)
+                writer.WriteUInt32(0x00EF0B04);
+            else
+                writer.WriteUInt32((uint)VFT);
+
             writer.WritePtrArr(Geometries);
             writer.WriteRawArr(BoundsData);
             writer.WriteRawArr(ShaderMapping);
@@ -1190,8 +1185,8 @@ namespace CodeX.Games.RDR1.RSC6
             MatrixIndex = reader.ReadByte("BoneIndex");
             MatrixCount = reader.ReadByte("BoneCount");
 
-            var min = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin"));
-            var max = Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax"));
+            var min = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMin"));
+            var max = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMax"));
             BoundingBox = new BoundingBox(min, max);
             Geometries = new(reader.ReadNodeArray<Rsc6DrawableGeometry>("Geometries"));
 
@@ -1290,10 +1285,13 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
+            bool wft = writer.BlockList[0] is Rsc6Fragment;
             bool wsg = writer.BlockList[0] is Rsc6SectorGrass;
 
             if (wfd)
                 writer.WriteUInt32(0x00D34D6C);
+            else if (wft)
+                writer.WriteUInt32(0x00EF4D6C);
             else if (wsg)
                 writer.WriteUInt32(0x04A3E26C);
             else
@@ -1336,17 +1334,17 @@ namespace CodeX.Games.RDR1.RSC6
 
         public bool IsReadWrite()
         {
-            return (Flags & ((byte)Rsc6VertexBufferFlags.ReadWrite | (byte)Rsc6VertexBufferFlags.Dynamic)) != 0;
+            return (Flags & ((byte)Rsc6VertexBufferFlags.READ_WRITE | (byte)Rsc6VertexBufferFlags.DYNAMIC)) != 0;
         }
 
         public bool IsDynamic()
         {
-            return (Flags & (byte)Rsc6VertexBufferFlags.Dynamic) != 0;
+            return (Flags & (byte)Rsc6VertexBufferFlags.DYNAMIC) != 0;
         }
 
         public bool IsPreallocatedMemory()
         {
-            return (Flags & (byte)Rsc6VertexBufferFlags.PreallocatedMemory) != 0;
+            return (Flags & (byte)Rsc6VertexBufferFlags.PREALLOCATED_MEMORY) != 0;
         }
 
         public override string ToString()
@@ -1357,13 +1355,13 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6IndexBuffer : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6IndexBuffer : Rsc6BlockBase //rage::grcIndexBuffer
     {
         public override ulong BlockLength => 48;
         public uint VFT { get; set; } = 0x01858D60;
-        public uint IndicesCount { get; set; }
+        public uint IndicesCount { get; set; } //m_IndexCount
         public uint Unknown_Ch { get; set; } //Always 0?
-        public Rsc6RawArr<ushort> Indices { get; set; }
+        public Rsc6RawArr<ushort> Indices { get; set; } //m_IndexData
         public uint Unknown_10h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_14h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_18h { get; set; } = 0xCDCDCDCD; //Padding
@@ -1379,7 +1377,6 @@ namespace CodeX.Games.RDR1.RSC6
             IndicesCount = reader.ReadUInt32();
             Indices = reader.ReadRawArrPtr<ushort>();
             Unknown_Ch = reader.ReadUInt32();
-            Indices = reader.ReadRawArrItems(Indices, IndicesCount);
             Unknown_10h = reader.ReadUInt32();
             Unknown_14h = reader.ReadUInt32();
             Unknown_18h = reader.ReadUInt32();
@@ -1388,6 +1385,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_24h = reader.ReadUInt32();
             Unknown_28h = reader.ReadUInt32();
             Unknown_2Ch = reader.ReadUInt32();
+            Indices = reader.ReadRawArrItems(Indices, IndicesCount);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -1407,7 +1405,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Drawable : Piece, Rsc6Block //rmcDrawable (grmShaderGroup + crSkeletonData + rmcLodGroup)
+    [TC(typeof(EXP))] public class Rsc6Drawable : Piece, IRsc6Block //rmcDrawable (grmShaderGroup + crSkeletonData + rmcLodGroup)
     {
         /*
          * An rmcDrawable contains up to four levels of detail; each level of detail
@@ -1420,8 +1418,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong BlockLength => 120;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
-
-        public ulong VFT { get; set; } = 0x01908F7C;
+        public uint VFT { get; set; } = 0x01908F7C;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
         public Rsc6Ptr<Rsc6ShaderGroup> ShaderGroup { get; set; } //rage::grmShaderGroup
         public Rsc6Ptr<Rsc6SkeletonData> SkeletonRef { get; set; } //rage::crSkeletonData
@@ -1443,6 +1440,8 @@ namespace CodeX.Games.RDR1.RSC6
         public float BoundingSphereRadius { get; set; } //m_CullRadius
         public uint PpuOnly { get; set; } = 0; //m_PpuOnly, 0 or 1 if PPU is set as default processor
         public JenkHash NameHash { get; set; }
+
+        public bool UseFragmentPointers { get; set; } //To point to the fragment's skeleton
 
         public virtual void Read(Rsc6DataReader reader)
         {
@@ -1489,15 +1488,38 @@ namespace CodeX.Games.RDR1.RSC6
 
             UpdateBounds();
             BoundingSphere = new BoundingSphere(BoundingBox.Center, BoundingSphereRadius);
+
+            //Approximative fix for displaying bounds
+            if (BoundingCenter.Z > 0.05f && !Name.EndsWith("x"))
+                Rsc6Fragment.SkinnedHeightPos = (BoundingCenter.Z > 0.6f) ? 1.0f : ((BoundingCenter.Z < 0.4f) ? 0.0f : BoundingCenter.Z + 0.1f);
+            else
+                Rsc6Fragment.SkinnedHeightPos = 0.0f;
         }
 
         public virtual void Write(Rsc6DataWriter writer)
         {
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-            writer.WriteUInt32(wfd ? 0x00E63DF0 : (uint)VFT);
+            bool wft = writer.BlockList[0] is Rsc6Fragment;
+
+            if (wfd)
+                writer.WriteUInt32(0x00E63DF0u);
+            else if (wft)
+                writer.WriteUInt32(0x00F230C0);
+            else
+                writer.WriteUInt32(VFT);
+
             writer.WritePtr(BlockMap);
-            writer.WritePtr(ShaderGroup);
-            writer.WritePtr(SkeletonRef);
+            if (UseFragmentPointers)
+            {
+                writer.WritePtrEmbed(ShaderGroup, ShaderGroup, 0);
+                writer.WritePtrEmbed(SkeletonRef, SkeletonRef, 0);
+            }
+            else
+            {
+                writer.WritePtr(ShaderGroup);
+                writer.WritePtr(SkeletonRef);
+            }
+
             writer.WriteVector4(BoundingCenter);
             writer.WriteVector4(BoundingBoxMin);
             writer.WriteVector4(BoundingBoxMax);
@@ -1519,12 +1541,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-            var nan = Rpf6Crypto.GetNaN();
+            var nan = Rpf6Crypto.NaN();
             Name = reader.ReadString("Name");
-            BoundingCenter = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingSphereCenter")), nan);
+            BoundingCenter = new Vector4(Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingSphereCenter")), nan);
             BoundingSphereRadius = reader.ReadSingle("BoundingSphereRadius");
-            BoundingBoxMin = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMin")), nan);
-            BoundingBoxMax = new Vector4(Rpf6Crypto.ToYZX(reader.ReadVector3("BoundingBoxMax")), nan);
+            BoundingBoxMin = new Vector4(Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMin")), nan);
+            BoundingBoxMax = new Vector4(Rpf6Crypto.ToXYZ(reader.ReadVector3("BoundingBoxMax")), nan);
             LodDistHigh = reader.ReadSingle("LodDistHigh");
             LodDistMed = reader.ReadSingle("LodDistMed");
             LodDistLow = reader.ReadSingle("LodDistLow");
@@ -1576,15 +1598,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteNode("LodLow", LodLow.Item);
             writer.WriteNode("LodVlow", LodVlow.Item);
             writer.WriteUInt32("PpuOnly", PpuOnly);
-        }
-
-        public bool IsSkinned()
-        {
-            foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
-            {
-                if (model.SkinFlag == 1 && !Name.Contains("p_gen")) return true;
-            }
-            return false;
         }
 
         public void AssignShaders()
@@ -1738,7 +1751,82 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SkeletonData : Skeleton, Rsc6Block //rage::crSkeletonData
+    [TC(typeof(EXP))] public class Rsc6Skeleton : IRsc6Block, MetaNode //rage::crSkeleton
+    {
+        /*
+         * Instance of a particular skeleton.
+         * Holds the current pose information of a particular character in a game.
+         * Sets the local matrices of all the crBones, and then computes the current object matrices for each bone.
+         */
+
+        public ulong BlockLength => 40;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+
+        public uint Unknown_0h { get; set; } //Always 0
+        public Rsc6Ptr<Rsc6SkeletonData> Skeleton { get; set; } //m_SkeletonData, same as Fragment.Drawable.SkeletonRef
+        public Rsc6RawArr<Matrix4x4> ParentMtx { get; set; } //m_ParentMtx, always NULL
+        public Rsc6RawArr<Matrix4x4> Locals { get; set; } //m_Locals, local matrices array
+        public int NumBones { get; set; } //m_NumBones
+        public ushort UpdateBufferIdx { get; set; } //m_UpdateBufferIdx
+        public ushort RenderBufferIdx { get; set; } //m_RenderBufferIdx
+        public Rsc6ManagedArr<Rsc6MatrixBuffer> GlobalMtxBuffers { get; set; } //m_GlobalMtxBuffers
+        public uint Unknown_20h { get; set; } //Always 0
+        public uint Unknown_24h { get; set; } //Always 0
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Unknown_0h = reader.ReadUInt32();
+            Skeleton = reader.ReadPtr<Rsc6SkeletonData>();
+            ParentMtx = reader.ReadRawArrPtr<Matrix4x4>();
+            Locals = reader.ReadRawArrPtr<Matrix4x4>();
+            NumBones = reader.ReadInt32();
+            UpdateBufferIdx = reader.ReadUInt16();
+            RenderBufferIdx = reader.ReadUInt16();
+            GlobalMtxBuffers = reader.ReadArr<Rsc6MatrixBuffer>();
+            Unknown_20h = reader.ReadUInt32();
+            Unknown_24h = reader.ReadUInt32();
+
+            ParentMtx = reader.ReadRawArrItems(ParentMtx, (uint)NumBones);
+            Locals = reader.ReadRawArrItems(Locals, (uint)NumBones);
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            var skel = writer.BlockList.OfType<Rsc6SkeletonData>().FirstOrDefault();
+            writer.WriteUInt32(Unknown_0h);
+            writer.WritePtrEmbed(skel, skel, 0);
+            writer.WriteRawArr(ParentMtx);
+            writer.WriteRawArr(Locals);
+            writer.WriteInt32(NumBones);
+            writer.WriteUInt16(UpdateBufferIdx);
+            writer.WriteUInt16(RenderBufferIdx);
+            writer.WriteArr(GlobalMtxBuffers);
+            writer.WriteUInt32(Unknown_20h);
+            writer.WriteUInt32(Unknown_24h);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            ParentMtx = new(reader.ReadMatrix4x4Array("ParentMtx"));
+            Locals = new(reader.ReadMatrix4x4Array("Locals"));
+            UpdateBufferIdx = reader.ReadUInt16("UpdateBufferIdx");
+            RenderBufferIdx = reader.ReadUInt16("RenderBufferIdx");
+            GlobalMtxBuffers = new(reader.ReadNodeArray<Rsc6MatrixBuffer>("GlobalMtxBuffers"));
+            NumBones = ParentMtx.Items?.Length ?? 0;
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteMatrix4x4Array("ParentMtx", ParentMtx.Items);
+            writer.WriteMatrix4x4Array("Locals", Locals.Items);
+            writer.WriteUInt16("UpdateBufferIdx", UpdateBufferIdx);
+            writer.WriteUInt16("RenderBufferIdx", RenderBufferIdx);
+            writer.WriteNodeArray("GlobalMtxBuffers", GlobalMtxBuffers.Items);
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6SkeletonData : Skeleton, IRsc6Block //rage::crSkeletonData
     {
         /*
          * Holds data that applies to all crSkeleton's of a particular type.
@@ -2132,7 +2220,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoneData : Bone, Rsc6Block //rage::crBoneData
+    [TC(typeof(EXP))] public class Rsc6BoneData : Bone, IRsc6Block //rage::crBoneData
     {
         /*
          * The crBoneData holds data that is general to all instances of a particular matrix that belongs
@@ -2278,13 +2366,13 @@ namespace CodeX.Games.RDR1.RSC6
             Index = reader.ReadInt32("Index");
             BoneId = (Rsc6BoneIdEnum)reader.ReadUInt16("BoneId");
             MirrorIndex = reader.ReadUInt16("MirrorIndex");
-            DefaultTranslation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultTranslation"));
-            DefaultRotation = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultRotation"));
-            DefaultRotationQuat = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultRotationQuat")).ToQuaternion();
-            DefaultScale = Rpf6Crypto.ToYZX(reader.ReadVector4("DefaultScale"));
-            GlobalOffset = Rpf6Crypto.ToYZX(reader.ReadVector4("GlobalOffset"));
-            RotationMin = Rpf6Crypto.ToYZX(reader.ReadVector4("RotationMin"));
-            RotationMax = Rpf6Crypto.ToYZX(reader.ReadVector4("RotationMax"));
+            DefaultTranslation = Rpf6Crypto.ToXYZ(reader.ReadVector4("DefaultTranslation"));
+            DefaultRotation = Rpf6Crypto.ToXYZ(reader.ReadVector4("DefaultRotation"));
+            DefaultRotationQuat = Rpf6Crypto.ToXYZ(reader.ReadVector4("DefaultRotationQuat")).ToQuaternion();
+            DefaultScale = Rpf6Crypto.ToXYZ(reader.ReadVector4("DefaultScale"));
+            GlobalOffset = Rpf6Crypto.ToXYZ(reader.ReadVector4("GlobalOffset"));
+            RotationMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("RotationMin"));
+            RotationMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("RotationMax"));
             JointData = reader.ReadUInt32("JointData");
             SiblingIndex = reader.ReadInt32("SiblingIndex");
             ChildIndex = reader.ReadInt32("ChildIndex");
@@ -2508,10 +2596,38 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
+    [TC(typeof(EXP))] public class Rsc6MatrixBuffer : IRsc6Block, MetaNode
+    {
+        public ulong BlockLength => 8;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public Rsc6Arr<Matrix4x4> MtxBuffers { get; set; }
+
+        public void Read(Rsc6DataReader reader)
+        {
+            MtxBuffers = reader.ReadArr<Matrix4x4>();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteArr(MtxBuffers);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            MtxBuffers = new(reader.ReadMatrix4x4Array("MtxBuffers"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteMatrix4x4Array("MtxBuffers", MtxBuffers.Items);
+        }
+    }
+
     [TC(typeof(EXP))] public class Rsc6ShaderGroup : Rsc6BlockBase, MetaNode //rage::grmShaderGroup
     {
         public override ulong BlockLength => 32;
-        public uint VFT { get; set; } = 0x0184A26C;
+        public uint VFT { get; set; } = 0x00EEB23C;
         public Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary { get; set; } //m_TextureDictionary, always NULL
         public Rsc6PtrArr<Rsc6ShaderFX> Shaders { get; set; } //m_Shaders
         public uint Unknown_10h { get; set; } //m_ShaderGroupVars[]
@@ -2532,8 +2648,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-            writer.WriteUInt32(wfd ? 0x00EEB23C : VFT);
+            bool alt = (writer.BlockList[0] is Rsc6FragDrawable) || (writer.BlockList[0] is Rsc6Fragment);
+            writer.WriteUInt32(alt ? VFT : 0x0184A26C);
             writer.WriteUInt32(0); //Unused
             writer.WritePtrArr(Shaders);
             writer.WriteUInt32(Unknown_10h);
@@ -2644,11 +2760,21 @@ namespace CodeX.Games.RDR1.RSC6
             Rsc6TextureBase texture = null;
             if (Texture != null)
             {
-                object block = writer.BlockList[0];
-                if (block is Rsc6FragDrawable wfd)
-                    texture = wfd.TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                var tex = WfdFile.TextureDictionary.Item;
+                if (tex == null)
+                {
+
+                }
                 else
-                    texture = ((Rsc6VisualDictionary)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                {
+                    object block = writer.BlockList[0];
+                    if (block is Rsc6FragDrawable wfd)
+                        texture = wfd.TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                    else if (block is Rsc6Fragment wft)
+                        texture = wft.Textures.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                    else
+                        texture = ((Rsc6VisualDictionary)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                }
             }
 
             switch (DataType)
@@ -3512,13 +3638,6 @@ namespace CodeX.Games.RDR1.RSC6
         CBuffer = 1,
     }
 
-    public enum Rsc6VertexBufferFlags : byte
-    {
-        Dynamic = 1 << 0,
-        PreallocatedMemory = 1 << 1,
-        ReadWrite = 1 << 2
-    }
-
     public enum Rsc6VertexBufferType : byte
     {
         DONT_TRIPPLE_BUFFER = 0,
@@ -3529,16 +3648,10 @@ namespace CodeX.Games.RDR1.RSC6
 
     public enum Rsc6VertexDeclarationTypes : ulong
     {
-        RDR1_1 = 0xAA1111111199A996, //Used for most drawables
-        RDR1_2 = 0xAAEEEEEEEE99A996, //Used for terrain
-        RDR1_3 = 0x0000000000080000  //Used for grass batches
-    }
-
-    public enum Rsc6LightmapTypes : uint
-    {
-        Lightmap,
-        LightmapColorHDR,
-        LightmapExpHDR
+        DEFAULT = 0xAA1111111199A996,
+        TERRAIN_TILE = 0xAAEEEEEEEE99A996,
+        GRASS_BATCH = 0x0000000000080000,
+        CLOTH = 0x0700000077097977
     }
 
     public enum Rsc6LodLevel : uint
@@ -3547,6 +3660,13 @@ namespace CodeX.Games.RDR1.RSC6
         MEDIUM = 1,
         LOW = 2,
         VLOW = 3
+    }
+
+    [Flags] public enum Rsc6VertexBufferFlags : byte
+    {
+        DYNAMIC = 1 << 0,
+        PREALLOCATED_MEMORY = 1 << 1,
+        READ_WRITE = 1 << 2
     }
 
     [Flags] public enum Rsc6DoFs : uint //Degrees of freedom ({rotate,translate,scale} X {x,y,z}) and limits

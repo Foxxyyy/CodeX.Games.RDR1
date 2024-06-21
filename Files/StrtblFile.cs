@@ -482,23 +482,29 @@ namespace CodeX.Games.RDR1.Files
 
         public static string GetLanguageFromIndex(int index)
         {
+            /*
+             * Flash languages abbreviations:
+             * brplu = br + pl + ru
+             * efigs = en + fr + it + de + es
+            */
+
             string name = string.Empty;
             switch (index)
             {
-                case 0: name = "English"; break;
-                case 1: name = "Spanish"; break;
-                case 2: name = "French"; break;
-                case 3: name = "German"; break;
-                case 4: name = "Italian"; break;
-                case 5: name = "Japanese"; break;
-                case 6: name = "Chinese-traditional"; break;
-                case 7: name = "Chinese-simplified"; break;
-                case 8: name = "Korean"; break;
+                case 0: name = "English"; break; //en
+                case 1: name = "Spanish"; break; //es
+                case 2: name = "French"; break; //fr
+                case 3: name = "German"; break; //de
+                case 4: name = "Italian"; break; //it
+                case 5: name = "Japanese"; break; //jp
+                case 6: name = "Chinese-traditional"; break; //cht
+                case 7: name = "Chinese-simplified"; break; //chs
+                case 8: name = "Korean"; break; //ko
                 case 9: name = "Spanish-spain"; break;
-                case 10: name = "Spanish-mexico"; break;
-                case 11: name = "Portuguese"; break;
-                case 12: name = "Polish"; break;
-                case 13: name = "Russian"; break;
+                case 10: name = "Spanish-mexico"; break; //mx
+                case 11: name = "Portuguese"; break; //bp
+                case 12: name = "Polish"; break; //pl
+                case 13: name = "Russian"; break; //ru
             }
             return name;
         }
@@ -804,7 +810,7 @@ namespace CodeX.Games.RDR1.Files
             get
             {
                 if (StringData == null) return null;
-                return StringData.ToDictionary(s => s.FontTex.Character, s => s.Value);
+                return StringData.Where(s => s.FontTex != null).ToDictionary(s => s.FontTex.Character, s => s.Value);
             }
         }
 
@@ -817,10 +823,10 @@ namespace CodeX.Games.RDR1.Files
     [TC(typeof(EXP))] public class Rsc6StringTableData
     {
         public int Length { get; set; } //stringLength
-        public string Value { get; set; } //m_String
-        public Vector2 Scale { get; set; } //m_Scale
-        public byte OffsetX { get; set; } //m_OffsetX
-        public byte OffsetY { get; set; } //m_OffsetY
+        public string Value { get; set; } //m_String, text that is displayed by the game
+        public Vector2 Scale { get; set; } //m_Scale, adjusts the text size
+        public byte OffsetX { get; set; } //m_OffsetX, adjust the X location of the text
+        public byte OffsetY { get; set; } //m_OffsetY, adjust the Y location of the text
         public Rsc6FontTexGlyph FontTex { get; set; }
 
         public byte[] ValueData; //For writing purpose

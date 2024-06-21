@@ -11,6 +11,7 @@ using System.Xml;
 using CodeX.Core.Numerics;
 using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RSC6;
+using System.ComponentModel;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -227,19 +228,26 @@ namespace CodeX.Games.RDR1.RPF6
             return BitConverter.ToSingle(data, 0);
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Vector3 ToZXY(Vector3 vec)
         {
-            return new Vector3(vec.Z, vec.X, vec.Y);
+            var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
+            var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
+            var z = float.IsNaN(vec.Z) ? 0.0f : vec.Z;
+            return new Vector3(z, x, y);
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Vector4 ToZXY(Vector4 vec)
         {
-            return new Vector4(vec.Z, vec.X, vec.Y, vec.W);
+            var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
+            var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
+            var z = float.IsNaN(vec.Z) ? 0.0f : vec.Z;
+            var w = float.IsNaN(vec.W) ? 0.0f : vec.W;
+            return new Vector4(z, x, y, w);
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static BoundingBox4 ToZXY(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
@@ -250,23 +258,34 @@ namespace CodeX.Games.RDR1.RPF6
             return new BoundingBox4(newBB);
         }
 
-        //Swap the axis from XYZ to ZXY
-        public static BoundingBox4[] ToZXY(BoundingBox4[] bb)
+        ///<summary>Swap the axis from ZXY to XYZ</summary>
+        public static BoundingBox4 ToXYZ(BoundingBox4 bb)
+        {
+            var newBB = new BoundingBox()
+            {
+                Minimum = ToXYZ(bb.Min.XYZ()),
+                Maximum = ToXYZ(bb.Max.XYZ())
+            };
+            return new BoundingBox4(newBB);
+        }
+
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
+        public static BoundingBox4[] ToXYZ(BoundingBox4[] bb)
         {
             for (int i = 0; i < bb.Length; i++)
             {
-                bb[i] = ToZXY(bb[i]);
+                bb[i] = ToXYZ(bb[i]);
             }
             return bb;
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Quaternion ToZXY(Quaternion quat)
         {
             return new Quaternion(quat.Z, quat.X, quat.Y, quat.W);
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Matrix3x4 ToZXY(Matrix3x4 m)
         {
             m.Translation = ToZXY(m.Translation);
@@ -274,7 +293,19 @@ namespace CodeX.Games.RDR1.RPF6
             return m;
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from ZXY to XYZ</summary>
+        public static Matrix3x4 ToXYZ(Matrix3x4 m, bool write = false)
+        {
+            var r1 = ToXYZ(m.Row1);
+            var r2 = ToXYZ(m.Row2);
+            var r3 = ToXYZ(m.Row3);
+            r1.W = write ? NaN() : (float.IsNaN(r1.W) ? 0.0f : r1.W);
+            r2.W = write ? NaN() : (float.IsNaN(r2.W) ? 0.0f : r2.W);
+            r3.W = write ? NaN() : (float.IsNaN(r3.W) ? 0.0f : r3.W);
+            return new Matrix3x4(r1, r2, r3);
+        }
+
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Matrix3x4[] ToZXY(Matrix3x4[] m)
         {
             for (int i = 0; i < m.Length; i++)
@@ -284,15 +315,25 @@ namespace CodeX.Games.RDR1.RPF6
             return m;
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from ZXY to XYZ</summary>
+        public static Matrix3x4[] ToXYZ(Matrix3x4[] m, bool write = false)
+        {
+            if (m == null) return null;
+            for (int i = 0; i < m.Length; i++)
+            {
+                m[i] = ToXYZ(m[i], write);
+            }
+            return m;
+        }
+
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
         {
-            var m14 = write ? GetNaN() : m.M14;
-            var m24 = write ? GetNaN() : m.M24;
-            var m34 = write ? GetNaN() : m.M34;
-            var m44 = write ? GetNaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
+            var m14 = write ? NaN() : (float.IsNaN(m.M14) ? 0.0f : m.M14);
+            var m24 = write ? NaN() : (float.IsNaN(m.M24) ? 0.0f : m.M24);
+            var m34 = write ? NaN() : (float.IsNaN(m.M34) ? 0.0f : m.M34);
+            var m44 = write ? NaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
             var translation = m.Translation;
-            m.Decompose(out var scale, out var rot, out var trans);
 
             return new Matrix4x4(
                 m.M11, m.M12, m.M13, m14,
@@ -302,13 +343,13 @@ namespace CodeX.Games.RDR1.RPF6
             );
         }
 
-        //Swap the axis from XYZ to YZX
-        public static Matrix4x4 ToYZX(Matrix4x4 m, bool write = false)
+        ///<summary>Swap the axis from ZXY to XYZ</summary>
+        public static Matrix4x4 ToXYZ(Matrix4x4 m, bool write = false)
         {
-            var m14 = write ? GetNaN() : m.M14;
-            var m24 = write ? GetNaN() : m.M24;
-            var m34 = write ? GetNaN() : m.M34;
-            var m44 = write ? GetNaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
+            var m14 = write ? NaN() : (float.IsNaN(m.M14) ? 0.0f : m.M14);
+            var m24 = write ? NaN() : (float.IsNaN(m.M24) ? 0.0f : m.M24);
+            var m34 = write ? NaN() : (float.IsNaN(m.M34) ? 0.0f : m.M34);
+            var m44 = write ? NaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
             var translation = m.Translation;
 
             return new Matrix4x4(
@@ -319,7 +360,7 @@ namespace CodeX.Games.RDR1.RPF6
             );
         }
 
-        //Swap the axis from XYZ to ZXY
+        ///<summary>Swap the axis from XYZ to ZXY</summary>
         public static Matrix4x4[] ToZXY(Matrix4x4[] m)
         {
             for (int i = 0; i < m.Length; i++)
@@ -329,14 +370,60 @@ namespace CodeX.Games.RDR1.RPF6
             return m;
         }
 
-        public static Vector3 ToYZX(Vector3 vector)
+        ///<summary>Swap the axis from ZXY to XYZ</summary>
+        public static Matrix4x4[] ToXYZ(Matrix4x4[] m, bool write = false)
+        {
+            if (m == null) return null;
+            for (int i = 0; i < m.Length; i++)
+            {
+                m[i] = ToXYZ(m[i], write);
+            }
+            return m;
+        }
+
+        ///<summary>
+        ///Converts a <see cref="System.Numerics.Vector3" /> from ZXY to XYZ format.
+        ///</summary>
+        ///<param name="vector">The input Vector3 in ZXY format.</param>
+        ///<returns>A new Vector3 in XYZ format.</returns>
+        public static Vector3 ToXYZ(Vector3 vector)
         {
             return new Vector3(vector.Y, vector.Z, vector.X);
         }
 
-        public static Vector4 ToYZX(Vector4 vector, bool wNaN = false)
+        ///<summary>
+        ///Converts a <see cref="System.Numerics.Vector4" /> from ZXYW to XYZW format.
+        ///</summary>
+        ///<param name="vector">The input Vector4 in ZXYW format.</param>
+        ///<returns>A new Vector4 in XYZW format.</returns>
+        public static Vector4 ToXYZ(Vector4 vector)
         {
-            return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
+            return new Vector4(vector.Y, vector.Z, vector.X, (vector.W == 0.0f) ? NaN() : vector.W);
+        }
+
+        public static Vector2 Half2ToVector2(Half2 value)
+        {
+            return new Vector2((float)value.X, (float)value.Y);
+        }
+
+        public static Vector4 Half4ToVector4(Half4 value)
+        {
+            return new Vector4((float)value.X, (float)value.Y, (float)value.Z, (float)value.W);
+        }
+
+        ///<summary>
+        ///Converts a <see cref="System.Numerics.Vector4" />[] from ZXYW to XYZW format.
+        ///</summary>
+        ///<param name="vector">The input Vector4[] in ZXYW format.</param>
+        ///<returns>A new Vector4[] in XYZW format.</returns>
+        public static Vector4[] ToXYZ(Vector4[] vector)
+        {
+            if (vector == null) return null;
+            for (int i = 0; i < vector.Length; i++)
+            {
+                vector[i] = ToXYZ(vector[i]);
+            }
+            return vector;
         }
 
         public static Vector4 GetXmlVector4(XmlNode node, string name)
@@ -345,7 +432,13 @@ namespace CodeX.Games.RDR1.RPF6
             return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
         }
 
-        //Swap the axis and writes a Vector3 at the given offset in a buffer
+        ///<summary>
+        ///Swaps the axis and writes a <see cref="System.Numerics.Vector3" /> at the given offset in a buffer
+        ///</summary>
+        ///<param name="vec">The Vector3 to be written.</param>
+        ///<param name="buffer">The buffer to write to.</param>
+        ///<param name="offset">The offset in the buffer where writing starts.</param>
+        ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
         public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
         {
             var x = BitConverter.GetBytes(vec.X);
@@ -366,7 +459,13 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        //Swap the axis and writes a Vector4 at the given offset in a buffer
+        ///<summary>
+        ///Swaps the axis and writes a <see cref="System.Numerics.Vector4" /> at the given offset in a buffer
+        ///</summary>
+        ///<param name="vec">The Vector4 to be written.</param>
+        ///<param name="buffer">The buffer to write to.</param>
+        ///<param name="offset">The offset in the buffer where writing starts.</param>
+        ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
         public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
         {
             if (float.IsNaN(vec.W))
@@ -395,13 +494,24 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        //Rescale Half2 texcoords (used for the terrain tiles)
+        ///<summary>
+        ///Rescales <see cref="CodeX.Core.Numerics.Half2" /> values (used for #vd terrain resources)
+        ///</summary>
+        ///<param name="val">The Half2 value to be rescaled.</param>
+        ///<param name="scale">The scaling factor.</param>
+        ///<returns>A new <see cref="Vector2" /> with the rescaled values.</returns>
         public static Vector2 RescaleHalf2(Half2 val, float scale)
         {
             return new Half2((float)val.X * scale, (float)val.Y * scale);
         }
 
-        //Reads UShort2N texcoords and rescale the values depending of the current model LOD
+        ///<summary>
+        ///Reads UShort2N values and rescales them depending of the LOD level
+        ///</summary>
+        ///<param name="buffer">The buffer containing the UShort2N values.</param>
+        ///<param name="offset">The offset in the buffer where the UShort2N values start.</param>
+        ///<param name="highLOD">Indicates if high LOD (Level of Detail) scaling should be applied.</param>
+        ///<returns>An array of rescaled float values.</returns>
         public static float[] ReadRescaleUShort2N(byte[] buffer, int offset, bool highLOD)
         {
             var xBuf = BufferUtil.ReadArray<byte>(buffer, offset, 2);
@@ -412,8 +522,8 @@ namespace CodeX.Games.RDR1.RPF6
             float[] values;
             if (!highLOD)
             {
-                xVal *= 2f;
-                yVal *= 2f;
+                xVal *= 2.0f;
+                yVal *= 2.0f;
                 values = new float[2] { float.NaN, float.NaN };
             }
             else
@@ -421,24 +531,26 @@ namespace CodeX.Games.RDR1.RPF6
                 values = new float[2] { xVal, yVal };
             }
 
-            //We can write the values anyway, for 'resource_0' they will be overwritten later...
             BufferUtil.WriteArray(buffer, offset, BitConverter.GetBytes((ushort)(xVal / 3.05185094e-005f)));
             BufferUtil.WriteArray(buffer, offset + 2, BitConverter.GetBytes((ushort)(yVal / 3.05185094e-005f)));
             return values;
         }
 
-        //Creates a Colour from a string representing RGB values, ie "255, 255, 255"
+        ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>
         public static Colour ParseRGBString(string rgbString)
         {
             string[] rgbValues = rgbString.Split(',');
-            if (rgbValues.Length == 3 && int.TryParse(rgbValues[0], out int red) && int.TryParse(rgbValues[1], out int green) && int.TryParse(rgbValues[2], out int blue))
+            if (rgbValues.Length == 3
+                && int.TryParse(rgbValues[0], out int red)
+                && int.TryParse(rgbValues[1], out int green)
+                && int.TryParse(rgbValues[2], out int blue))
             {
                 return new Colour(red, green, blue);
             }
             return Colour.Red;
         }
 
-        //A hacky function to adjust the bounds correctly for fragments, used for the prefabs
+        ///<summary>A hacky function to adjust the bounds for fragments, used in the prefabs.</summary>
         public static void ResizeBoundsForPeds(Piece piece)
         {
             if (piece == null) return;
@@ -452,7 +564,7 @@ namespace CodeX.Games.RDR1.RPF6
             piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
         }
 
-        //Convert a Vector4 to a byte array
+        ///<summary>Convert a <see cref="System.Numerics.Vector4" /> to a <see cref="System.Byte" />[].</summary>
         public static byte[] Vector4ToByteArray(Vector4 vector)
         {
             var buffer = new byte[16];
@@ -466,7 +578,7 @@ namespace CodeX.Games.RDR1.RPF6
             return buffer;
         }
 
-        //Checks if a specified value is present in an enum
+        ///<summary>Checks if a specified value is present in an enum.</summary>
         public static bool IsDefinedInEnumRange<TEnum>(byte value) where TEnum : Enum
         {
             foreach (byte enumValue in Enum.GetValues(typeof(TEnum)))
@@ -479,34 +591,149 @@ namespace CodeX.Games.RDR1.RPF6
             return false;
         }
 
-        //Returns NaN as 0x0100807F, (float.NaN = 0x0000C0FF)
-        public static float GetNaN()
+        ///<summary>Returns NaN as 0x0100807F (float.NaN = 0x0000C0FF).</summary>
+        public static float NaN()
         {
             return BitConverter.ToSingle(BitConverter.GetBytes(0x7F800001), 0);
         }
 
-        //Returns a Vector4 of NaN as 0x0100807F, (float.NaN = 0x0000C0FF)
+        ///<summary>Returns a <see cref="System.Numerics.Vector4" /> with NaN values.</summary>
         public static Vector4 GetVec4NaN()
         {
-            return new Vector4(GetNaN(), GetNaN(), GetNaN(), GetNaN());
+            return new Vector4(NaN(), NaN(), NaN(), NaN());
         }
 
-        //Converts a floating point number into a fixed point number
-        //It's simply multiplying the float by a constant value and discarding the extra bits
-        public static uint PackFixedPoint(float value, uint size, uint shift) //Vector3::Pack1010102
+        ///<summary>Returns a <see cref="System.Numerics.Matrix4x4" /> with NaN values.</summary>
+        public static Matrix4x4 GetMatrix4x4NaN()
+        {
+            return new Matrix4x4(NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN());
+        }
+
+        /// <summary>
+        /// Converts a floating point number into a fixed point number.
+        /// </summary>
+        /// <remarks>
+        /// <format type="text/markdown">
+        /// <![CDATA[It's multiplying the float by a constant value and discarding the extra bits (Vector3::Pack1010102)]]>
+        /// </format>
+        /// </remarks>
+        public static uint PackFixedPoint(float value, uint size, uint shift)
         {
             float scale = ((1u << (int)(size - 1)) - 1);
             return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
         }
 
-        //Converts a Vector4 (XYZ to ZXY/YZX) to Dec3N
+        ///<summary>Converts a <see cref="System.Numerics.Vector4" /> to the Dec3N format.</summary>
         public static uint GetDec3N(Vector4 val, bool zxy = true)
         {
-            var wPack = val.W > 0.5f ? 1 << 30 : val.W < -0.5f ? -1 << 30 : 0;
+            var wPack = (val.W > 0.5f) ? 1 << 30 : (val.W < -0.5f) ? -1 << 30 : 0;
             if (zxy) //XYZ > ZXY (RDR1 to CX)
                 return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20) | (uint)wPack;
-            else     //XYZ > YZX (CX to RDR1)
+            else     //ZXY > XYZ (CX to RDR1)
                 return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20) | (uint)wPack;
+        }
+
+        /// <summary>
+        /// Transforms an array of items of type T from XYZ to ZXY space. This method should be used for unmanaged types only.
+        /// </summary>
+        /// <typeparam name="T">The type of items in the array. Must be an unmanaged type.</typeparam>
+        /// <param name="items">The array of items to transform.</param>
+        public static void TransformToZXY<T>(T[] items) where T : unmanaged
+        {
+            if (items == null) return;
+            if (typeof(T) == typeof(Vector4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToZXY((Vector4)(object)items[i]);
+                }
+            }
+            else if(typeof(T) == typeof(BoundingBox4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToZXY((BoundingBox4)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Vector3))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToZXY((Vector3)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Matrix3x4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToZXY((Matrix3x4)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Matrix4x4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToZXY((Matrix4x4)(object)items[i]);
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Transforms an array of items of type T from ZXY to XYZ space. This method should be used for unmanaged types only.
+        /// </summary>
+        /// <typeparam name="T">The type of items in the array. Must be an unmanaged type.</typeparam>
+        /// <param name="items">The array of items to transform.</param>
+        public static void TransformFromZXY<T>(T[] items) where T : unmanaged
+        {
+            if (items == null) return;
+            if (typeof(T) == typeof(Vector4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToXYZ((Vector4)(object)items[i]);
+                }
+            }
+            else if(typeof(T) == typeof(BoundingBox4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToXYZ((BoundingBox4)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Vector3))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToXYZ((Vector3)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Matrix3x4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToXYZ((Matrix3x4)(object)items[i]);
+                }
+            }
+            else if (typeof(T) == typeof(Matrix4x4))
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    items[i] = (T)(object)ToXYZ((Matrix4x4)(object)items[i]);
+                }
+            }
+        }
+
+        ///<summary>rage::intA<2></summary>
+        public struct IntA
+        {
+            public int Int1; //m_ints[0]
+            public int Int2; //m_ints[1]
+
+            public override readonly string ToString()
+            {
+                return $"Int1: {Int1}, Int2: {Int2}";
+            }
         }
     }
 }

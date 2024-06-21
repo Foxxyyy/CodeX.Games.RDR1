@@ -6,10 +6,10 @@ using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6StringTable : Rsc6FileBase, MetaNode //rage::txtStringTable
+    [TC(typeof(EXP))] public class Rsc6StringTable : Rsc6BlockBaseMap, MetaNode //rage::txtStringTable
     {
         public override ulong BlockLength => 20;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x00EC9BC8;
         public Rsc6Ptr<Rsc6TextHashTable> HashTable { get; set; } //m_HashTable
         public int NumIdentifiers { get; set; } //m_NumIdentifiers, always 0
         public uint Unknown_10h { get; set; } //Always 0
@@ -17,7 +17,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             HashTable = reader.ReadPtr<Rsc6TextHashTable>();
             NumIdentifiers = reader.ReadInt32();
             Unknown_10h = reader.ReadUInt32();
@@ -25,8 +24,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x00EC9BC8);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WritePtr(HashTable);
             writer.WriteInt32(NumIdentifiers);
             writer.WriteUInt32(Unknown_10h);
@@ -43,7 +41,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TextHashTable : Rsc6FileBase, MetaNode //rage::txtHashTable
+    [TC(typeof(EXP))] public class Rsc6TextHashTable : Rsc6BlockBase, MetaNode //rage::txtHashTable
     {
         public override ulong BlockLength => 16;
         public int NumSlots { get; set; } //mNumSlots
@@ -87,7 +85,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TextHashEntry : Rsc6BlockBase, Rsc6DataMapEntry<Rsc6TextHashEntry>, MetaNode //rage::txtHashEntry
+    [TC(typeof(EXP))] public class Rsc6TextHashEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TextHashEntry>, MetaNode //rage::txtHashEntry
     {
         public override ulong BlockLength => 16;
         public JenkHash Hash { get; set; } //mHash, equal to mData.Hash

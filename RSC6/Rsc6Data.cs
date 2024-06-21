@@ -1,12 +1,11 @@
-﻿using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.RPF6;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Text;
-using System.Numerics;
-using CodeX.Core.Numerics;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Numerics;
+using System.Collections.Generic;
+using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -247,7 +246,7 @@ namespace CodeX.Games.RDR1.RSC6
             return array;
         }
 
-        public T ReadBlock<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public T ReadBlock<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             if (Position == 0) return default(T);
             if (BlockPool.TryGetValue(Position, out var exitem))
@@ -265,7 +264,7 @@ namespace CodeX.Games.RDR1.RSC6
             return block;
         }
 
-        public T ReadBlock<T>(ulong position, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public T ReadBlock<T>(ulong position, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             if (position == 0) return default(T);
             var p = Position;
@@ -275,7 +274,7 @@ namespace CodeX.Games.RDR1.RSC6
             return b;
         }
 
-        public Rsc6Ptr<T> ReadPtr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6Ptr<T> ReadPtr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             var ptr = new Rsc6Ptr<T>();
             ptr.Read(this, createFunc);
@@ -302,21 +301,21 @@ namespace CodeX.Games.RDR1.RSC6
             return ptr;
         }
 
-        public Rsc6PtrArr<T> ReadPtrArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6PtrArr<T> ReadPtrArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             var arr = new Rsc6PtrArr<T>();
             arr.Read(this, createFunc);
             return arr;
         }
 
-        public Rsc6PtrToPtrArr<T> ReadPtrToItem<T>() where T : Rsc6Block, new()
+        public Rsc6PtrToPtrArr<T> ReadPtrToItem<T>() where T : IRsc6Block, new()
         {
             var ptr = new Rsc6PtrToPtrArr<T>();
             ptr.ReadPtr(this);
             return ptr;
         }
 
-        public Rsc6PtrToPtrArr<T> ReadItems<T>(Rsc6PtrToPtrArr<T> arr, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6PtrToPtrArr<T> ReadItems<T>(Rsc6PtrToPtrArr<T> arr, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             arr.ReadItems(this, createFunc);
             return arr;
@@ -336,28 +335,28 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6ManagedArr<T> ReadArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6ManagedArr<T> ReadArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             var arr = new Rsc6ManagedArr<T>();
             arr.Read(this, createFunc);
             return arr;
         }
 
-        public Rsc6AtMapArr<T> ReadAtMapArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6AtMapArr<T> ReadAtMapArr<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             var mapArr = new Rsc6AtMapArr<T>();
             mapArr.Read(this, createFunc);
             return mapArr;
         }
 
-        public Rsc6ManagedSizedArr<T> ReadSizedArrPtr<T>() where T : Rsc6Block, new()
+        public Rsc6ManagedSizedArr<T> ReadSizedArrPtr<T>() where T : IRsc6Block, new()
         {
             var arr = new Rsc6ManagedSizedArr<T>();
             arr.ReadArr(this);
             return arr;
         }
 
-        public Rsc6ManagedSizedArr<T> ReadSizedArrItems<T>(Rsc6ManagedSizedArr<T> arr, ushort size, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6ManagedSizedArr<T> ReadSizedArrItems<T>(Rsc6ManagedSizedArr<T> arr, ushort size, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             arr.ReadItems(this, size, createFunc);
             return arr;
@@ -370,14 +369,14 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6RawLst<T> ReadRawLstPtr<T>() where T : Rsc6Block, new()
+        public Rsc6RawLst<T> ReadRawLstPtr<T>() where T : IRsc6Block, new()
         {
             var arr = new Rsc6RawLst<T>();
             arr.ReadPtr(this);
             return arr;
         }
 
-        public Rsc6RawLst<T> ReadRawLstItems<T>(Rsc6RawLst<T> arr, uint count, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6RawLst<T> ReadRawLstItems<T>(Rsc6RawLst<T> arr, uint count, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             arr.ReadItems(this, count, createFunc);
             return arr;
@@ -400,27 +399,27 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6RawPtrArr<T> ReadRawPtrArrPtr<T>() where T : Rsc6Block, new()
+        public Rsc6RawPtrArr<T> ReadRawPtrArrPtr<T>() where T : IRsc6Block, new()
         {
             var arr = new Rsc6RawPtrArr<T>();
             arr.ReadPtr(this);
             return arr;
         }
 
-        public Rsc6RawPtrArr<T> ReadRawPtrArrItem<T>(Rsc6RawPtrArr<T> arr, uint count, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6RawPtrArr<T> ReadRawPtrArrItem<T>(Rsc6RawPtrArr<T> arr, uint count, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             arr.ReadItems(this, count, createFunc);
             return arr;
         }
 
-        public Rsc6Ptr<T> ReadPtrOnly<T>() where T : Rsc6Block, new()
+        public Rsc6Ptr<T> ReadPtrOnly<T>() where T : IRsc6Block, new()
         {
             var ptr = new Rsc6Ptr<T>();
             ptr.ReadPtr(this);
             return ptr;
         }
 
-        public Rsc6Ptr<T> ReadPtrItem<T>(Rsc6Ptr<T> ptr, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public Rsc6Ptr<T> ReadPtrItem<T>(Rsc6Ptr<T> ptr, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             ptr.ReadItem(this, createFunc);
             return ptr;
@@ -433,6 +432,19 @@ namespace CodeX.Games.RDR1.RSC6
             return str;
         }
 
+        public Rsc6StrArr ReadPtr()
+        {
+            var arr = new Rsc6StrArr();
+            arr.ReadPtr(this);
+            return arr;
+        }
+
+        public Rsc6StrArr ReadItems(Rsc6StrArr arr, uint count)
+        {
+            arr.ReadItems(this, count);
+            return arr;
+        }
+
         public Rsc6PtrStr ReadPtrStr(uint pad = 0)
         {
             var str = new Rsc6PtrStr();
@@ -440,7 +452,7 @@ namespace CodeX.Games.RDR1.RSC6
             return str;
         }
 
-        public static BlockAnalyzer Analyze<T>(Rpf6ResourceFileEntry rfe, byte[] data, Func<Rsc6DataReader, T> createFunc = null) where T : Rsc6Block, new()
+        public static BlockAnalyzer Analyze<T>(Rpf6ResourceFileEntry rfe, byte[] data, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
             var r = new Rsc6DataReader(rfe, data);
             var block = r.ReadBlock(createFunc);
@@ -490,7 +502,7 @@ namespace CodeX.Games.RDR1.RSC6
                 else
                     vblocks.Add(bblock);
 
-                if ((block is Rsc6Block) || (block is Array))
+                if ((block is IRsc6Block) || (block is Array))
                 {
                     bblock.Align = 16;
                 }
@@ -540,12 +552,66 @@ namespace CodeX.Games.RDR1.RSC6
                 if (pref.Data == null || pref.Object == null) continue;
                 if (blocks.TryGetValue(pref.Object, out var bblock) == false)
                 {
-                    if (pref.Object is Rsc6BoneData bobject)
+                    if (pref.Object is Rsc6BoneData)
                     {
-                        var kv = blocks.FirstOrDefault(e => e.Key is Rsc6SkeletonBoneData data);
+                        var kv = blocks.FirstOrDefault(e => e.Key is Rsc6SkeletonBoneData);
                         if (kv.Value != null)
                         {
                             bblock = kv.Value;
+                        }
+                    }
+                    else if (pref.Object is Rsc6DrawableInstance)
+                    {
+                        var found = false;
+                        var kvs = blocks.Where(e => e.Key is Rsc6DrawableInstance[]).ToArray();
+
+                        for (int i = 0; i < kvs.Length; i++)
+                        {
+                            if (found) break;
+                            var kv = kvs[i];
+
+                            if (kv.Key != null)
+                            {
+                                if (kv.Key is Rsc6DrawableInstance[] instances)
+                                {
+                                    foreach (var inst in instances)
+                                    {
+                                        if (inst == pref.Object)
+                                        {
+                                            bblock = kv.Value;
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (pref.Object is Rsc6Polygon)
+                    {
+                        var found = false;
+                        var kvs = blocks.Where(e => e.Key is Rsc6Polygon[]).ToArray();
+
+                        for (int i = 0; i < kvs.Length; i++)
+                        {
+                            if (found) break;
+                            var kv = kvs[i];
+
+                            if (kv.Key != null)
+                            {
+                                if (kv.Key is Rsc6Polygon[] instances)
+                                {
+                                    foreach (var inst in instances)
+                                    {
+                                        if (inst == pref.Object)
+                                        {
+                                            bblock = kv.Value;
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -554,7 +620,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void WriteBlock<T>(T block) where T : Rsc6Block, new()
+        public void WriteBlock<T>(T block) where T : IRsc6Block, new()
         {
             if (block == null)
                 return;
@@ -577,7 +643,7 @@ namespace CodeX.Games.RDR1.RSC6
             this.Position = expos;
         }
 
-        public void WriteBlocks<T>(T[] blocks) where T : Rsc6Block, new()
+        public void WriteBlocks<T>(T[] blocks) where T : IRsc6Block, new()
         {
             if (blocks == null)
                 return;
@@ -706,17 +772,17 @@ namespace CodeX.Games.RDR1.RSC6
             arr.Write(this);
         }
 
-        public void WriteArr<T>(Rsc6ManagedArr<T> arr) where T : Rsc6Block, new()
+        public void WriteArr<T>(Rsc6ManagedArr<T> arr) where T : IRsc6Block, new()
         {
             arr.Write(this);
         }
 
-        public void WriteAtMapArr<T>(Rsc6AtMapArr<T> mapArr) where T : Rsc6Block, new()
+        public void WriteAtMapArr<T>(Rsc6AtMapArr<T> mapArr) where T : IRsc6Block, new()
         {
             mapArr.Write(this);
         }
 
-        public void WriteSizedArr<T>(Rsc6ManagedSizedArr<T> arr) where T : Rsc6Block, new()
+        public void WriteSizedArr<T>(Rsc6ManagedSizedArr<T> arr) where T : IRsc6Block, new()
         {
             arr.Write(this);
         }
@@ -736,7 +802,7 @@ namespace CodeX.Games.RDR1.RSC6
             arr.Write(this);
         }
 
-        public void WritePtr<T>(Rsc6Ptr<T> ptr) where T : Rsc6Block, new()
+        public void WritePtr<T>(Rsc6Ptr<T> ptr) where T : IRsc6Block, new()
         {
             ptr.Write(this);
         }
@@ -746,9 +812,9 @@ namespace CodeX.Games.RDR1.RSC6
             ptr.Write(this);
         }
 
-        public void WritePtrArr<T>(Rsc6PtrArr<T> ptr) where T : Rsc6Block, new()
+        public void WritePtrArr<T>(Rsc6PtrArr<T> ptr, bool inverseCapacity = false) where T : IRsc6Block, new()
         {
-            ptr.Write(this);
+            ptr.Write(this, inverseCapacity);
         }
 
         public void WriteRawArr<T>(Rsc6RawArr<T> ptr) where T : unmanaged
@@ -756,12 +822,22 @@ namespace CodeX.Games.RDR1.RSC6
             ptr.Write(this);
         }
 
-        public void WriteRawLst<T>(Rsc6RawLst<T> lst) where T : Rsc6Block, new()
+        public void WriteRawLst<T>(Rsc6RawLst<T> lst) where T : IRsc6Block, new()
         {
             lst.Write(this);
         }
 
-        public void WriteRawPtrArr<T>(Rsc6RawPtrArr<T> arr) where T : Rsc6Block, new()
+        public void WriteStrArr(Rsc6StrArr arr)
+        {
+            arr.Write(this);
+        }
+
+        public void WriteRawPtrArr<T>(Rsc6RawPtrArr<T> arr) where T : IRsc6Block, new()
+        {
+            arr.Write(this);
+        }
+
+        public void WritePtrToPtrArr<T>(Rsc6PtrToPtrArr<T> arr) where T : IRsc6Block, new()
         {
             arr.Write(this);
         }
@@ -779,50 +855,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public interface Rsc6Block : BlockBase
-    {
-        bool IsPhysical { get; }
-        void Read(Rsc6DataReader reader);
-        void Write(Rsc6DataWriter writer);
-    }
-
-    public abstract class Rsc6BlockBase : Rsc6Block
-    {
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-        public abstract ulong BlockLength { get; }
-        public abstract void Read(Rsc6DataReader reader);
-        public abstract void Write(Rsc6DataWriter writer);
-    }
-
-    public class Rsc6BlockMap : Rsc6BlockBase
-    {
-        public override ulong BlockLength => 4;
-
-        public uint Blockmap { get; set; }
-
-        public Rsc6BlockMap()
-        {
-        }
-
-        public Rsc6BlockMap(ulong blockmap)
-        {
-            Blockmap = (uint)blockmap;
-        }
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            Blockmap = reader.ReadUInt32();
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            writer.WriteUInt32(Blockmap);
-        }
-    }
-
-    //Pointer to a single managed object
-    public struct Rsc6Ptr<T> where T : Rsc6Block, new()
+    public struct Rsc6Ptr<T> where T : IRsc6Block, new()
     {
         public ulong Position;
         public T Item;
@@ -867,7 +900,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to a single unmanaged object
     public struct Rsc6PtrUnmanaged<T> where T : unmanaged
     {
         public ulong Position;
@@ -930,20 +962,19 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Array of unmanaged objects
     public struct Rsc6Arr<T> where T : unmanaged
     {
         public uint Position;
         public uint Count;
         public uint Capacity;
         public T[] Items;
-        public bool Size64; //Whether to store position + count + capacity on 12 bytes or not (default is 8)
+        public bool Size64; //Store position + count + capacity on 12 bytes or 8 bytes
 
         public Rsc6Arr(T[] items, bool useArraySizeOf64 = false, uint capacity = 0)
         {
             Position = 0;
-            Count = (ushort)items.Length;
-            Capacity = capacity > 0 ? capacity : Count;
+            Count = (ushort)(items?.Length ?? 0);
+            Capacity = (capacity > 0) ? capacity : Count;
             Items = items;
             Size64 = useArraySizeOf64;
         }
@@ -967,6 +998,7 @@ namespace CodeX.Games.RDR1.RSC6
             var p = reader.Position;
             reader.Position = Position;
             Items = reader.ReadArray<T>(Count);
+            Rpf6Crypto.TransformToZXY(Items);
             reader.Position = p;
         }
 
@@ -1101,8 +1133,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Array of managed objects
-    public struct Rsc6ManagedArr<T> where T : Rsc6Block, new()
+    public struct Rsc6ManagedArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public ushort Count;
@@ -1113,7 +1144,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Position = 0;
             Items = items;
-            Count = (ushort)items.Length;
+            Count = (ushort)(items?.Length ?? 0);
             Capacity = Count;
         }
 
@@ -1150,7 +1181,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBlocks(Items);
         }
 
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
@@ -1162,8 +1193,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Array of managed objects but with a given size different than count/capacity
-    public struct Rsc6ManagedSizedArr<T> where T : Rsc6Block, new()
+    public struct Rsc6ManagedSizedArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public ushort Count;
@@ -1222,8 +1252,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Array of key/value objects with different purpose (atMap uses a hash to associate an arbitrary key with arbitrary data)
-    public struct Rsc6AtMapArr<T> where T : Rsc6Block, new()
+    public struct Rsc6AtMapArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public ushort Count; //m_Slots, number of slots in toplevel hash
@@ -1257,12 +1286,12 @@ namespace CodeX.Games.RDR1.RSC6
 
             var p = reader.Position;
             reader.Position = Position;
-            Pointers = reader.ReadArray<uint>(Count);
             Items = new T[Count];
+            Pointers = reader.ReadArray<uint>(Count);
 
             for (int i = 0; i < Count; i++)
             {
-                Items[i] = reader.ReadBlock(Pointers[i], createFunc);
+                Items[i] = reader.ReadBlock(Pointers[i], createFunc);;
             }
             reader.Position = p;
         }
@@ -1308,8 +1337,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to an array of managed objects
-    public struct Rsc6PtrArr<T> where T : Rsc6Block, new()
+    public struct Rsc6PtrArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public ushort Count;
@@ -1319,20 +1347,16 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6PtrArr(T[] items)
         {
-            Position = 0;
-            Count = (ushort)items.Length;
+            Count = (ushort)(items?.Length ?? 0);
             Capacity = Count;
-            Pointers = new uint[Count];
-            Items = items;
+            InitBlock(items);
         }
 
-        public Rsc6PtrArr(uint count)
+        public Rsc6PtrArr(T[] items, ushort capacity, ushort count)
         {
-            Position = 0;
-            Count = (ushort)count;
-            Capacity = (ushort)count;
-            Pointers = new uint[count];
-            Items = new T[count];
+            Count = count;
+            Capacity = capacity;
+            InitBlock(items);
         }
 
         public void Read(Rsc6DataReader reader, Func<Rsc6DataReader, T> createFunc = null)
@@ -1348,15 +1372,16 @@ namespace CodeX.Games.RDR1.RSC6
             Items = new T[Count];
             for (int i = 0; i < Count; i++)
             {
+                if (Pointers[i] == 0) continue;
                 byte[] buffer = BitConverter.GetBytes(Pointers[i]);
                 Items[i] = reader.ReadBlock(BitConverter.ToUInt32(buffer, 0), createFunc);
             }
             reader.Position = p;
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public void Write(Rsc6DataWriter writer, bool inverseCapacity = false)
         {
-            var ptrs = new uint[Capacity];
+            var ptrs = new uint[inverseCapacity ? Count : Capacity];
             if (Count > 0)
             {
                 writer.AddPointerRef(ptrs);
@@ -1369,7 +1394,7 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 var data = writer.WriteArray(ptrs);
                 var offset = 0u;
-                for (int i = 0; i < Capacity; i++)
+                for (int i = 0; i < (inverseCapacity ? Count : Capacity); i++)
                 {
                     var item = (i < Items.Length) ? Items[i] : default;
                     if (item != null)
@@ -1382,7 +1407,14 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public T this[int index]
+        private void InitBlock(T[] items)
+        {
+            Position = 0;
+            Pointers = new uint[Count];
+            Items = items;
+        }
+
+        public readonly T this[int index]
         {
             get => index < Items.Length ? Items[index] : default;
             set => Items[index] = value;
@@ -1394,8 +1426,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to an array of blocks with a given size
-    public struct Rsc6RawLst<T> where T : Rsc6Block, new()
+    public struct Rsc6RawLst<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public T[] Items { get; set; }
@@ -1446,7 +1477,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to an array of unmanaged data with a given size
     public struct Rsc6RawArr<T> where T : unmanaged
     {
         public ulong Position;
@@ -1468,6 +1498,7 @@ namespace CodeX.Games.RDR1.RSC6
             var p = reader.Position;
             reader.Position = Position;
             Items = reader.ReadArray<T>(count);
+            Rpf6Crypto.TransformToZXY(Items);
             reader.Position = p;
         }
 
@@ -1478,7 +1509,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArray(Items);
         }
 
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
@@ -1490,8 +1521,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to an array of raw pointers to managed objects
-    public struct Rsc6RawPtrArr<T> where T : Rsc6Block, new()
+    public struct Rsc6RawPtrArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public uint[] Pointers;
@@ -1500,7 +1530,10 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawPtrArr(T[] items)
         {
             Position = 0;
-            Items = items;
+            if (items != null && items.Length > 0)
+            {
+                Items = items;
+            }
         }
     
         public void ReadPtr(Rsc6DataReader reader)
@@ -1528,10 +1561,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.AddPointerRef(ptrs);
             writer.WriteUInt32(Position);
 
+            var data = writer.WriteArray(ptrs);
+            var offset = 0u;
+
             if (Items != null)
             {
-                var data = writer.WriteArray(ptrs);
-                var offset = 0u;
                 for (int i = 0; i < Items.Length; i++)
                 {
                     var item = Items[i];
@@ -1557,12 +1591,15 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to an array of 'pointers/count/capacity' to managed objects
-    //Basically Rsc6Ptr + Rsc6Arr
-    public struct Rsc6PtrToPtrArr<T> where T : Rsc6Block, new()
+    public struct Rsc6PtrToPtrArr<T> where T : IRsc6Block, new()
     {
         public uint Position;
         public Rsc6ManagedArr<T> Array;
+
+        public Rsc6PtrToPtrArr(Rsc6ManagedArr<T> arr)
+        {
+            Array = arr;
+        }
 
         public void ReadPtr(Rsc6DataReader reader)
         {
@@ -1599,7 +1636,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //Pointer to a string
     public struct Rsc6Str
     {
         public ulong Position;
@@ -1675,8 +1711,91 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //A rarely used structure consisting of a pointer + count + capacity pointing to an array of strings
-    //Each string have a maximum size per block, the remaining bytes are padding until the start of the next block
+    public struct Rsc6StrArr
+    {
+        public ulong Position;
+        public Rsc6Str[] Items;
+
+        public Rsc6StrArr(Rsc6Str[] items)
+        {
+            Position = 0;
+            Items = items;
+        }
+
+        public Rsc6StrArr(string[] strings)
+        {
+            Position = 0;
+            if (strings != null)
+            {
+                Items = new Rsc6Str[strings.Length];
+                for (int i = 0; i < strings.Length; i++)
+                {
+                    Items[i] = new Rsc6Str(strings[i]);
+                }
+            }
+        }
+
+        public void ReadPtr(Rsc6DataReader reader)
+        {
+            Position = reader.ReadUInt32();
+        }
+
+        public void ReadItems(Rsc6DataReader reader, uint count)
+        {
+            var p = reader.Position;
+            reader.Position = Position;
+
+            Items = new Rsc6Str[count];
+            for (int i = 0; i < count; i++)
+            {
+                Items[i] = reader.ReadStr();
+            }
+            reader.Position = p;
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            var ptrs = (Items != null) ? new uint[Items.Length] : null;
+            writer.AddPointerRef(ptrs);
+            writer.WriteUInt32((uint)Position);
+
+            if (Items != null)
+            {
+                var ptrData = writer.WriteArray(ptrs);
+                var offset = 0u;
+
+                foreach (var item in Items)
+                {
+                    if (item.Value == null) continue;
+
+                    var encoding = Encoding.UTF8;
+                    var b = encoding.GetBytes(item.Value);
+                    var len = b.Length + 1;
+                    var data = new byte[len];
+                    if (b != null)
+                    {
+                        Buffer.BlockCopy(b, 0, data, 0, b.Length);
+                    }
+
+                    writer.AddBlock(item, data);
+                    writer.AddPointerRef(item, ptrData, offset);
+                    offset += 4;
+                }
+            }
+        }
+
+        public readonly Rsc6Str this[int index]
+        {
+            get => Items[index];
+            set => Items[index] = value;
+        }
+
+        public override string ToString()
+        {
+            return "Count: " + (Items?.Length.ToString() ?? "0");
+        }
+    }
+
     public struct Rsc6PtrStr
     {
         public ulong Position;
@@ -1711,7 +1830,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 for (int i = 0; i < Count; i++)
                 {
-                    if (pad > 0) //Used for rage::speedTreeDebugName...
+                    if (pad > 0) //Used for rage::speedTreeDebugName (fixed-size string)
                     {
                         Items[i] = new Rsc6Str(reader.Position);
                         Items[i].ReadAsArray(reader, pad);
@@ -1786,7 +1905,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    //A rarely specific-case structure used for flash files (.wsf)
     public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
     {
         public uint Position;
@@ -1821,6 +1939,7 @@ namespace CodeX.Games.RDR1.RSC6
             var p = reader.Position;
             reader.Position = Position;
             Items = reader.ReadArray<T>(Count);
+            Rpf6Crypto.TransformToZXY(Items);
             reader.Position = p;
         }
 
@@ -1850,60 +1969,34 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6String : Rsc6BlockBase
+    public class Rsc6BlockMap : Rsc6BlockBase
     {
-        public override ulong BlockLength => 8;
-        public uint Position;
-        public string Value;
-        public uint FixedLength;
-
-        public Rsc6String() { }
-        public Rsc6String(uint fixedLength) { FixedLength = fixedLength; }
+        public override ulong BlockLength => 4;
+        public uint Block { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
-            Position = reader.ReadUInt32();
-            if (Position != 0)
-            {
-                var p = reader.Position;
-                reader.Position = Position;
-
-                if (FixedLength != 0)
-                    Value = Encoding.ASCII.GetString(reader.ReadArray<byte>(40, false)).Trim('\0');
-                else
-                    Value = reader.ReadString();
-                reader.Position = p;
-            }
+            Block = reader.ReadUInt32();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.AddPointerRef(Value);
-            writer.WriteUInt32(Position);
-
-            if (Value != null)
-            {
-                var encoding = Encoding.UTF8;
-                var b = encoding.GetBytes(Value);
-                var len = b.Length + 1;
-                var data = new byte[len];
-                if (b != null)
-                {
-                    Buffer.BlockCopy(b, 0, data, 0, b.Length);
-                }
-                writer.AddBlock(Value, data);
-            }
-        }
-
-        public override string ToString()
-        {
-            return Value;
+            writer.WriteUInt32(Block);
         }
     }
 
-    public abstract class Rsc6FileBase : Rsc6BlockBase //I guess I should rework this to include blockmaps
+    public abstract class Rsc6BlockBase : IRsc6Block
     {
-        public ulong VFT { get; set; }
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public abstract ulong BlockLength { get; }
+        public abstract void Read(Rsc6DataReader reader);
+        public abstract void Write(Rsc6DataWriter writer);
+    }
+
+    public abstract class Rsc6FileBase : Rsc6BlockBase
+    {
+        public abstract uint VFT { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1912,13 +2005,52 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32((uint)VFT);
+            writer.WriteUInt32(VFT);
+        }
+    }
+
+    public abstract class Rsc6BlockBaseMap : Rsc6FileBase //rage::pgBase
+    {
+        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WritePtr(BlockMap);
+        }
+    }
+
+    public abstract class Rsc6BlockBaseMapRef : Rsc6BlockBaseMap //rage::pgBaseRefCounted
+    {
+        public uint RefCount { get; set; } //m_RefCount
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            RefCount = reader.ReadUInt32();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteUInt32(RefCount);
+        }
+
+        public override string ToString()
+        {
+            return "References: " + RefCount.ToString();
         }
     }
 
     public static class Rsc6DataMap
     {
-        public static List<T> Build<T>(List<T> entries, bool sortbuckets = false, bool reversebuckets = false, T[] extest = null) where T : Rsc6DataMapEntry<T>
+        public static List<T> Build<T>(List<T> entries, bool sortbuckets = false, bool reversebuckets = false, T[] extest = null) where T : IRsc6DataMapEntry<T>
         {
             if (entries.Count < 1 || ((entries.Count == 1) && (entries[0].MapKey == 0)))
             {
@@ -2013,7 +2145,7 @@ namespace CodeX.Games.RDR1.RSC6
             return result;
         }
 
-        public static List<U> Flatten<T, U>(T[] entries, Func<T, U> yieldFunc, Comparison<U> sortFunc = null) where T : Rsc6DataMapEntry<T>
+        public static List<U> Flatten<T, U>(T[] entries, Func<T, U> yieldFunc, Comparison<U> sortFunc = null) where T : IRsc6DataMapEntry<T>
         {
             var result = new List<U>();
             if (entries != null)
@@ -2035,7 +2167,7 @@ namespace CodeX.Games.RDR1.RSC6
             return result;
         }
 
-        public static Dictionary<uint, U> GetDictionary<T, U>(T[] entries, Func<T, U> yieldFunc) where T : Rsc6DataMapEntry<T>
+        public static Dictionary<uint, U> GetDictionary<T, U>(T[] entries, Func<T, U> yieldFunc) where T : IRsc6DataMapEntry<T>
         {
             var result = new Dictionary<uint, U>();
             if (entries != null)
@@ -2054,7 +2186,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public interface Rsc6DataMapEntry<T>
+    public interface IRsc6Block : BlockBase
+    {
+        bool IsPhysical { get; }
+        void Read(Rsc6DataReader reader);
+        void Write(Rsc6DataWriter writer);
+    }
+
+    public interface IRsc6DataMapEntry<T>
     {
         uint MapKey { get; }
         T MapNext { get; set; }

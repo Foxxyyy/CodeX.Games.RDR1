@@ -1,21 +1,19 @@
-﻿using CodeX.Core.Numerics;
-using CodeX.Core.Utilities;
-using System.Drawing;
-using System;
-using System.Numerics;
-using CodeX.Core.Engine;
-using CodeX.Games.RDR1.RPF6;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.IO;
-using SharpDX.Direct2D1.Effects;
+using System.Linq;
+using System.Numerics;
+using System.Collections.Generic;
+using CodeX.Core.Engine;
+using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6SectorGrass : Rsc6FileBase, MetaNode
+    public class Rsc6SectorGrass : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 28;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x049FFD14;
         public Rsc6PtrArr<Rsc6GrassField> GrassItems { get; set; } //grassField
         public uint Unknown_10h { get; set; } //Always 0
         public uint Unknown_14h { get; set; } //Always 0
@@ -24,7 +22,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             GrassItems = reader.ReadPtrArr<Rsc6GrassField>();
             Unknown_10h = reader.ReadUInt32();
             Unknown_14h = reader.ReadUInt32();
@@ -33,8 +30,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x049FFD14);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WritePtrArr(GrassItems);
             writer.WriteUInt32(Unknown_10h);
             writer.WriteUInt32(Unknown_14h);
@@ -56,11 +52,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6GrassField : Rsc6Block, MetaNode //rage::grassField
+    public class Rsc6GrassField : Rsc6BlockBase, MetaNode //rage::grassField
     {
-        public ulong BlockLength => 112;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 112;
         public Vector4 Extents { get; set; } //m_Extents
         public Vector4 AABBMax { get; set; } //m_aabbMax
         public Vector4 AABBMin { get; set; } //m_aabbMin
@@ -86,7 +80,7 @@ namespace CodeX.Games.RDR1.RSC6
         public const float SPAWN_KIDS_HEIGHT = 0.1f;
         public const float SPAWN_KID_MULTIPLIER = 4.0f;
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Extents = reader.ReadVector4();
             AABBMax = reader.ReadVector4();
@@ -156,7 +150,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(Extents);
             writer.WriteVector4(AABBMax);
@@ -179,10 +173,10 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Name = new(reader.ReadString("Name"));
-            AABBMax = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBMax"));
-            AABBMin = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBMin"));
-            AABBScale = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBScale"));
-            AABBOffset = Rpf6Crypto.ToYZX(reader.ReadVector4("AABBOffset"));
+            AABBMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBMax"));
+            AABBMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBMin"));
+            AABBScale = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBScale"));
+            AABBOffset = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBOffset"));
             TexPlacement = new(reader.ReadNode<Rsc6TexPlacementValues>("TexPlacement"));
             Layout = new(reader.ReadNode<Rsc6VertexDeclaration>("Layout"));
             Zup = reader.ReadBool("Zup");
@@ -206,7 +200,7 @@ namespace CodeX.Games.RDR1.RSC6
                 FVF = fvf,
                 FVFSize = (byte)mesh.VertexStride,
                 ChannelCount = (byte)mesh.VertexLayout.ElementCount,
-                Types = Rsc6VertexDeclarationTypes.RDR1_3 //grass patches
+                Types = Rsc6VertexDeclarationTypes.GRASS_BATCH
             };
 
             vbuf.VertexCount = (ushort)mesh.VertexCount;
@@ -276,22 +270,15 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TexPlacementValues : Rsc6Block, MetaNode
+    public class Rsc6TexPlacementValues : Rsc6BlockBase, MetaNode
     {
-        public ulong FilePosition { get; set; }
-        public ulong BlockLength => 21;
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 21;
         public Rsc6Arr<Vector3> Patches { get; set; } //m_Patches
         public Rsc6Arr<float> HeightScales { get; set; } //m_HeightScales
         public Rsc6Arr<uint> Colors { get; set; } //m_Color
         public byte Pad { get; set; } //pad
 
-        public Rsc6TexPlacementValues()
-        {
-        }
-
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Patches = reader.ReadArr<Vector3>();
             HeightScales = reader.ReadArr<float>();
@@ -299,7 +286,7 @@ namespace CodeX.Games.RDR1.RSC6
             Pad = reader.ReadByte();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteArr(Patches);
             writer.WriteArr(HeightScales);

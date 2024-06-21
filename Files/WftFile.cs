@@ -9,13 +9,14 @@ namespace CodeX.Games.RDR1.Files
     public class WftFile : PiecePack
     {
         public Rsc6Fragment Fragment;
-        public JenkHash Hash;
-        public string Name;
 
         public WftFile(Rpf6FileEntry file) : base(file)
         {
-            Name = file.NameLower;
-            Hash = JenkHash.GenHash(file.NameLower);
+        }
+
+        public WftFile(Rsc6Fragment fragment) : base(null)
+        {
+            Fragment = fragment;
         }
 
         public override void Load(byte[] data)
@@ -36,7 +37,7 @@ namespace CodeX.Games.RDR1.Files
                 var d = Fragment.Drawable.Item;
                 var b = Fragment.Bounds.Item;
 
-                Piece = d;
+                Piece = d.Drawable;
                 Piece.Name = e.Name;
                 Piece.FilePack = this;
 
@@ -44,13 +45,16 @@ namespace CodeX.Games.RDR1.Files
                 {
                     Piece.Collider = b;
                 }
-                Pieces.Add(e.ShortNameHash, d);
+                Pieces.Add(e.ShortNameHash, d.Drawable);
             }
         }
 
         public override byte[] Save()
         {
-            return null;
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(Fragment);
+            byte[] data = writer.Build(138);
+            return data;
         }
     }
 }

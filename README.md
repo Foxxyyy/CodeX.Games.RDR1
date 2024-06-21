@@ -14,21 +14,17 @@ Be sure this project is still WIP, including the separated engine. If you want t
 
 # Udpates
 
-I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.            
-Here are some of the noticeable features for RDR1 :
-* You can import, replace, edit and create files or folders as you wish without the need to rebuild the entire .RPFs (unlike MagicRDR)
-* You can view, edit and search files in multiple .RPFs at the same time, they're all accessible in the tree view (unlike MagicRDR)
-* You can search for files, but you can also search for words/text/hex through all the files
-* You can view a certain number of resources, some of them can technically be exported and reimported from XML
+I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.    
 
-    > Models (.wfd / .wvd)                                 
-    > Collisions (.wbd)                               
-    > Textures (.wtd)                                           
-    > Game strings (.strtbl / .sst)                                                   
-    > Map Data (.wsi)                                
-    > Animations (.was / .wcdt)                               
-    > Tree Data (.wsp)                                                                  
-    > Grass Batches (.wsg)                                                               
+Here are some of the features :
+* Import, replace, edit and create files or folders, without the need to rebuild the entire .RPF files (instant-save, unlike MagicRDR)
+* View & edit multiple .RPF files at the same time (unlike MagicRDR)
+* Search for files, as well as search for words, text, or hex within all the files.
+* A significant number of files have been researched and can be viewed.
+* Some files can be exported to XML (sometimes re-imported) : `.wvd, .wfd, .wsp, .wsg, .wtd, .wbd, .wedt, .sst, .strtbl, .fonttex, etc.`      
+
+I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), it can import `WFD & WVD` files (no exports yet).                       
+Fragments can technically be imported if you rename the XML extension from `.wft.wml` to `.wfd.xml` and manually edit the file to keep the `<Drawable>` node part.
 
 # CodeX Contributors
 * dexyfex     

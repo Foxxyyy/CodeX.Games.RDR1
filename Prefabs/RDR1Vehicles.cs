@@ -196,7 +196,7 @@ namespace CodeX.Games.RDR1.Prefabs
             Wfd = peds.LoadWfd(Prefab.WfdEntry);
             Wtd = peds.LoadWtd(Prefab.WtdEntry);
 
-            var skel = Wft?.Fragment?.Drawable.Item?.Skeleton;
+            var skel = Wft?.Fragment?.Drawable.Item?.Drawable.Skeleton;
             SetSkeleton(skel);
 
             //A few models doesn't use a frag drawable

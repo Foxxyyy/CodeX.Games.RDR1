@@ -9,16 +9,14 @@ using CodeX.Core.Numerics;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Xml.Linq;
-using static System.Formats.Asn1.AsnWriter;
-using BepuPhysics.Trees;
+using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6SectorInfo : Rsc6FileBase, MetaNode //sagSectorInfo
+    [TC(typeof(EXP))] public class Rsc6SectorInfo : Rsc6BlockBaseMap, MetaNode //sagSectorInfo
     {
         public override ulong BlockLength => 480;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x01909C38;
         public Rsc6Str Name { get; set; } //Only for scoped sectors, otherwise NULL
         public float LODFade { get; set; } //m_LODFade, always 0.0f
         public ulong Unknown_10h { get; set; } //Always 0
@@ -28,11 +26,8 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Unknown_1Bh { get; set; } = 0xFF; //0xFF padding
         public JenkHash ScopedNameHash { get; set; } //m_iScopeNameHash, only for scoped sectors, otherwise NULL
         public Rsc6Ptr<Rsc6CurveGroup>[] Curves { get; set; } = new Rsc6Ptr<Rsc6CurveGroup>[24]; //m_CurveArrays, not used in 'swTerrain', 'swAll' & some random areas
-        public int ParentLevelIndex { get; set; } //m_ParentLevelIndex
-        public bool DoNotManage { get; set; } //m_DoNotManage
-        public bool Managed { get; set; } //m_Managed
-        public bool Dynamic { get; set; } //m_Dynamic
-        public bool HasBoneData { get; set; } //m_HasBoneData
+        public int ParentLevelIndex { get; set; } = 24; //m_ParentLevelIndex, always 24
+        public int Unknown_84h { get; set; } = -1; //Always -1
         public uint Unknown_88h { get; set; } //Always 0
         public uint ExtraCurveData { get; set; } //Used only in 'swAiCurves' - (sagCurveExtraData, sagCurveStringMap & CurveNetworkGraph)
         public Vector4 MinAndBoundingRadius { get; set; } //m_MinAndBoundingRadius
@@ -41,15 +36,15 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 BoundMax { get; set; }
         public Rsc6Ptr<Rsc6PlacedLightsGroup> PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
         public Rsc6ManagedArr<Rsc6PropInstanceInfo> Entities { get; set; } //m_Props
-        public Rsc6PtrArr<Rsc6BlockMap> Unknown_DCh { get; set; }
+        public Rsc6PtrArr<Rsc6MapAttribute> DoorsAttributes { get; set; }
+        public uint Unknown_E4h { get; set; } = 0x00CDCDCD; //Padding
         public Rsc6ManagedArr<Rsc6SectorChild> ItemMapChilds { get; set; } //m_Children, 'swAll.wsi' only
-        public uint Unknown_E4h { get; set; } = 0x00CDCDCD; //Always 0xCDCDCD00
         public Rsc6Ptr<Rsc6ScopedSectors> ItemChilds { get; set; } //m_ChildGroup
         public Rsc6PtrArr<Rsc6SectorInfo> ChildPtrs { get; set; } //m_ChildPtrs, used only in swTerrain, swHorseCurves, etc.
         public Rsc6ManagedArr<Rsc6DrawableInstanceBase> DrawableInstances { get; set; } //m_SectorDrawableInstances
-        public Rsc6ManagedArr<Rsc6Portals> Portals { get; set; } //m_Portals
-        public Rsc6ManagedArr<Rsc6Portal> Attributes { get; set; } //m_Attributes
-        public Rsc6PtrArr<Rsc6Attribute> Unknown_114h { get; set; }
+        public Rsc6ManagedArr<Rsc6DrawableInstance> Unknown_104h { get; set; }
+        public Rsc6ManagedArr<Rsc6Portal> Portals { get; set; } //m_Portals
+        public Rsc6PtrArr<Rsc6Attribute> Attributes { get; set; } //m_Attributes
         public uint Unknown_11Ch { get; set; } //Always 0
         public Rsc6StreamableBase VisualDictionary { get; set; } = new Rsc6StreamableBase();
         public Rsc6StreamableBase MedVisualDictionary { get; set; } = new Rsc6StreamableBase();
@@ -60,7 +55,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6StreamableBase VLowVisualDictionary { get; set; } = new Rsc6StreamableBase();
         public Rsc6StreamableBase BoundDictionary { get; set; } = new Rsc6StreamableBase();
         public uint Unknown_170h { get; set; } //Always 0
-        public float LowLODFade { get; set; } = 1.0f;
+        public float LowLODFade { get; set; } = 1.0f; //Always 1.0f
         public JenkHash SectorNameLower { get; set; }
         public Rsc6ManagedArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
         public uint LastVisibleMarker { get; set; } //m_LastVisibleMarker, always 0
@@ -72,30 +67,30 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6PtrStr PropNames { get; set; }
         public Rsc6ManagedArr<Rsc6LocatorStatic> Locators { get; set; } //m_Locators
         public bool AnyHighInstanceLoaded { get; set; } //m_AnyHighLODInstancesLoaded
-        public byte ResidentVLowCount { get; set; } //m_ResidentVLowCount
+        public byte ResidentVLowCount { get; set; } //m_ResidentVLowCount, always 0
         public bool HasVLowLODResource { get; set; } //m_HasVLowLodResource
-        public bool VLowSuperseded { get; set; } //m_VLowSuperseded
+        public bool VLowSuperseded { get; set; } //m_VLowSuperseded, always FALSE
         public Rsc6Str Scope { get; set; } //m_Scope
         public ushort Unknown_1B4h { get; set; } //Always 0
-        public ushort NumGroupedChildren { get; set; } //m_iNumGroupedChildren
-        public ushort LODReferences { get; set; } //m_LODReferences
+        public ushort NumGroupedChildren { get; set; } //m_iNumGroupedChildren, always 0
+        public ushort LODReferences { get; set; } //m_LODReferences, always 0
         public ushort Unknown_1B8h { get; set; } //Always 0
         public ushort Unknown_1BAh { get; set; } //Always 0
-        public byte CurrentLOD { get; set; } //m_CurrentLOD
-        public byte District { get; set; } //m_District
-        public bool IsTerrain { get; set; } //m_IsTerrain
-        public bool TotallyAllInstancesLoaded { get; set; } //m_TotallyAllInstancesLoaded
-        public bool HasDictFlags { get; set; } //m_HasDictFlags
-        public byte InstanceAge { get; set; } //m_InstanceAge
-        public byte BoundAge { get; set; } //m_BoundAge
-        public byte PropsAge { get; set; } //m_PropsAge
+        public byte CurrentLOD { get; set; } = 0xFF; //m_CurrentLOD
+        public bool District { get; set; } //m_District
+        public byte IsTerrain { get; set; } = 0xCD; //m_IsTerrain
+        public byte TotallyAllInstancesLoaded { get; set; } = 0xCD; //m_TotallyAllInstancesLoaded
+        public byte HasDictFlags { get; set; } = 0xCD; //m_HasDictFlags
+        public byte InstanceAge { get; set; } = 0xCD; //m_InstanceAge
+        public byte BoundAge { get; set; } = 0xCD; //m_BoundAge
+        public byte PropsAge { get; set; } = 0xCD; //m_PropsAge
         public byte RefCount { get; set; } //m_RefCount
-        public byte ParentChildIndex { get; set; } //m_ParentChildIndex
+        public byte ParentChildIndex { get; set; } //m_ParentChildIndex, always 0
         public uint Flags { get; set; } //m_Flags
-        public bool InnerPropsInstanciated { get; set; } //m_InnerPropsInstantiated
-        public byte InnerPropsAge { get; set; } //m_InnerPropsAge
-        public byte RawPropsGroup { get; set; } //m_RawPropsGroup
-        public byte GroupFileFlags { get; set; } //m_GroupFileFlags
+        public bool InnerPropsInstanciated { get; set; } = true; //m_InnerPropsInstantiated, always TRUE
+        public byte InnerPropsAge { get; set; } //m_InnerPropsAge, always 0
+        public byte RawPropsGroup { get; set; } //m_RawPropsGroup, always 0
+        public byte GroupFileFlags { get; set; } //m_GroupFileFlags, always 0
         public uint BoundInstances { get; set; } //m_BoundInstances, rage::atArray<sagBoundInstance>
         public uint NamedNodeMap { get; set; } //m_NamedNodeMap, rage::atMap<int,rage::datRef<RDR2NameAttribute>>
         public byte Unknown_1D8h { get; set; }
@@ -107,7 +102,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             Name = reader.ReadStr();
             LODFade = reader.ReadSingle();
             Unknown_10h = reader.ReadUInt64();
@@ -123,10 +117,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
             ParentLevelIndex = reader.ReadInt32();
-            DoNotManage = reader.ReadBoolean();
-            Managed = reader.ReadBoolean(); 
-            Dynamic = reader.ReadBoolean();
-            HasBoneData = reader.ReadBoolean();
+            Unknown_84h = reader.ReadInt32();
             Unknown_88h = reader.ReadUInt32();
             ExtraCurveData = reader.ReadUInt32();
             MinAndBoundingRadius = reader.ReadVector4();
@@ -135,15 +126,15 @@ namespace CodeX.Games.RDR1.RSC6
             BoundMax = reader.ReadVector4();
             PlacedLightsGroup = reader.ReadPtr<Rsc6PlacedLightsGroup>();
             Entities = reader.ReadArr<Rsc6PropInstanceInfo>();
-            Unknown_DCh = reader.ReadPtrArr<Rsc6BlockMap>();
+            DoorsAttributes = reader.ReadPtrArr<Rsc6MapAttribute>();
             Unknown_E4h = reader.ReadUInt32();
             ItemMapChilds = reader.ReadArr<Rsc6SectorChild>();
             ItemChilds = reader.ReadPtr<Rsc6ScopedSectors>();
             ChildPtrs = reader.ReadPtrArr<Rsc6SectorInfo>();
             DrawableInstances = reader.ReadArr<Rsc6DrawableInstanceBase>();
-            Portals = reader.ReadArr<Rsc6Portals>();
-            Attributes = reader.ReadArr<Rsc6Portal>();
-            Unknown_114h = reader.ReadPtrArr(Rsc6Attribute.Create);
+            Unknown_104h = reader.ReadArr<Rsc6DrawableInstance>();
+            Portals = reader.ReadArr<Rsc6Portal>();
+            Attributes = reader.ReadPtrArr(Rsc6Attribute.Create);
             Unknown_11Ch = reader.ReadUInt32();
             VisualDictionary.Read(reader);
             MedVisualDictionary.Read(reader);
@@ -176,10 +167,10 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1B8h = reader.ReadUInt16();
             Unknown_1BAh = reader.ReadUInt16();
             CurrentLOD = reader.ReadByte();
-            District = reader.ReadByte();
-            IsTerrain = reader.ReadBoolean();
-            TotallyAllInstancesLoaded = reader.ReadBoolean();
-            HasDictFlags = reader.ReadBoolean();
+            District = reader.ReadBoolean();
+            IsTerrain = reader.ReadByte();
+            TotallyAllInstancesLoaded = reader.ReadByte();
+            HasDictFlags = reader.ReadByte();
             InstanceAge = reader.ReadByte();
             BoundAge = reader.ReadByte();
             PropsAge = reader.ReadByte();
@@ -201,8 +192,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x01909C38);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteStr(Name);
             writer.WriteSingle(LODFade);
             writer.WriteUInt64(Unknown_10h);
@@ -218,10 +208,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
             writer.WriteInt32(ParentLevelIndex);
-            writer.WriteByte(DoNotManage ? (byte)255 : (byte)0);
-            writer.WriteByte(Managed ? (byte)255 : (byte)0);
-            writer.WriteByte(Dynamic ? (byte)255 : (byte)0);
-            writer.WriteByte(HasBoneData ? (byte)255 : (byte)0);
+            writer.WriteInt32(Unknown_84h);
             writer.WriteUInt32(Unknown_88h);
             writer.WriteUInt32(ExtraCurveData);
             writer.WriteVector4(MinAndBoundingRadius);
@@ -230,15 +217,15 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4(BoundMax);
             writer.WritePtr(PlacedLightsGroup);
             writer.WriteArr(Entities);
-            writer.WritePtrArr(Unknown_DCh);
+            writer.WritePtrArr(DoorsAttributes, true);
             writer.WriteUInt32(Unknown_E4h);
             writer.WriteArr(ItemMapChilds);
             writer.WritePtr(ItemChilds);
             writer.WritePtrArr(ChildPtrs);
             writer.WriteArr(DrawableInstances);
+            writer.WriteArr(Unknown_104h);
             writer.WriteArr(Portals);
-            writer.WriteArr(Attributes);
-            writer.WritePtrArr(Unknown_114h);
+            writer.WritePtrArr(Attributes);
             writer.WriteUInt32(Unknown_11Ch);
             VisualDictionary.Write(writer);
             MedVisualDictionary.Write(writer);
@@ -258,7 +245,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_190h);
             writer.WriteUInt32(Unknown_194h);
             writer.WriteUInt32(Unknown_198h);
-            writer.WritePtrStr(PropNames); //TODO: make sure this works
+            writer.WritePtrStr(PropNames);
             writer.WriteArr(Locators);
             writer.WriteByte(AnyHighInstanceLoaded ? (byte)1 : (byte)0);
             writer.WriteByte(ResidentVLowCount);
@@ -271,10 +258,10 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt16(Unknown_1B8h);
             writer.WriteUInt16(Unknown_1BAh);
             writer.WriteByte(CurrentLOD);
-            writer.WriteByte(District);
-            writer.WriteByte(IsTerrain ? (byte)205 : (byte)0);
-            writer.WriteByte(TotallyAllInstancesLoaded ? (byte)205 : (byte)0);
-            writer.WriteByte(HasDictFlags ? (byte)205 : (byte)0);
+            writer.WriteBoolean(District);
+            writer.WriteByte(IsTerrain);
+            writer.WriteByte(TotallyAllInstancesLoaded);
+            writer.WriteByte(HasDictFlags);
             writer.WriteByte(InstanceAge);
             writer.WriteByte(BoundAge);
             writer.WriteByte(PropsAge);
@@ -296,10 +283,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Name = new Rsc6Str(reader.ReadString("Name"));
-            LODFade = reader.ReadSingle("LODFade");
-            Added = reader.ReadBool("Added");
             PropsGroup = reader.ReadBool("PropsGroup");
-            MissingMedLOD = reader.ReadBool("MissingMedLOD");
             ScopedNameHash = new JenkHash(reader.ReadString("ScopedNameHash"));
 
             for (int i = 0; i < Curves.Length; i++)
@@ -307,66 +291,78 @@ namespace CodeX.Games.RDR1.RSC6
                 Curves[i] = new(reader.ReadNode<Rsc6CurveGroup>($"Curve{i}"));
             }
 
-            ParentLevelIndex = reader.ReadInt32("ParentLevelIndex");
-            DoNotManage = reader.ReadBool("DoNotManage");
-            Managed = reader.ReadBool("Managed");
-            Dynamic = reader.ReadBool("Dynamic");
-            HasBoneData = reader.ReadBool("HasBoneData");
-            ExtraCurveData = reader.ReadUInt32("ExtraCurveData");
-            MinAndBoundingRadius = Rpf6Crypto.ToYZX(reader.ReadVector4("MinAndBoundingRadius"));
-            MaxAndInscribedRadius = Rpf6Crypto.ToYZX(reader.ReadVector4("MaxAndInscribedRadius"));
-            BoundMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundMin"));
-            BoundMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundMax"));
+            MinAndBoundingRadius = Rpf6Crypto.ToXYZ(reader.ReadVector4("MinAndBoundingRadius"));
+            MaxAndInscribedRadius = Rpf6Crypto.ToXYZ(reader.ReadVector4("MaxAndInscribedRadius"));
+            BoundMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMin"));
+            BoundMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMax"));
             PlacedLightsGroup = new(reader.ReadNode<Rsc6PlacedLightsGroup>("PlacedLightsGroup"));
             Entities = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
+            //Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
+
+            var dAttr = reader.ReadNodeArray<Rsc6MapAttribute>("DoorsAttributes");
+            if (dAttr != null)
+            {
+                //DoorsAttributes = new(dAttr, (ushort)dAttr.Where(a => a != null).ToArray().Length, (ushort)dAttr.Length);
+            }
+
             ItemMapChilds = new(reader.ReadNodeArray<Rsc6SectorChild>("ItemMapChilds"));
             ItemChilds = new(reader.ReadNode<Rsc6ScopedSectors>("ItemChilds"));
             ChildPtrs = new(reader.ReadNodeArray<Rsc6SectorInfo>("ChildPtrs"));
-            DrawableInstances = new(reader.ReadNodeArray<Rsc6DrawableInstanceBase>("DrawableInstances"));
-            //Portals = new(reader.ReadNodeArray<Rsc6Portals>("Portals"));
-            Attributes = new(reader.ReadNodeArray<Rsc6Portal>("Attributes"));
-            LowLODFade = reader.ReadSingle("LowLODFade");
+            //DrawableInstances = new(reader.ReadNodeArray<Rsc6DrawableInstanceBase>("DrawableInstances"));
+            Unknown_104h = new(reader.ReadNodeArray<Rsc6DrawableInstance>("Unknown_104h"));
+            Portals = new(reader.ReadNodeArray<Rsc6Portal>("Portals"));
             SectorNameLower = new JenkHash(reader.ReadString("SectorNameLower"));
             Occluders = new(reader.ReadNodeArray<Rsc6Portal>("Occluders"));
-            LastVisibleMarker = reader.ReadUInt32("LastVisibleMarker");
             ResidentStatus = reader.ReadUInt32("ResidentStatus");
-            PropNames = new((reader.ReadStringArray("PropNames") ?? Array.Empty<string>()).Select(s => new Rsc6Str(s)).ToArray());
+
+            var propNames = reader.ReadStringArray("PropNames");
+            if (propNames != null)
+            {
+                var propStr = new Rsc6Str[propNames.Length];
+                for (int i = 0; i < propStr.Length; i++)
+                {
+                    propStr[i] = new Rsc6Str((propNames[i] == string.Empty) ? null : propNames[i]);
+                }
+                PropNames = new(propStr);
+            }
+
             Locators = new(reader.ReadNodeArray<Rsc6LocatorStatic>("Locators"));
             AnyHighInstanceLoaded = reader.ReadBool("AnyHighInstanceLoaded");
-            ResidentVLowCount = reader.ReadByte("ResidentVLowCount");
             HasVLowLODResource = reader.ReadBool("HasVLowLODResource");
-            VLowSuperseded = reader.ReadBool("VLowSuperseded");
             Scope = new(reader.ReadString("Scope"));
-            NumGroupedChildren = reader.ReadUInt16("NumGroupedChildren");
-            LODReferences = reader.ReadUInt16("LODReferences");
-            CurrentLOD = reader.ReadByte("CurrentLOD");
-            District = reader.ReadByte("District");
-            IsTerrain = reader.ReadBool("IsTerrain");
-            TotallyAllInstancesLoaded = reader.ReadBool("TotallyAllInstancesLoaded");
-            HasDictFlags = reader.ReadBool("HasDictFlags");
-            InstanceAge = reader.ReadByte("InstanceAge");
-            BoundAge = reader.ReadByte("BoundAge");
-            PropsAge = reader.ReadByte("PropsAge");
+            District = reader.ReadBool("District");
             RefCount = reader.ReadByte("RefCount");
-            ParentChildIndex = reader.ReadByte("ParentChildIndex");
             Flags = reader.ReadUInt32("Flags");
-            InnerPropsInstanciated = reader.ReadBool("InnerPropsInstanciated");
-            InnerPropsAge = reader.ReadByte("InnerPropsAge");
-            RawPropsGroup = reader.ReadByte("RawPropsGroup");
-            GroupFileFlags = reader.ReadByte("GroupFileFlags");
             BoundInstances = reader.ReadUInt32("BoundInstances");
             NamedNodeMap = reader.ReadUInt32("NamedNodeMap");
             Unknown_1DAh = reader.ReadUInt32("Unknown_1DAh");
+
+            if (Attributes.Items != null && DoorsAttributes.Items != null)
+            {
+                for (int i = 0; i < DoorsAttributes.Count; i++)
+                {
+                    var d = DoorsAttributes[i];
+                    if (d == null) continue;
+
+                    var target = d.Target.Item;
+                    if (target == null || target.ToString() == string.Empty) continue; 
+
+                    foreach (var attr in Attributes.Items)
+                    {
+                        if (attr.ToString() == target.ToString())
+                        {
+                            d.AttrTarget = attr;
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteUInt32("@version", 0);
             if (Name.Value != null) writer.WriteString("Name", Name.Value);
-            writer.WriteSingle("LODFade", LODFade);
-            writer.WriteBool("Added", Added);
             writer.WriteBool("PropsGroup", PropsGroup);
-            writer.WriteBool("MissingMedLOD", MissingMedLOD);
             if (ScopedNameHash != 0) writer.WriteString("ScopedNameHash", ScopedNameHash.ToString());
 
             for (int i = 0; i < Curves.Length; i++)
@@ -374,56 +370,34 @@ namespace CodeX.Games.RDR1.RSC6
                 writer.WriteNode($"Curve{i}", Curves[i].Item);
             }
 
-            writer.WriteInt32("ParentLevelIndex", ParentLevelIndex);
-            writer.WriteBool("DoNotManage", DoNotManage);
-            writer.WriteBool("Managed", Managed);
-            writer.WriteBool("Dynamic", Dynamic);
-            writer.WriteBool("HasBoneData", HasBoneData);
-            writer.WriteUInt32("ExtraCurveData", ExtraCurveData);
             writer.WriteVector4("MinAndBoundingRadius", MinAndBoundingRadius);
             writer.WriteVector4("MaxAndInscribedRadius", MaxAndInscribedRadius);
             writer.WriteVector4("BoundMin", BoundMin);
             writer.WriteVector4("BoundMax", BoundMax);
             writer.WriteNode("PlacedLightsGroup", PlacedLightsGroup.Item);
-            writer.WriteNodeArray("Entities", Entities.Items);
-            writer.WriteNodeArray("ItemMapChilds", ItemMapChilds.Items);
+            if (Entities.Count > 0) writer.WriteNodeArray("Entities", Entities.Items);
+            if (Attributes.Capacity > 0) writer.WriteNodeArray("DoorsAttributes", DoorsAttributes.Items);
+            if (ItemMapChilds.Count > 0) writer.WriteNodeArray("ItemMapChilds", ItemMapChilds.Items);
             writer.WriteNode("ItemChilds", ItemChilds.Item);
-            writer.WriteNodeArray("ChildPtrs", ChildPtrs.Items);
-            writer.WriteNodeArray("DrawableInstances", DrawableInstances.Items);
-            writer.WriteNodeArray("Portals", Portals.Items);
-            writer.WriteNodeArray("Attributes", Attributes.Items);
-            writer.WriteSingle("LowLODFade", LowLODFade);
+            if (ChildPtrs.Count > 0) writer.WriteNodeArray("ChildPtrs", ChildPtrs.Items);
+            if (DrawableInstances.Count > 0) writer.WriteNodeArray("DrawableInstances", DrawableInstances.Items);
+            if (Unknown_104h.Count > 0) writer.WriteNodeArray("Unknown_104h", Unknown_104h.Items);
+            if (Portals.Count > 0) writer.WriteNodeArray("Portals", Portals.Items);
+            if (Attributes.Count > 0) writer.WriteNodeArray("Attributes", Attributes.Items);
             writer.WriteString("SectorNameLower", SectorNameLower.ToString());
-            writer.WriteNodeArray("Occluders", Occluders.Items);
-            writer.WriteUInt32("LastVisibleMarker", LastVisibleMarker);
+            if (Occluders.Count > 0) writer.WriteNodeArray("Occluders", Occluders.Items);
             writer.WriteUInt32("ResidentStatus", ResidentStatus);
-            writer.WriteStringArray("PropNames", PropNames.Items.Select(s => s.Value).ToArray());
-            writer.WriteNodeArray("Locators", Locators.Items);
+            if (PropNames.Count > 0) writer.WriteStringArray("PropNames", PropNames.Items.Select(s => s.Value).ToArray());
+            if (Locators.Count > 0) writer.WriteNodeArray("Locators", Locators.Items);
             writer.WriteBool("AnyHighInstanceLoaded", AnyHighInstanceLoaded);
-            writer.WriteByte("ResidentVLowCount", ResidentVLowCount);
             writer.WriteBool("HasVLowLODResource", HasVLowLODResource);
-            writer.WriteBool("VLowSuperseded", VLowSuperseded);
             writer.WriteString("Scope", Scope.Value);
-            writer.WriteUInt16("NumGroupedChildren", NumGroupedChildren);
-            writer.WriteUInt16("LODReferences", LODReferences);
-            writer.WriteByte("CurrentLOD", CurrentLOD);
-            writer.WriteByte("District", District);
-            writer.WriteBool("IsTerrain", IsTerrain);
-            writer.WriteBool("TotallyAllInstancesLoaded", TotallyAllInstancesLoaded);
-            writer.WriteBool("HasDictFlags", HasDictFlags);
-            writer.WriteByte("InstanceAge", InstanceAge);
-            writer.WriteByte("BoundAge", BoundAge);
-            writer.WriteByte("PropsAge", PropsAge);
+            writer.WriteBool("District", District);
             writer.WriteByte("RefCount", RefCount);
-            writer.WriteByte("ParentChildIndex", ParentChildIndex);
             writer.WriteUInt32("Flags", Flags);
-            writer.WriteBool("InnerPropsInstanciated", InnerPropsInstanciated);
-            writer.WriteByte("InnerPropsAge", InnerPropsAge);
-            writer.WriteByte("RawPropsGroup", RawPropsGroup);
-            writer.WriteByte("GroupFileFlags", GroupFileFlags);
-            writer.WriteUInt32("BoundInstances", BoundInstances);
-            writer.WriteUInt32("NamedNodeMap", NamedNodeMap);
-            writer.WriteUInt32("Unknown_1DAh", Unknown_1DAh);
+            if (BoundInstances != 0) writer.WriteUInt32("BoundInstances", BoundInstances);
+            if (NamedNodeMap != 0) writer.WriteUInt32("NamedNodeMap", NamedNodeMap);
+            if (Unknown_1DAh != 0) writer.WriteUInt32("Unknown_1DAh", Unknown_1DAh);
         }
 
         public override string ToString()
@@ -432,28 +406,26 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ScopedSectors : Rsc6Block, MetaNode //sagScopedSectors
+    [TC(typeof(EXP))] public class Rsc6ScopedSectors : Rsc6BlockBase, MetaNode //sagScopedSectors
     {
-        public ulong BlockLength => 28;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-        public Rsc6PtrArr<Rsc6SectorInfo> Sectors { get; set; }
-        public Rsc6ManagedArr<Rsc6ScopedSectorParent> SectorsParents { get; set; }
-        public Rsc6RawArr<ushort> SectorsIndices { get; set; }
+        public override ulong BlockLength => 28;
+        public Rsc6PtrArr<Rsc6SectorInfo> Sectors { get; set; } //m_ScopedSectors
+        public Rsc6ManagedArr<Rsc6ScopedSectorParent> SectorsParents { get; set; } //m_ScopedSectorsParents
+        public Rsc6RawArr<ushort> SectorsIndices { get; set; } //m_ScopedSectorsIndices
         public ushort IndicesCount { get; set; }
         public ushort IndicesCapacity { get; set; }
-        public Rsc6Str Name { get; set; }
+        public Rsc6Str Name { get; set; } //m_ScopeName
 
         public List<string> ParentsNames; //For writing purposes
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
-            Sectors = reader.ReadPtrArr<Rsc6SectorInfo>(); //m_ScopedSectors
-            SectorsParents = reader.ReadArr<Rsc6ScopedSectorParent>(); //m_ScopedSectorsParents
-            SectorsIndices = reader.ReadRawArrPtr<ushort>(); //m_ScopedSectorsIndices
+            Sectors = reader.ReadPtrArr<Rsc6SectorInfo>();
+            SectorsParents = reader.ReadArr<Rsc6ScopedSectorParent>();
+            SectorsIndices = reader.ReadRawArrPtr<ushort>();
             IndicesCount = reader.ReadUInt16();
             IndicesCapacity = reader.ReadUInt16();
-            Name = reader.ReadStr(); //m_ScopeName
+            Name = reader.ReadStr();
             SectorsIndices = reader.ReadRawArrItems(SectorsIndices, IndicesCount);
 
             for (int i = 0; i < SectorsParents.Count; i++)
@@ -470,7 +442,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             var parentsPos = new Rsc6ScopedSectorParent[ParentsNames.Count];
             for (int i = 0; i < ParentsNames.Count; i++)
@@ -538,21 +510,18 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))]
-    public class Rsc6ScopedSectorParent : Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6ScopedSectorParent : Rsc6BlockBase
     {
-        public ulong BlockLength => 4;
-        public bool IsPhysical => false;
-        public ulong FilePosition { get; set; }
+        public override ulong BlockLength => 4;
         public uint ParentPointer { get; set; }
         public Rsc6SectorInfo Parent { get; set; }
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             ParentPointer = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             if (Parent == null)
                 writer.WriteUInt32((uint)Rpf6Crypto.VIRTUAL_BASE);
@@ -569,6 +538,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))] public class Rsc6DrawableInstanceBase : Rsc6FileBase, MetaNode //rdrDrawableInstanceBase
     {
         public override ulong BlockLength => 224;
+        public override uint VFT { get; set; } = 0x01913300;
         public float TimeLastVisible { get; set; } //m_TimeLastVisible
         public ulong Unknown_8h { get; set; } //Always 0
         public Vector4 LastKnownPositionAndFlags { get; set; } //m_LastKnownPositionAndFlags
@@ -649,7 +619,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x01913300);
+            base.Write(writer);
             writer.WriteSingle(TimeLastVisible);
             writer.WriteUInt64(Unknown_8h);
             writer.WriteVector4(LastKnownPositionAndFlags);
@@ -691,7 +661,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             TimeLastVisible = reader.ReadSingle("TimeLastVisible");
-            LastKnownPositionAndFlags = Rpf6Crypto.ToYZX(reader.ReadVector4("LastKnownPositionAndFlags"));
+            LastKnownPositionAndFlags = Rpf6Crypto.ToXYZ(reader.ReadVector4("LastKnownPositionAndFlags"));
             Node = reader.ReadInt32("Node");
             AtDNode = reader.ReadInt32("AtDNode");
             Next = reader.ReadInt32("Next");
@@ -702,10 +672,9 @@ namespace CodeX.Games.RDR1.RSC6
             NodeType = reader.ReadByte("NodeType");
             VisibilityFlag = reader.ReadInt32("VisibilityFlag");
             BucketFlag = reader.ReadInt32("BucketFlag");
-            Matrix = reader.ReadMatrix4x4("Matrix");
-            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMin"));
-            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMax"));
-            InstanceHash = reader.ReadUInt32("InstanceHash");
+            Matrix = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Matrix"), true);
+            BoundingBoxMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMax"));
             RoomBits = reader.ReadInt32("RoomBits");
             Elements = reader.ReadUInt32("Elements");
             Type = reader.ReadUInt16("Type");
@@ -718,6 +687,7 @@ namespace CodeX.Games.RDR1.RSC6
             Name = new Rsc6Str(reader.ReadString("Name"));
             Room = new(reader.ReadNode<Rsc6Room>("Room"));
             Drawable = reader.ReadInt32("Drawable");
+            InstanceHash = new(Name.Value);
         }
 
         public void Write(MetaNodeWriter writer)
@@ -737,7 +707,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4("Matrix", Matrix);
             writer.WriteVector4("BoundingBoxMin", BoundingBoxMin);
             writer.WriteVector4("BoundingBoxMax", BoundingBoxMax);
-            writer.WriteUInt32("InstanceHash", InstanceHash);
             writer.WriteInt32("RoomBits", RoomBits);
             writer.WriteUInt32("Elements", Elements);
             writer.WriteUInt16("Type", Type);
@@ -761,7 +730,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))] public class Rsc6Room : Rsc6FileBase, MetaNode //rage::rmpRoom
     {
         public override ulong BlockLength => 144;
-
+        public override uint VFT { get; set; } = 0x019130E0;
         public Rsc6Str Name { get; set; } //m_ReverbName
         public Rsc6Str RscName { get; set; } //m_DebugRscName
         public uint AddMarker { get; set; } = 0xFFFFFFFF; //m_AddMarker
@@ -798,7 +767,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x019130E0);
+            base.Write(writer);
             writer.WriteStr(Name);
             writer.WriteStr(RscName);
             writer.WriteUInt32(AddMarker);
@@ -820,10 +789,10 @@ namespace CodeX.Games.RDR1.RSC6
             Name = new Rsc6Str(reader.ReadString("Name"));
             RscName = new Rsc6Str(reader.ReadString("RscName"));
             AddMarker = reader.ReadUInt32("AddMarker");
-            Bounds = Rpf6Crypto.ToYZX(reader.ReadVector4("Bounds"));
-            Matrix = reader.ReadMatrix4x4("Matrix");
+            Bounds = Rpf6Crypto.ToXYZ(reader.ReadVector4("Bounds"));
+            Matrix = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Matrix"), true);
             Polygons = new(reader.ReadNodeArray<Rsc6Polygon>("Polygons"));
-            StaticObjects = new(reader.ReadUInt16Array("StaticObjects") ?? Array.Empty<ushort>());
+            StaticObjects = new(reader.ReadUInt16Array("StaticObjects"));
             Portals = new(reader.ReadNodeArray<Rsc6Portal>("Portals"));
             Flags = reader.ReadUInt32("Flags");
             ReverbName = new Rsc6Str(reader.ReadString("ReverbName"));
@@ -853,7 +822,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Portal : Rsc6FileBase, MetaNode //rage::rmpPortal
+    [TC(typeof(EXP))] public class Rsc6Portal : Rsc6BlockBase, MetaNode //rage::rmpPortal
     {
         public override ulong BlockLength => 224;
         public Rsc6Polygon Polygons { get; set; } = new Rsc6Polygon();
@@ -911,8 +880,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Polygons = new Rsc6Polygon();
             Polygons.Read(reader);
-            Matrix = reader.ReadMatrix4x4("Matrix");
-            Bounds = reader.ReadVector3("Bounds");
+            Matrix = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Matrix"), true);
+            Bounds = Rpf6Crypto.ToXYZ(reader.ReadVector3("Bounds"));
             Radius = reader.ReadSingle("Radius");
             FrontRoom = reader.ReadInt32("FrontRoom");
             BackRoom = reader.ReadInt32("BackRoom");
@@ -942,10 +911,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Portals : Rsc6FileBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6DrawableInstance : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 144;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x0198EFC0;
         public uint Unknown_8h { get; set; } //Always 0
         public uint Unknown_Ch { get; set; } //Always 0
         public ushort Unknown_10h { get; set; }
@@ -953,14 +922,14 @@ namespace CodeX.Games.RDR1.RSC6
         public int Unknown_14h { get; set; } = -1; //Always -1
         public uint Unknown_18h { get; set; } //Always 0
         public uint Unknown_1Ch { get; set; } = 0xCDCDCDCD; //Always 0xCDCDCDCD
-        public JenkHash Unknown_20h { get; set; }
-        public uint Unknown_24h { get; set; } //Pointer to VFT (starts of the struct)
+        public uint Unknown_20h { get; set; }
+        public uint Unknown_24h { get; set; } //Pointer to VFT (start of the struct)
         public short Unknown_28h { get; set; } = -1; //Always -1
         public ushort Unknown_2Ah { get; set; } //Always 0
         public uint Unknown_2Ch { get; set; } //Pointer to Unknown_70h
         public Matrix4x4 Unknown_30h { get; set; }
-        public uint Unknown_70h { get; set; } = 0x018E3C34; //26098740 or 11199752 - probably VFTs
-        public uint Unknown_74h { get; set; } //Pointer to VFT (starts of the struct)
+        public uint Unknown_70h { get; set; } = 0x018E3C34; //26098740 or 11199752
+        public uint Unknown_74h { get; set; } //Pointer to VFT (start of the struct)
         public uint Unknown_78h { get; set; } //Pointer to Unknown_20h
         public ushort Unknown_7Ch { get; set; } = 2; //Always 2
         public short Unknown_7Eh { get; set; } = -1; //Always -1
@@ -972,7 +941,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             Unknown_8h = reader.ReadUInt32();
             Unknown_Ch = reader.ReadUInt32();
             Unknown_10h = reader.ReadUInt16();
@@ -999,25 +967,24 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x0198EFC0);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(Unknown_Ch);
-            writer.WriteUInt32(Unknown_10h);
-            writer.WriteUInt32(Unknown_12h);
+            writer.WriteUInt16(Unknown_10h);
+            writer.WriteUInt16(Unknown_12h);
             writer.WriteInt32(Unknown_14h);
             writer.WriteUInt32(Unknown_18h);
             writer.WriteUInt32(Unknown_1Ch);
             writer.WriteUInt32(Unknown_20h);
-            writer.WriteUInt32(Unknown_24h);
+            writer.WritePtrEmbed(this, this, 0); //Unknown_24h
             writer.WriteInt16(Unknown_28h);
-            writer.WriteUInt32(Unknown_2Ah);
-            writer.WriteUInt32(Unknown_2Ch);
+            writer.WriteUInt16(Unknown_2Ah);
+            writer.WritePtrEmbed(this, this, 0x70); //Unknown_2Ch
             writer.WriteMatrix4x4(Unknown_30h);
             writer.WriteUInt32(Unknown_70h);
-            writer.WriteUInt32(Unknown_74h);
-            writer.WriteUInt32(Unknown_78h);
-            writer.WriteUInt32(Unknown_7Ch);
+            writer.WritePtrEmbed(this, this, 0); //Unknown_74h
+            writer.WritePtrEmbed(this, this, 0x20); //Unknown_78h
+            writer.WriteUInt16(Unknown_7Ch);
             writer.WriteInt16(Unknown_7Eh);
             writer.WriteUInt32(Unknown_80h);
             writer.WriteUInt32(Unknown_84h);
@@ -1029,7 +996,9 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Unknown_10h = reader.ReadUInt16("Unknown_10h");
             Unknown_12h = reader.ReadUInt16("Unknown_12h");
-            Unknown_30h = reader.ReadMatrix4x4("Unknown_30h");
+            Unknown_20h = reader.ReadUInt32("Unknown_20h");
+            Unknown_30h = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Unknown_30h"), true);
+            Unknown_88h = reader.ReadJenkHash("Unknown_88h");
             Unknown_8Ch = new(reader.ReadNode<Rsc6DrawableInstanceBase>("Unknown_8Ch"));
         }
 
@@ -1037,7 +1006,9 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteUInt16("Unknown_10h", Unknown_10h);
             writer.WriteUInt16("Unknown_12h", Unknown_12h);
+            writer.WriteUInt32("Unknown_20h", Unknown_20h);
             writer.WriteMatrix4x4("Unknown_30h", Unknown_30h);
+            writer.WriteJenkHash("Unknown_88h", Unknown_88h);
             writer.WriteNode("Unknown_8Ch", Unknown_8Ch.Item);
         }
     }
@@ -1045,6 +1016,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))] public class Rsc6Polygon : Rsc6FileBase, MetaNode //rage::spdPolygon
     {
         public override ulong BlockLength => 112;
+        public override uint VFT { get; set; } = 0x01909C10;
         public int EdgeVisFrame { get; set; } //Always -1
         public int Data { get; set; } = -1; //Always -1
         public int RefNumber { get; set; } = -1; //Always -1
@@ -1061,11 +1033,11 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Arr<Vector4> Points { get; set; } //m_Points
         public Rsc6Arr<byte> VisibleEdges { get; set; } //m_VisibleEdges, capacity constantly set to 16
         public bool SingleSided { get; set; } //m_SingleSided
-        public uint Unknown_61h { get; set; } //Padding
-        public uint Unknown_65h { get; set; } //Padding
-        public uint Unknown_69h { get; set; } //Padding
-        public ushort Unknown_6Dh { get; set; } //Padding
-        public byte Unknown_6Fh { get; set; } //Padding
+        public uint Unknown_61h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_65h { get; set; } = 0xCDCDCDCD; //Padding
+        public uint Unknown_69h { get; set; } = 0xCDCDCDCD; //Padding
+        public ushort Unknown_6Dh { get; set; } = 0xCDCD; //Padding
+        public byte Unknown_6Fh { get; set; } = 0xCD; //Padding
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1095,7 +1067,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x01909C10);
+            base.Write(writer);
             writer.WriteInt32(EdgeVisFrame);
             writer.WriteInt32(Data);
             writer.WriteInt32(RefNumber);
@@ -1129,9 +1101,9 @@ namespace CodeX.Games.RDR1.RSC6
             Next = reader.ReadInt32("Next");
             Prev = reader.ReadInt32("Prev");
             Polygon = reader.ReadInt32("Polygon");
-            PlaneCoeffs = Rpf6Crypto.ToYZX(reader.ReadVector4("PlaneCoeffs"));
-            Center = Rpf6Crypto.ToYZX(reader.ReadVector4("Center"));
-            Points = new(reader.ReadVector4Array("Points"));
+            PlaneCoeffs = Rpf6Crypto.ToXYZ(reader.ReadVector4("PlaneCoeffs"));
+            Center = Rpf6Crypto.ToXYZ(reader.ReadVector4("Center"));
+            Points = new(Rpf6Crypto.ToXYZ(reader.ReadVector4Array("Points")));
             VisibleEdges = new(reader.ReadByteArray("VisibleEdges"), false, 16);
             SingleSided = reader.ReadBool("SingleSided");
         }
@@ -1154,7 +1126,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6CurveGroup : Rsc6Block, MetaNode //sagCurveArray
+    [TC(typeof(EXP))] public class Rsc6CurveGroup : Rsc6BlockBase, MetaNode //sagCurveArray
     {
         /*
          * There's a block of 24 pointers in each sagSectorInfo that refer to this sagCurveGroup structure
@@ -1171,17 +1143,14 @@ namespace CodeX.Games.RDR1.RSC6
          * Others are mostly used in hub sectors like towns
          */
 
-        public ulong BlockLength => 48; //sagCurveGroup + sagCurveArray
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 48; //sagCurveGroup + sagCurveArray
         public Vector4 BoundingBoxMin { get; set; } //m_AABBMin
         public Vector4 BoundingBoxMax { get; set; } //m_AABBMax
         public Rsc6ManagedArr<Rsc6Curve> Curves { get; set; } //m_CurveArray
         public int Next { get; set; } //m_Next
         public int ParentLevelIndex { get; set; } //m_ParentLevelIndex
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             BoundingBoxMin = reader.ReadVector4();
             BoundingBoxMax = reader.ReadVector4();
@@ -1190,7 +1159,7 @@ namespace CodeX.Games.RDR1.RSC6
             ParentLevelIndex = reader.ReadInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(BoundingBoxMin);
             writer.WriteVector4(BoundingBoxMax);
@@ -1201,8 +1170,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMin"));
-            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMax"));
+            BoundingBoxMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMax"));
             Curves = new(reader.ReadNodeArray<Rsc6Curve>("Curves"));
             Next = reader.ReadInt32("Next");
             ParentLevelIndex = reader.ReadInt32("ParentLevelIndex");
@@ -1221,6 +1190,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))] public class Rsc6Curve : Rsc6FileBase, MetaNode //sagCurve
     {
         public override ulong BlockLength => 80; //rage::mayaCurve + sagCurve
+        public override uint VFT { get; set; } = 0x0190DAB8;
         public Rsc6RawArr<Vector4> ControlledVertices { get; set; } //m_pCVs
         public uint Unknown_8h { get; set; } = 0x01877240; //25653824 or 10755280, probably VFTs
         public Rsc6RawArr<float> Knots { get; set; } //m_pKnots, maya-style knot vectors (joint points)
@@ -1246,11 +1216,8 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             ControlledVertices = reader.ReadRawArrPtr<Vector4>();
             Unknown_8h = reader.ReadUInt32();
-
-            //rage::mayaKnotVector
-            Knots = reader.ReadRawArrPtr<float>();
+            Knots = reader.ReadRawArrPtr<float>(); //rage::mayaKnotVector
             KnotsCount = reader.ReadInt32();
-
             TRange = reader.ReadSingle();
             TMax = reader.ReadSingle();
             CVCount = reader.ReadUInt16();
@@ -1266,14 +1233,13 @@ namespace CodeX.Games.RDR1.RSC6
             BoneIndex = reader.ReadInt16();
             ParentLevelIndex = reader.ReadInt16();
             CRC = reader.ReadUInt32();
-
             ControlledVertices = reader.ReadRawArrItems(ControlledVertices, (uint)CVCount + 1);
             Knots = reader.ReadRawArrItems(Knots, (uint)KnotsCount);
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x0190DAB8);
+            base.Write(writer);
             writer.WriteRawArr(ControlledVertices);
             writer.WriteUInt32(Unknown_8h);
             writer.WriteRawArr(Knots);
@@ -1297,14 +1263,14 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            ControlledVertices = new(reader.ReadVector4Array("ControlledVertices"));
+            ControlledVertices = new(Rpf6Crypto.ToXYZ(reader.ReadVector4Array("ControlledVertices")));
             Knots = new(reader.ReadSingleArray("Knots"));
             TRange = reader.ReadSingle("TRange");
             TMax = reader.ReadSingle("TMax");
             Form = reader.ReadEnum<Rsc6MayaCurveForm>("Form");
             Degree = reader.ReadByte("Degree");
-            AABBMin = reader.ReadVector4("AABBMin");
-            AABBMax = reader.ReadVector4("AABBMax");
+            AABBMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBMin"));
+            AABBMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("AABBMax"));
             Name = new(reader.ReadString("Name"));
             Dynamic = reader.ReadBool("Dynamic");
             Active = reader.ReadBool("Active");
@@ -1350,26 +1316,23 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PropInstanceInfo : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6PropInstanceInfo : Rsc6BlockBase, MetaNode
     {
-        public ulong BlockLength => 48;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 48;
         public Rsc6Str EntityName { get; set; } //m_TypeName
         public uint Light { get; set; } //m_Light, always 0
         public Half RotationX { get; set; } //m_Rx
         public Half RotationY { get; set; } //m_Ry
         public Half RotationZ { get; set; } //m_Rz
-        public byte Flags { get; set; } //m_Flags
-        public byte AO { get; set; } //m_AO
+        public byte Flags { get; set; } //m_Flags (0, 65, 66 (mostly), 67, 128, 193, 194, etc)
+        public byte AO { get; set; } //m_AO (64, 84, 57, 22, 18, 41, 27, 33, etc)
         public Vector4 EntityPosition { get; set; } //m_Offset
         public uint Unknown_20h { get; set; } //Always 0
         public uint Unknown_24h { get; set; } //Mostly 0 or can be 1 when called from RDR2AttribBase
-        public uint PortalOffset { get; set; }
+        public uint PortalOffset { get; set; } //m_Portal
         public uint Unknown_2Ch { get; set; } //Always 0
 
-        public void Read(Rsc6DataReader reader) //propInstanceInfo
+        public override void Read(Rsc6DataReader reader) //propInstanceInfo
         {
             EntityName = reader.ReadStr();
             Light = reader.ReadUInt32();
@@ -1385,7 +1348,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_2Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteStr(EntityName);
             writer.WriteUInt32(Light);
@@ -1404,21 +1367,21 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             EntityName = new(reader.ReadString("EntityName"));
-            RotationX = reader.ReadStruct<Half>("RotationX");
-            RotationY = reader.ReadStruct<Half>("RotationY");
-            RotationZ = reader.ReadStruct<Half>("RotationZ");
+            RotationX = (Half)reader.ReadSingle("RotationX");
+            RotationY = (Half)reader.ReadSingle("RotationY");
+            RotationZ = (Half)reader.ReadSingle("RotationZ");
             Flags = reader.ReadByte("Flags");
             AO = reader.ReadByte("AO");
-            EntityPosition = Rpf6Crypto.ToYZX(reader.ReadVector4("EntityPosition"));
-            PortalOffset = reader.ReadUInt32("PortalOffset"); //TODO: change this
+            EntityPosition = Rpf6Crypto.ToXYZ(reader.ReadVector4("EntityPosition"));
+            PortalOffset = reader.ReadUInt32("PortalOffset");
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteString("EntityName", EntityName.Value);
-            writer.WriteStruct("RotationX", RotationX);
-            writer.WriteStruct("RotationY", RotationY);
-            writer.WriteStruct("RotationZ", RotationZ);
+            writer.WriteSingle("RotationX", (float)RotationX);
+            writer.WriteSingle("RotationY", (float)RotationY);
+            writer.WriteSingle("RotationZ", (float)RotationZ);
             writer.WriteByte("Flags", Flags);
             writer.WriteByte("AO", AO);
             writer.WriteVector4("EntityPosition", EntityPosition);
@@ -1431,14 +1394,16 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Attribute : Rsc6FileBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6Attribute : Rsc6FileBase, MetaNode //RDR2AttribBase
     {
         public override ulong BlockLength => 16;
+        public override uint VFT { get; set; } //TODO: finish writing
         public uint TargetPointer { get; set; } //m_TargetPointer
         public uint TargetType { get; set; } //m_eTargetType, mostly 1, sometimes 3 when ClassID is equal to 2 or 5
         public uint ClassID { get; set; } //m_ClassID, 1, 2 or 5
 
         public string TargetedProp; //For writing purposes
+        public Rsc6AttributeType Type; //For writing purposes
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1446,18 +1411,64 @@ namespace CodeX.Games.RDR1.RSC6
             TargetPointer = reader.ReadUInt32();
             TargetType = reader.ReadUInt32();
             ClassID = reader.ReadUInt32();
+            
+            if (TargetType == 1 && ClassID == 1)
+                Type = Rsc6AttributeType.PROPS_DOORS_1;
+            else if (TargetType == 3 && ClassID == 2)
+                Type = Rsc6AttributeType.PROPS_GRINGOS;
+            else
+                Type = Rsc6AttributeType.PROPS_DOORS_2;
         }
-        
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteUInt32(TargetPointer);
+            writer.WriteUInt32(TargetType);
+            writer.WriteUInt32(ClassID);
+        }
+
         public void Read(MetaNodeReader reader)
         {
-            TargetType = reader.ReadUInt32("TargetType");
-            ClassID = reader.ReadUInt32("ClassID");
+            Type = reader.ReadEnum("@type", Rsc6AttributeType.PROPS_DOORS_1);
+            switch (Type)
+            {
+                case Rsc6AttributeType.PROPS_DOORS_1:
+                    TargetType = 1;
+                    ClassID = 1;
+                    break;
+                case Rsc6AttributeType.PROPS_GRINGOS:
+                    TargetType = 3;
+                    ClassID = 2;
+                    break;
+                case Rsc6AttributeType.PROPS_DOORS_2:
+                    TargetType = 1;
+                    ClassID = 2;
+                    break;
+            }
+
+            if (Type == Rsc6AttributeType.PROPS_DOORS_2)
+            {
+                ClassID = reader.ReadUInt32("ClassID");
+            }
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteUInt32("TargetType", TargetType);
-            writer.WriteUInt32("ClassID", ClassID);
+            writer.WriteString("@type", Type.ToString());
+            if (Type == Rsc6AttributeType.PROPS_DOORS_2)
+            {
+                writer.WriteUInt32("ClassID", ClassID);
+            }
+        }
+
+        public static Rsc6Attribute Create(string typeName)
+        {
+            if (Enum.TryParse(typeName, out Rsc6AttributeType type))
+            {
+                return Create(type);
+            }
+            return null;
         }
 
         public static Rsc6Attribute Create(Rsc6DataReader r)
@@ -1469,15 +1480,66 @@ namespace CodeX.Games.RDR1.RSC6
 
             switch (classID)
             {
-                case 1: return new Rsc6AttributeInstancedProp();
+                case 1: return new Rsc6AttributeInstancedProp(); //Prop & doors
                 case 2:
                 case 5:
                     {
-                        if (targetType == 3) return new Rsc6AttributeDrawableInstanceProp();
+                        if (targetType == 3) return new Rsc6AttributeDrawableInstanceProp(); //Prop & gringos
                         else return new Rsc6AttributeInstancedProp2();
                     }
                 default: throw new NotImplementedException("Unknown RDRAttribute type");
             }
+        }
+
+        public static Rsc6Attribute Create(Rsc6AttributeType type)
+        {
+            return type switch
+            {
+                Rsc6AttributeType.PROPS_DOORS_1 => new Rsc6AttributeInstancedProp(),
+                Rsc6AttributeType.PROPS_GRINGOS => new Rsc6AttributeDrawableInstanceProp(),
+                Rsc6AttributeType.PROPS_DOORS_2 => new Rsc6AttributeInstancedProp2(),
+                _ => throw new NotImplementedException("Unknown RDRAttribute type"),
+            };
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6MapAttribute : Rsc6BlockBase, MetaNode
+    {
+        public override ulong BlockLength => 12;
+        public JenkHash TargetHash { get; set; } //The name of the attribute
+        public Rsc6Ptr<Rsc6Attribute> Target { get; set; }
+        public Rsc6Ptr<Rsc6MapAttribute> Next { get; set; } //Next attribute...
+
+        public Rsc6Attribute AttrTarget; //For writing purposes
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            TargetHash = reader.ReadUInt32();
+            Target = reader.ReadPtr(Rsc6Attribute.Create);
+            Next = reader.ReadPtr<Rsc6MapAttribute>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(TargetHash);
+            writer.WritePtrEmbed(AttrTarget, AttrTarget, 0);
+            writer.WritePtr(Next);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Target = new(reader.ReadNode("Target", Rsc6Attribute.Create));
+            Next = new(reader.ReadNode<Rsc6MapAttribute>("Next"));
+            if (Target.Item != null)
+            {
+                TargetHash = new(Target.Item.ToString());
+            }
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteNode("Target", Target.Item);
+            writer.WriteNode("Next", Next.Item);
         }
     }
 
@@ -1500,8 +1562,23 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            Rsc6PropInstanceInfo target = null;
+            var enumerable = writer.BlockList.FirstOrDefault(s => s is Rsc6PropInstanceInfo[]);
+
+            if (enumerable != null && enumerable is Rsc6PropInstanceInfo[] instances)
+            {
+                for (int i = 0; i < instances.Length; i++)
+                {
+                    var inst = instances[i];
+                    if (inst == null) continue;
+                    if (inst.EntityName.ToString() != TargetedProp) continue;
+                    target = inst;
+                    break;
+                }
+            }
+
             writer.WriteUInt32(0x019094C0);
-            writer.WritePtr(TargetProp);
+            writer.WritePtrEmbed(target, target, 0);
             writer.WriteUInt32(TargetType);
             writer.WriteUInt32(ClassID);
             writer.WriteStr(Name);
@@ -1513,7 +1590,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             TargetedProp = reader.ReadString("TargetProp");
             Name = new(reader.ReadString("Name"));
-            Unknown_14h = reader.ReadVector3("Unknown_14h");
+            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -1566,7 +1643,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             TargetedProp = reader.ReadString("TargetProp");
             Unknown_10h = reader.ReadUInt32("Unknown_10h");
-            Unknown_14h = reader.ReadVector3("Unknown_14h");
+            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -1631,7 +1708,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             TargetedProp = reader.ReadString("TargetProp");
             Name = reader.ReadUInt32("Name");
-            Unknown_14h = reader.ReadVector3("Unknown_14h");
+            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
             Unknown_24h = reader.ReadUInt32("Unknown_24h");
         }
 
@@ -1657,12 +1734,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SectorChild : Rsc6Block, MetaNode //sagSectorChild
+    [TC(typeof(EXP))] public class Rsc6SectorChild : Rsc6BlockBase, MetaNode //sagSectorChild
     {
-        public ulong BlockLength => 112;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 112;
         public BoundingBox SectorBounds { get; set; }
         public Vector4 BoundsMin { get; set; } //m_BoundingBoxMin
         public Vector4 BoundsMax { get; set; } //m_BoundingBoxMax
@@ -1672,7 +1746,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_68h { get; set; } //m_String, always 0
         public uint IsImportantLandmark { get; set; } //m_IsImportantLandmark, always 0 except for 'fillMoreTunnel'
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             BoundsMin = reader.ReadVector4();
             BoundsMax = reader.ReadVector4();
@@ -1681,19 +1755,19 @@ namespace CodeX.Games.RDR1.RSC6
 
             while (reader.Position < FilePosition + 0x64)
             {
-                reader.ReadByte(); //0xCD padding
+                reader.ReadByte(); //Padding
             }
 
             Scope = reader.ReadStr();
             Unknown_68h = reader.ReadUInt32();
             IsImportantLandmark = reader.ReadUInt32();
 
-            //Scaling the bounds for CodeX map viewer
+            //Scaling bounds for map viewer
             var scale = new Vector3(1000.0f);
             SectorBounds = new BoundingBox(BoundsMin.XYZ() - scale, BoundsMax.XYZ() + scale);
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             ulong pos = writer.Position;
             writer.WriteVector4(BoundsMin);
@@ -1713,8 +1787,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundsMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMin"));
-            BoundsMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMax"));
+            BoundsMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundsMin"));
+            BoundsMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundsMax"));
             Name = reader.ReadString("Name");
             Scope = new Rsc6Str(reader.ReadString("Scope"));
             IsImportantLandmark = reader.ReadUInt32("IsImportantLandmark");
@@ -1735,12 +1809,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLightsGroup : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6PlacedLightsGroup : Rsc6BlockBase, MetaNode
     {
-        public ulong BlockLength => 64;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 64;
         public Vector4 BoundsMin { get; set; } //m_AABBMin
         public Vector4 BoundsMax { get; set; } //m_AABBMax
         public Rsc6Str Name { get; set; } //m_Name
@@ -1751,7 +1822,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_38h { get; set; } //Always 0
         public uint Unknown_3Ch { get; set; } //Always 0
 
-        public void Read(Rsc6DataReader reader) //rdrPlacedLightsGroup
+        public override void Read(Rsc6DataReader reader) //rdrPlacedLightsGroup
         {
             BoundsMin = reader.ReadVector4();
             BoundsMax = reader.ReadVector4();
@@ -1764,7 +1835,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_3Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(BoundsMin);
             writer.WriteVector4(BoundsMax);
@@ -1779,8 +1850,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundsMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMin"));
-            BoundsMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundsMax"));
+            BoundsMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundsMin"));
+            BoundsMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundsMax"));
             Name = new Rsc6Str(reader.ReadString("Name"));
             Lights = new(reader.ReadNodeArray<Rsc6PlacedLight>("Lights"));
         }
@@ -1794,12 +1865,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLight : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6PlacedLight : Rsc6BlockBase, MetaNode
     {
-        public ulong BlockLength => 160;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 160;
         public Vector4 Position { get; set; } //m_Position
         public Vector4 ParentPosition { get; set; }  //m_ParentPosition
         public Half4 Direction { get; set; } //m_Direction
@@ -1829,7 +1897,7 @@ namespace CodeX.Games.RDR1.RSC6
         public bool DrawPropsOnly { get; set; } //drawPropsOnly
         public byte Transparency { get; set; } //transparency
 
-        public void Read(Rsc6DataReader reader) //rdrPlacedLight
+        public override void Read(Rsc6DataReader reader) //rdrPlacedLight
         {
             Position = reader.ReadVector4();
             ParentPosition = reader.ReadVector4();
@@ -1861,7 +1929,7 @@ namespace CodeX.Games.RDR1.RSC6
             Transparency = reader.ReadByte();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(Position);
             writer.WriteVector4(ParentPosition);
@@ -1895,16 +1963,19 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Position = Rpf6Crypto.ToYZX(reader.ReadVector4("Position"));
-            ParentPosition = Rpf6Crypto.ToYZX(reader.ReadVector4("ParentPosition"));
-            Direction = reader.ReadStruct<Half4>("Direction");
-            Color = reader.ReadStruct<Half4>("Color");
-            EnvInfluence = reader.ReadStruct<Half4>("EnvInfluence");
-            FillInfluence = reader.ReadStruct<Half4>("FillInfluence");
-            FlickerStrength = reader.ReadStruct<Half4>("FlickerStrength");
-            FlickerSpeed = reader.ReadStruct<Half4>("FlickerSpeed");
-            Attenuation = reader.ReadStruct<Half4>("Attenuation");
-            InnerConeOuterCone = reader.ReadStruct<Half2>("InnerConeOuterCone");
+            Position = Rpf6Crypto.ToXYZ(reader.ReadVector4("Position"));
+            ParentPosition = Rpf6Crypto.ToXYZ(reader.ReadVector4("ParentPosition"));
+            Direction = reader.ReadVector4("Direction");
+
+            var color = reader.ReadColour("Color");
+            Color = new Half4(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, color.A / 255.0f);
+
+            EnvInfluence = reader.ReadVector4("EnvInfluence");
+            FillInfluence = reader.ReadVector4("FillInfluence");
+            FlickerStrength = reader.ReadVector4("FlickerStrength");
+            FlickerSpeed = reader.ReadVector4("FlickerSpeed");
+            Attenuation = reader.ReadVector4("Attenuation");
+            InnerConeOuterCone = reader.ReadVector2("InnerConeOuterCone");
             Type = reader.ReadUInt32("Type");
             Flags = reader.ReadUInt32("Flags");
             Range = reader.ReadSingle("Range");
@@ -1927,14 +1998,14 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteVector4("Position", Position);
             writer.WriteVector4("ParentPosition", ParentPosition);
-            writer.WriteStruct("Direction", Direction);
-            writer.WriteStruct("Color", Color);
-            writer.WriteStruct("EnvInfluence", EnvInfluence);
-            writer.WriteStruct("FillInfluence", FillInfluence);
-            writer.WriteStruct("FlickerStrength", FlickerStrength);
-            writer.WriteStruct("FlickerSpeed", FlickerSpeed);
-            writer.WriteStruct("Attenuation", Attenuation);
-            writer.WriteStruct("InnerConeOuterCone", InnerConeOuterCone);
+            writer.WriteVector4("Direction", Rpf6Crypto.Half4ToVector4(Direction));
+            writer.WriteColour("Color", new Colour(Color));
+            writer.WriteVector4("EnvInfluence", Rpf6Crypto.Half4ToVector4(EnvInfluence));
+            writer.WriteVector4("FillInfluence", Rpf6Crypto.Half4ToVector4(FillInfluence));
+            writer.WriteVector4("FlickerStrength", Rpf6Crypto.Half4ToVector4(FlickerStrength));
+            writer.WriteVector4("FlickerSpeed", Rpf6Crypto.Half4ToVector4(FlickerSpeed));
+            writer.WriteVector4("Attenuation", Rpf6Crypto.Half4ToVector4(Attenuation));
+            writer.WriteVector2("InnerConeOuterCone", Rpf6Crypto.Half2ToVector2(InnerConeOuterCone));
             writer.WriteUInt32("Type", Type);
             writer.WriteUInt32("Flags", Flags);
             writer.WriteSingle("Range", Range);
@@ -1959,12 +2030,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLightGlow : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6PlacedLightGlow : Rsc6BlockBase, MetaNode
     {
-        public ulong BlockLength => 64;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 64;
         public Colour GlowColor { get; set; } //m_GlowColor
         public Colour StarColor { get; set; } //m_StarColor
         public Colour FogColor { get; set; } //m_FogColor
@@ -1988,7 +2056,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Half FogConeOffset { get; set; } //m_FogConeOffset
         public int NoiseType { get; set; } //m_NoiseType
 
-        public void Read(Rsc6DataReader reader) //rdrPlacedLightGlow
+        public override void Read(Rsc6DataReader reader) //rdrPlacedLightGlow
         {
             GlowColor = reader.ReadColour();
             StarColor = reader.ReadColour();
@@ -2014,7 +2082,7 @@ namespace CodeX.Games.RDR1.RSC6
             NoiseType = reader.ReadInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteColour(GlowColor);
             writer.WriteColour(StarColor);
@@ -2046,23 +2114,23 @@ namespace CodeX.Games.RDR1.RSC6
             StarColor = reader.ReadColour("StarColor");
             FogColor = reader.ReadColour("FogColor");
             StarTexture = reader.ReadInt32("StarTexture");
-            GlowScale = reader.ReadStruct<Half2>("GlowScale");
-            GlowIntensity = reader.ReadStruct<Half>("GlowIntensity");
-            FogIntensity = reader.ReadStruct<Half>("FogIntensity");
-            GlowOpacity = reader.ReadStruct<Half>("GlowOpacity");
-            FogConeAngle = reader.ReadStruct<Half>("FogConeAngle");
-            FogConeStart = reader.ReadStruct<Half>("FogConeStart");
-            FogConeEnd = reader.ReadStruct<Half>("FogConeEnd");
-            InnerRange = reader.ReadStruct<Half>("InnerRange");
-            NoiseSpeed = reader.ReadStruct<Half>("NoiseSpeed");
-            NoiseScale = reader.ReadStruct<Half>("NoiseScale");
-            NoiseFade = reader.ReadStruct<Half>("NoiseFade");
-            NoiseAzimuth = reader.ReadStruct<Half>("NoiseAzimuth");
-            NoiseElevation = reader.ReadStruct<Half>("NoiseElevation");
+            GlowScale = reader.ReadVector2("GlowScale");
+            GlowIntensity = (Half)reader.ReadSingle("GlowIntensity");
+            FogIntensity = (Half)reader.ReadSingle("FogIntensity");
+            GlowOpacity = (Half)reader.ReadSingle("GlowOpacity");
+            FogConeAngle = (Half)reader.ReadSingle("FogConeAngle");
+            FogConeStart = (Half)reader.ReadSingle("FogConeStart");
+            FogConeEnd = (Half)reader.ReadSingle("FogConeEnd");
+            InnerRange = (Half)reader.ReadSingle("InnerRange");
+            NoiseSpeed = (Half)reader.ReadSingle("NoiseSpeed");
+            NoiseScale = (Half)reader.ReadSingle("NoiseScale");
+            NoiseFade = (Half)reader.ReadSingle("NoiseFade");
+            NoiseAzimuth = (Half)reader.ReadSingle("NoiseAzimuth");
+            NoiseElevation = (Half)reader.ReadSingle("NoiseElevation");
             GlowEnable = reader.ReadBool("GlowEnable");
             FogEnable = reader.ReadBool("FogEnable");
             NoiseEnable = reader.ReadBool("NoiseEnable");
-            FogConeOffset = reader.ReadStruct<Half>("FogConeOffset");
+            FogConeOffset = (Half)reader.ReadSingle("FogConeOffset");
             NoiseType = reader.ReadInt32("NoiseType");
         }
 
@@ -2072,33 +2140,30 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteColour("StarColor", StarColor);
             writer.WriteColour("FogColor", FogColor);
             writer.WriteInt32("StarTexture", StarTexture);
-            writer.WriteStruct("GlowScale", GlowScale);
-            writer.WriteStruct("GlowIntensity", GlowIntensity);
-            writer.WriteStruct("FogIntensity", FogIntensity);
-            writer.WriteStruct("GlowOpacity", GlowOpacity);
-            writer.WriteStruct("FogConeAngle", FogConeAngle);
-            writer.WriteStruct("FogConeStart", FogConeStart);
-            writer.WriteStruct("FogConeEnd", FogConeEnd);
-            writer.WriteStruct("InnerRange", InnerRange);
-            writer.WriteStruct("NoiseSpeed", NoiseSpeed);
-            writer.WriteStruct("NoiseScale", NoiseScale);
-            writer.WriteStruct("NoiseFade", NoiseFade);
-            writer.WriteStruct("NoiseAzimuth", NoiseAzimuth);
-            writer.WriteStruct("NoiseElevation", NoiseElevation);
+            writer.WriteVector2("GlowScale", Rpf6Crypto.Half2ToVector2(GlowScale));
+            writer.WriteSingle("GlowIntensity", (float)GlowIntensity);
+            writer.WriteSingle("FogIntensity", (float)FogIntensity);
+            writer.WriteSingle("GlowOpacity", (float)GlowOpacity);
+            writer.WriteSingle("FogConeAngle", (float)FogConeAngle);
+            writer.WriteSingle("FogConeStart", (float)FogConeStart);
+            writer.WriteSingle("FogConeEnd", (float)FogConeEnd);
+            writer.WriteSingle("InnerRange", (float)InnerRange);
+            writer.WriteSingle("NoiseSpeed", (float)NoiseSpeed);
+            writer.WriteSingle("NoiseScale", (float)NoiseScale);
+            writer.WriteSingle("NoiseFade", (float)NoiseFade);
+            writer.WriteSingle("NoiseAzimuth", (float)NoiseAzimuth);
+            writer.WriteSingle("NoiseElevation", (float)NoiseElevation);
             writer.WriteBool("GlowEnable", GlowEnable);
             writer.WriteBool("FogEnable", FogEnable);
             writer.WriteBool("NoiseEnable", NoiseEnable);
-            writer.WriteStruct("FogConeOffset", FogConeOffset);
+            writer.WriteSingle("FogConeOffset", (float)FogConeOffset);
             writer.WriteInt32("NoiseType", NoiseType);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6LocatorStatic : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6LocatorStatic : Rsc6BlockBase, MetaNode
     {
-        public ulong BlockLength => 48;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 48;
         public Vector4 Offset { get; set; }
         public Vector4 Eulers { get; set; }
         public Rsc6Str Name { get; set; }
@@ -2107,7 +2172,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_2Ch { get; set; } //Padding
 
 
-        public void Read(Rsc6DataReader reader) //rdrLocatorStatic
+        public override void Read(Rsc6DataReader reader) //rdrLocatorStatic
         {
             Offset = reader.ReadVector4();
             Eulers = reader.ReadVector4();
@@ -2117,7 +2182,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_2Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteVector4(Offset);
             writer.WriteVector4(Eulers);
@@ -2128,8 +2193,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Offset = Rpf6Crypto.ToYZX(reader.ReadVector4("Offset"));
-            Eulers = Rpf6Crypto.ToYZX(reader.ReadVector4("Eulers"));
+            Offset = Rpf6Crypto.ToXYZ(reader.ReadVector4("Offset"));
+            Eulers = Rpf6Crypto.ToXYZ(reader.ReadVector4("Eulers"));
         }
 
         public void Write(MetaNodeWriter writer)
@@ -2144,18 +2209,15 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6StreamableBase : Rsc6Block //pgStreamableBase
+    [TC(typeof(EXP))] public class Rsc6StreamableBase : Rsc6BlockBase //pgStreamableBase
     {
-        public ulong BlockLength => 16;
-        public bool IsPhysical => false;
-        public ulong FilePosition { get; set; }
-
-        public uint Unknown_0h { get; set; } = uint.MaxValue; //Always 0xFFFFFFFF
-        public uint Unknown_4h { get; set; } = 64; //Always 64
+        public override ulong BlockLength => 16;
+        public uint Unknown_0h { get; set; } = uint.MaxValue; //Always 0xFFFFFFFF (for #si), 0 for fragments
+        public uint Unknown_4h { get; set; } = 64; //Always 64 (for #si), 0xFFFFFFFF for fragments
         public uint Unknown_8h { get; set; } //Always 0
         public uint Unknown_Ch { get; set; } //Always 0
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Unknown_0h = reader.ReadUInt32();
             Unknown_4h = reader.ReadUInt32();
@@ -2163,7 +2225,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt32(Unknown_0h);
             writer.WriteUInt32(Unknown_4h);
@@ -2272,6 +2334,13 @@ namespace CodeX.Games.RDR1.RSC6
             sb.AppendLine("\t\tObject Position : " + Position);
             return sb.ToString();
         }
+    }
+
+    public enum Rsc6AttributeType : uint
+    {
+        PROPS_DOORS_1 = 1,
+        PROPS_GRINGOS = 3,
+        PROPS_DOORS_2 = 5
     }
 
     public enum Rsc6MayaCurveForm : short

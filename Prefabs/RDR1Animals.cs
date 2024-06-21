@@ -124,7 +124,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             Wft = peds.LoadWft(Prefab.WftEntry);
 
-            var skel = Wft?.Fragment?.Drawable.Item?.Skeleton;
+            var skel = Wft?.Fragment?.Drawable.Item?.Drawable.Skeleton;
             SetSkeleton(skel);
 
             var piece = Wft.Piece;

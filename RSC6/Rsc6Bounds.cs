@@ -1,24 +1,23 @@
 ﻿using System;
 using System.Text;
-using System.Collections.Generic;
-using System.Numerics;
-using CodeX.Core.Engine;
-using CodeX.Core.Utilities;
-using CodeX.Core.Numerics;
-using CodeX.Core.Physics;
-using CodeX.Games.RDR1.RPF6;
 using System.Linq;
+using System.Numerics;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using CodeX.Core.Engine;
+using CodeX.Core.Physics;
+using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6TerrainBound : Rsc6BlockBase //terrainBoundTile
+    [TC(typeof(EXP))] public class Rsc6TerrainBound : Rsc6BlockBaseMap //terrainBoundTile
     {
         public override ulong BlockLength => 40; //terrainBoundTile + terrainTileScanData
-        public uint VFT { get; set; } = 0x04A007B8;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x04A007B8;
         public Rsc6Ptr<Rsc6TerrainDictBoundResource> ResourceDict { get; set; } //m_ResourceDict
         public uint PointMaterials_AND { get; set; } //m_PointMaterials_AND
         public uint Unknown_10h { get; set; } //Always 0
@@ -29,8 +28,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            base.Read(reader);
             ResourceDict = reader.ReadPtr<Rsc6TerrainDictBoundResource>();
             PointMaterials_AND = reader.ReadUInt32();
             Unknown_10h = reader.ReadUInt32();
@@ -42,8 +40,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(VFT);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WritePtr(ResourceDict);
             writer.WriteUInt32(PointMaterials_AND);
             writer.WriteUInt32(Unknown_10h);
@@ -54,11 +51,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundResource : Rsc6BlockBase //pgDictionary<terrainBoundResource>
+    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundResource : Rsc6BlockBaseMap //pgDictionary<terrainBoundResource>
     {
         public override ulong BlockLength => 32;
-        public uint VFT { get; set; } = 0x04A007D0;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x04A007D0;
         public uint Unknown_8h { get; set; } //Always 0?
         public uint RefCount { get; set; } //m_RefCount
         public Rsc6Arr<JenkHash> Codes { get; set; } //m_Codes
@@ -66,8 +62,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            base.Read(reader);
             Unknown_8h = reader.ReadUInt32();
             RefCount = reader.ReadUInt32();
             Codes = reader.ReadArr<JenkHash>();
@@ -76,8 +71,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(VFT);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(RefCount);
             writer.WriteArr(Codes);
@@ -104,11 +98,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundInstance : Rsc6BlockBase //pgDictionary<terrainBoundInstance>
+    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundInstance : Rsc6BlockBaseMap //pgDictionary<terrainBoundInstance>
     {
         public override ulong BlockLength => 32;
-        public uint VFT { get; set; } = 0x04A007D0;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x04A007D0;
         public uint Unknown_8h { get; set; } //Always 0?
         public uint RefCount { get; set; } //m_RefCount
         public Rsc6Arr<JenkHash> Codes { get; set; } //m_Codes
@@ -116,8 +109,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            base.Read(reader);
             Unknown_8h = reader.ReadUInt32();
             RefCount = reader.ReadUInt32();
             Codes = reader.ReadArr<JenkHash>();
@@ -126,8 +118,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(VFT);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(RefCount);
             writer.WriteArr(Codes);
@@ -150,7 +141,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ScanData : Rsc6Block //terrainTileScanData
+    [TC(typeof(EXP))] public class Rsc6ScanData : IRsc6Block //terrainTileScanData
     {
         public ulong BlockLength => 8;
         public bool IsPhysical => false;
@@ -171,11 +162,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundsDictionary : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6BoundsDictionary : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 32;
-        public uint VFT { get; set; }
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; } = 0x01830BC0;
         public JenkHash ParentDictionary { get; set; }
         public uint UsageCount { get; set; } = 1;
         public Rsc6Arr<JenkHash> Hashes { get; set; }
@@ -183,8 +173,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            base.Read(reader);
             ParentDictionary = reader.ReadUInt32();
             UsageCount = reader.ReadUInt32();
             Hashes = reader.ReadArr<JenkHash>();
@@ -193,8 +182,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x01830BC0);
-            writer.WritePtr(BlockMap);
+            base.Write(writer);
             writer.WriteUInt32(ParentDictionary);
             writer.WriteUInt32(UsageCount);
             writer.WriteArr(Hashes);
@@ -234,7 +222,7 @@ namespace CodeX.Games.RDR1.RSC6
         Triangle = 13
     }
 
-    [TC(typeof(EXP))] public class Rsc6Bounds : Collider, Rsc6Block
+    [TC(typeof(EXP))] public class Rsc6Bounds : Collider, IRsc6Block
     {
         public virtual ulong BlockLength => 144;
         public ulong FilePosition { get; set; }
@@ -248,15 +236,15 @@ namespace CodeX.Games.RDR1.RSC6
         public float SphereRadius { get; set; } //m_RadiusAroundCentroid, upper bound on the distance from center to any point in this bound.
         public float WorldRadius { get; set; } //m_RadiusAroundLocalOrigin
         public Vector3 BoxMax { get; set; } //m_BoundingBoxMax
-        public float Unknown_2Ch { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float Unknown_2Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector3 BoxMin { get; set; } //m_BoundingBoxMin
-        public float Unknown_3Ch { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float Unknown_3Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector3 BoxCenter { get; set; } //m_CentroidOffset, offset of the centroid from the local coordinate system origin
-        public float Unknown_4Ch { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float Unknown_4Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector3 CentroidOffsetWorldSpace { get; set; } //m_CentroidOffsetWorldSpace
-        public float Unknown_5Ch { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float Unknown_5Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector3 SphereCenter { get; set; } //m_CGOffset, center of gravity location in the local coordinate system
-        public float Unknown_6Ch { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float Unknown_6Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector4 VolumeDistribution { get; set; } //m_VolumeDistribution, angular inertia that this bound would have with a mass of 1kg and the bound's volume (element w).
         public Vector3 Margin { get; set; } //m_MarginV, the distance by which collision detection will be expanded beyond the bound's surface
         public uint RefCount { get; set; } = 1; //Number of physics instances (or sometimes other classes) using this bound, mostly 1, can also be 2
@@ -333,13 +321,13 @@ namespace CodeX.Games.RDR1.RSC6
             WorldSpaceUpdatesEnabled = reader.ReadBool("WorldSpaceUpdatesEnabled");
             SphereRadius = reader.ReadSingle("SphereRadius");
             WorldRadius = reader.ReadSingle("WorldRadius");
-            BoxMax = Rpf6Crypto.ToYZX(reader.ReadVector3("BoxMax"));
-            BoxMin = Rpf6Crypto.ToYZX(reader.ReadVector3("BoxMin"));
-            BoxCenter = Rpf6Crypto.ToYZX(reader.ReadVector3("BoxCenter"));
-            CentroidOffsetWorldSpace = Rpf6Crypto.ToYZX(reader.ReadVector3("CentroidOffsetWorldSpace"));
-            SphereCenter = Rpf6Crypto.ToYZX(reader.ReadVector3("SphereCenter"));
-            VolumeDistribution = Rpf6Crypto.ToYZX(reader.ReadVector4("VolumeDistribution"));
-            Margin = Rpf6Crypto.ToYZX(reader.ReadVector3("Margin"));
+            BoxMax = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoxMax"));
+            BoxMin = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoxMin"));
+            BoxCenter = Rpf6Crypto.ToXYZ(reader.ReadVector3("BoxCenter"));
+            CentroidOffsetWorldSpace = Rpf6Crypto.ToXYZ(reader.ReadVector3("CentroidOffsetWorldSpace"));
+            SphereCenter = Rpf6Crypto.ToXYZ(reader.ReadVector3("SphereCenter"));
+            VolumeDistribution = Rpf6Crypto.ToXYZ(reader.ReadVector4("VolumeDistribution"));
+            Margin = Rpf6Crypto.ToXYZ(reader.ReadVector3("Margin"));
             RefCount = reader.ReadUInt32("NumPhysicsIntance");
         }
 
@@ -450,7 +438,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            Radius = Rpf6Crypto.ToZXY(reader.ReadVector4("Radius"));
+            Radius = Rpf6Crypto.ToXYZ(reader.ReadVector4("Radius"));
             Material = reader.ReadStruct<Rsc6BoundMaterial>("Material");
             InitSpherePart();
         }
@@ -516,10 +504,10 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            CapsuleRadius = Rpf6Crypto.ToZXY(reader.ReadVector4("CapsuleRadius"));
-            CapsuleLength = Rpf6Crypto.ToZXY(reader.ReadVector4("CapsuleLength"));
-            EndPointsWorldSpace0 = Rpf6Crypto.ToZXY(reader.ReadVector4("EndPointsWorldSpace0"));
-            EndPointsWorldSpace1 = Rpf6Crypto.ToZXY(reader.ReadVector4("EndPointsWorldSpace1"));
+            CapsuleRadius = Rpf6Crypto.ToXYZ(reader.ReadVector4("CapsuleRadius"));
+            CapsuleLength = Rpf6Crypto.ToXYZ(reader.ReadVector4("CapsuleLength"));
+            EndPointsWorldSpace0 = Rpf6Crypto.ToXYZ(reader.ReadVector4("EndPointsWorldSpace0"));
+            EndPointsWorldSpace1 = Rpf6Crypto.ToXYZ(reader.ReadVector4("EndPointsWorldSpace1"));
             Material = reader.ReadStruct<Rsc6BoundMaterial>("Material");
             InitCapsulePart();
         }
@@ -537,7 +525,7 @@ namespace CodeX.Games.RDR1.RSC6
         private void InitCapsulePart()
         {
             PartColour = Material.Type.Colour;
-            PartSize = new Vector3(CapsuleRadius.X, CapsuleRadius.X, 0.0f);
+            PartSize = new Vector3(CapsuleRadius.X, CapsuleLength.X, CapsuleRadius.X); //CapsuleLength, CapsuleRadius
             ComputeMass(ColliderType.Capsule, PartSize, 1.0f);
             ComputeBodyInertia();
         }
@@ -552,7 +540,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override ulong BlockLength => base.BlockLength + 352;
         public Vector4 BoxSize { get; set; } //m_BoxSize
-        public new Vector4[] Vertices { get; set; } //Vec3V[8] equal to (VerticesData[i] * Quantum) + CenterGeom;
+        public Vector4[] PlainVertices { get; set; } //Vec3V[8] equal to (VerticesData[i] * Quantum) + CenterGeom;
         public uint[] Unknown_170h { get; set; } //(0xCDCDCDCD + 0x00000000 + 0x0000 0xFFFFFFFF + 0xFFFF) x 12 -> 16 bytes * 12
         public Rsc6BoundMaterial Material { get; set; }
         public uint Unknown_154h { get; set; } //Padding
@@ -565,10 +553,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            base.Read(reader); //phBoundPolyhedron
+            base.Read(reader); //phBoundPolyhedron Rsc6FragArchetype
             BoxSize = reader.ReadVector4();
-            Vertices = reader.ReadVector4Arr(8);
-            Unknown_170h = reader.ReadUInt32Arr(48); //TODO: research this
+            PlainVertices = reader.ReadVector4Arr(8);
+            Unknown_170h = reader.ReadUInt32Arr(48); //TODO: research this (3452816845, 0, uint.MaxValue, uint.MaxValue) x 12
             Material = reader.ReadStruct<Rsc6BoundMaterial>();
             Unknown_154h = reader.ReadUInt32();
             Unknown_158h = reader.ReadUInt32();
@@ -581,18 +569,27 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Write(writer);
             writer.WriteVector4(BoxSize);
-            writer.WriteVector4Array(Vertices);
+            writer.WriteVector4Array(PlainVertices);
             writer.WriteUInt32Array(Unknown_170h);
             Material.Write(writer);
+            writer.WriteUInt32(Unknown_154h);
+            writer.WriteUInt32(Unknown_158h);
+            writer.WriteUInt32(Unknown_15Ch);
         }
 
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            BoxSize = Rpf6Crypto.ToZXY(reader.ReadVector4("BoxSize"));
-            Vertices = reader.ReadVector4Array("Vertices");
+            BoxSize = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoxSize"));
             Unknown_170h = reader.ReadUInt32Array("Unknown_170h");
             Material = reader.ReadStruct<Rsc6BoundMaterial>("Material");
+
+            var vertices = new List<Vector4>();
+            for (int i = 0; i < Vertices.Length; i++)
+            {
+                vertices.Add(new Vector4(Vertices[i], Rpf6Crypto.NaN()));
+            }
+            PlainVertices = vertices.ToArray();
             base.InitPolyhedronPart();
         }
 
@@ -600,7 +597,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Write(writer);
             writer.WriteVector4("BoxSize", BoxSize);
-            writer.WriteVector4Array("Vertices", Vertices);
             writer.WriteUInt32Array("Unknown_170h", Unknown_170h);
             writer.WriteStruct("Material", Material);
         }
@@ -753,7 +749,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedFace : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6BoundCurvedFace : IRsc6Block, MetaNode
     {
         //Curved face for a curved geometry bound
 
@@ -818,8 +814,8 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Polygons = reader.ReadStruct<Rsc6BoundPolyTriangle>("Polygons");
-            CurvatureCenter = Rpf6Crypto.ToZXY(reader.ReadVector4("CurvatureCenter"));
-            UnitNormal = Rpf6Crypto.ToZXY(reader.ReadVector4("UnitNormal"));
+            CurvatureCenter = Rpf6Crypto.ToXYZ(reader.ReadVector4("CurvatureCenter"));
+            UnitNormal = Rpf6Crypto.ToXYZ(reader.ReadVector4("UnitNormal"));
             OuterRadius = reader.ReadSingle("OuterRadius");
             InnerRadius = reader.ReadSingle("InnerRadius");
             MinCosine = reader.ReadSingle("MinCosine");
@@ -845,7 +841,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedEdge : Rsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6BoundCurvedEdge : IRsc6Block, MetaNode
     {
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 48;
@@ -877,8 +873,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            CurvatureCenter = Rpf6Crypto.ToZXY(reader.ReadVector4("CurvatureCenter"));
-            PlaneNormal = Rpf6Crypto.ToZXY(reader.ReadVector4("PlaneNormal"));
+            CurvatureCenter = Rpf6Crypto.ToXYZ(reader.ReadVector4("CurvatureCenter"));
+            PlaneNormal = Rpf6Crypto.ToXYZ(reader.ReadVector4("PlaneNormal"));
             Radius = reader.ReadSingle("Radius");
             VertexIndices = reader.ReadInt32Array("VertexIndices");
         }
@@ -900,9 +896,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint VerticesWorldSpace { get; set; } //m_VerticesWorldSpace
         public Rsc6RawArr<byte> PolygonsData { get; set; } //m_Polygons
         public Vector3 Quantum { get; set; } //m_UnQuantizeFactor
-        public float QuantumW { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float QuantumW { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Vector3 CenterGeom { get; set; } //m_BoundingBoxCenter
-        public float CenterGeomW { get; set; } = Rpf6Crypto.GetNaN(); //0x0100807F
+        public float CenterGeomW { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
         public Rsc6RawArr<Vector3S> VerticesData { get; set; } //m_CompressedVertices
         public uint SmallPolygonsWorldSpace { get; set; } //m_SmallPolygonsWorldSpace
         public bool UseActiveComponents { get; set; } //m_UseActiveComponents, true if this bound supports subsets of itself being active at any time
@@ -1061,7 +1057,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < PolygonsCount; i++)
             {
-                var offset = i * 16; ;
+                var offset = i * 16;
                 var b0 = polygonData[offset] & 0xFB; //Clear high type bit
                 var type = (Rsc6BoundPolygonType)(b0 & 0x7);
                 var area = BufferUtil.ReadSingle(polygonData, offset);
@@ -1133,12 +1129,12 @@ namespace CodeX.Games.RDR1.RSC6
             var polygonData = PolygonsData.Items;
             for (int i = 0; i < PolygonsCount; i++)
             {
-                var offset = i * 16;;
+                var offset = i * 16;
                 var b0 = polygonData[offset] & 0xFB; //Clear high type bit
                 var type = (Rsc6BoundPolygonType)(b0 & 0x7);
                 var area = BufferUtil.ReadSingle(polygonData, offset);
 
-                if (!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f)
+                if ((!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f) || Type == Rsc6BoundsType.Box)
                 {
                     type = Rsc6BoundPolygonType.Triangle;
                     PartShape = EditablePartShape.TriMesh;
@@ -1221,7 +1217,7 @@ namespace CodeX.Games.RDR1.RSC6
                 }
                 else
                 {
-
+                    throw new NotImplementedException("Rsc6Bounds: Unknown primitive type!");
                 }
             }
 
@@ -1496,7 +1492,7 @@ namespace CodeX.Games.RDR1.RSC6
             foreach (var str in strarr)
             {
                 var v = FloatUtil.ParseVector3String(str);
-                list.Add(Rpf6Crypto.ToYZX(v));
+                list.Add(Rpf6Crypto.ToXYZ(v));
             }
 
             if (list.Count == 0) return null;
@@ -1702,7 +1698,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => base.BlockLength + 32;
         public Rsc6RawPtrArr<Rsc6Bounds> Childrens { get; set; } //m_Bounds, sub-bounds that compose this composite bound
         public Rsc6RawArr<Matrix4x4> CurrentMatrices { get; set; } //m_CurrentMatrices, current matrices for each sub-bound
-        public Rsc6RawArr<Matrix4x4> LastMatrices { get; set; } //m_LastMatrices, previous (last update) matrices for each sub-bound
+        public Rsc6RawArr<Matrix4x4> LastMatrices { get; set; } //m_LastMatrices, previous (last update) matrices for each sub-bound, same as m_CurrentMatrices
         public Rsc6RawArr<BoundingBox4> LocalBoxMinMaxs { get; set; } //m_LocalBoxMinMaxs, the bounding boxes, in part local space, of all of the sub-bounds
         public Rsc6RawArr<Rsc6BoundCompositeChildrenFlags> TypeFlags { get; set; } //m_OwnedTypeAndIncludeFlags, optional per-component type flags
         public Rsc6RawArr<Rsc6BoundCompositeChildrenFlags> IncludeFlags { get; set; } //m_OwnedTypeAndIncludeFlags, optional per-component include flags
@@ -1743,14 +1739,21 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i = 0; i < Childrens.Items.Length; i++)
                 {
                     var c = Childrens.Items[i];
+                    var flag = TypeFlags.Items?[i];
+
                     if (c == null) continue;
                     c.Name = "Child" + i.ToString();
 
                     if ((CurrentMatrices.Items != null) && (i < CurrentMatrices.Items.Length))
                     {
+                        var height = Rsc6Fragment.SkinnedHeightPos; //Approximative fix for displaying bounds
+                        if (flag?.TypeFlags == Rsc6ObjectTypeFlags.STATIC_STANDARD || flag?.TypeFlags == Rsc6ObjectTypeFlags.STATIC_STANDARD2)
+                        {
+                            height = 0.0f;
+                        }
+
                         var m = new Matrix3x4(CurrentMatrices[i]);
-                        var height = Rsc6Fragment.IsSkinnedPed ? 1.0f : 0.0f; //Approximative fix for peds
-                        m.Translation = new Vector3(m.Translation.Z, m.Translation.X, m.Translation.Y - height);
+                        m.Translation = new Vector3(m.Translation.Y, m.Translation.Z, m.Translation.X - height);
                         m.Orientation = new Quaternion(m.Orientation.Z, m.Orientation.X, m.Orientation.Y, m.Orientation.W);
 
                         if (c is Rsc6BoundCapsule)
@@ -1786,25 +1789,34 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            Childrens = new(reader.ReadNodeArray<Rsc6Bounds>("Childrens"));
-            CurrentMatrices = new(reader.ReadMatrix4x4Array("CurrentMatrices"));
-            LastMatrices = new(reader.ReadMatrix4x4Array("LastMatrices"));
-            LocalBoxMinMaxs = new(reader.ReadStructArray<BoundingBox4>("LocalBoxMinMaxs"));
+            Childrens = new(reader.ReadNodeArray("Childrens", Create));
+            CurrentMatrices = new(Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4Array("Matrices")));
             TypeFlags = new(reader.ReadStructArray<Rsc6BoundCompositeChildrenFlags>("TypeFlags"));
             ContainsBVH = reader.ReadBool("ContainsBVH");
             NumActiveBounds = reader.ReadUInt16("NumActiveBounds");
 
-            MaxNumBounds = (ushort)(Childrens.Items?.Length ?? 0);
-            NumBounds = (ushort)(LocalBoxMinMaxs.Items?.Length ?? 0);
+            if (Childrens.Items != null)
+            {
+                MaxNumBounds = (ushort)(Childrens.Items.Length);
+                NumBounds = (ushort)(Childrens.Items.Length);
+
+                var localBbs = new BoundingBox4[NumBounds];
+                for (int i = 0; i < NumBounds; i++)
+                {
+                    var child = Childrens.Items[i];
+                    var bb = new BoundingBox(child.BoxMin, child.BoxMax);
+                    localBbs[i] = new BoundingBox4(bb);
+                }
+                LocalBoxMinMaxs = new(localBbs);
+            }
+            LastMatrices = new(CurrentMatrices.Items);
         }
 
         public override void Write(MetaNodeWriter writer)
         {
             base.Write(writer);
             writer.WriteNodeArray("Childrens", Childrens.Items);
-            writer.WriteMatrix4x4Array("CurrentMatrices", CurrentMatrices.Items);
-            writer.WriteMatrix4x4Array("LastMatrices", LastMatrices.Items);
-            writer.WriteStructArray("LocalBoxMinMaxs", LocalBoxMinMaxs.Items);
+            writer.WriteMatrix4x4Array("Matrices", CurrentMatrices.Items);
             writer.WriteStructArray("TypeFlags", TypeFlags.Items);
             writer.WriteBool("ContainsBVH", ContainsBVH);
             writer.WriteUInt16("NumActiveBounds", NumActiveBounds);
@@ -1851,10 +1863,10 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Nodes = new(reader.ReadStructArray<Rsc6BoundGeometryBVHNode>("Nodes"));
             Depth = reader.ReadUInt32("Depth");
-            BoundingBoxMin = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMin"));
-            BoundingBoxMax = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxMax"));
-            BoundingBoxCenter = Rpf6Crypto.ToYZX(reader.ReadVector4("BoundingBoxCenter"));
-            BVHQuantum = Rpf6Crypto.ToYZX(reader.ReadVector4("BVHQuantum"));
+            BoundingBoxMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMin"));
+            BoundingBoxMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxMax"));
+            BoundingBoxCenter = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundingBoxCenter"));
+            BVHQuantum = Rpf6Crypto.ToXYZ(reader.ReadVector4("BVHQuantum"));
             Trees = new(reader.ReadStructArray<Rsc6BoundGeometryBVHTree>("Trees"));
             BVHQuantumInverse = new Vector4(1 / BVHQuantum.X, 1 / BVHQuantum.Y, 1 / BVHQuantum.Z, 0.0f);
         }

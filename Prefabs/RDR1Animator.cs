@@ -62,7 +62,7 @@ namespace CodeX.Games.RDR1.Prefabs
                 var v = anim.Evaluate(f, i);
                 v = new Vector4(v.Z, v.X, v.Y, v.W);
 
-                if (boneid.TrackType == Rsc6TrackType.Quaternion) //Quaternion - needs to be normalized
+                if (boneid.TrackType == Rsc6TrackType.QUATERNION) //Quaternion - needs to be normalized
                 {
                     v = Vector4.Normalize(v);
                 }

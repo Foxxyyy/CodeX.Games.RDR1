@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Collections.Generic;
 using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6AnimationSet : Rsc6FileBase, MetaNode //animAnimSet
+    public class Rsc6AnimationSet : Rsc6BlockBaseMap, MetaNode //animAnimSet
     {
         public override ulong BlockLength => 88;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; }
         public Rsc6PtrArr<Rsc6ClipDictionaryEntry> Entries { get; set; } //m_ASTtoClipMap
         public uint Unknown_10h { get; set; } = 0x00CDCDCD;
         public Rsc6Ptr<Rsc6ClipDictionary> ClipDictionary { get; set; } //m_ClipDict
@@ -25,13 +25,12 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_34h { get; set; } = 0xCDCDCDCD;
         public string AnimSetName { get; set; } //m_AnimSetName
 
-        public Rsc6Clip[] Clips => Rsc6DataMap.Flatten(Entries.Items, e => e.Item.Item).ToArray();
+        public Rsc6Clip[] Clips => Rsc6DataMap.Flatten(Entries.Items, e => e.Entry.Item).ToArray();
         public Dictionary<uint, Rsc6Clip> Dict { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
             Entries = reader.ReadPtrArr<Rsc6ClipDictionaryEntry>();
             Unknown_10h = reader.ReadUInt32();
             ClipDictionary = reader.ReadPtr<Rsc6ClipDictionary>();
@@ -44,7 +43,6 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_30h = reader.ReadUInt32();
             Unknown_34h = reader.ReadUInt32();
             AnimSetName = reader.ReadString();
-
             CreateDict();
         }
 
@@ -62,32 +60,29 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void CreateDict()
         {
-            Dict = Rsc6DataMap.GetDictionary(Entries.Items, e => e.Item.Item);
+            Dict = Rsc6DataMap.GetDictionary(Entries.Items, e => e.Entry.Item);
         }
     }
 
-    public class Rsc6ClipDictionary : Rsc6FileBase, MetaNode //rage::crClipDictionary
+    public class Rsc6ClipDictionary : Rsc6BlockBaseMapRef, MetaNode //rage::crClipDictionary
     {
         /*
          * Simple clip container class
          */
 
         public override ulong BlockLength => 32;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public uint RefCount { get; set; } //m_RefCount
+        public override uint VFT { get; set; }
         public Rsc6Ptr<Rsc6AnimDictionary> AnimDict { get; set; } //m_AnimDictionary
         public bool AnimDictionaryOwner { get; set; } = true; //m_AnimDictionaryOwner
         public bool BaseNameKeys { get; set; } //m_BaseNameKeys
         public ushort Padding { get; set; } //m_Padding
         public Rsc6AtMapArr<Rsc6ClipDictionaryEntry> Entries { get; set; } //m_Clips
-        public Rsc6Clip[] Clips => Rsc6DataMap.Flatten(Entries.Items, e => e.Item.Item).ToArray();
+        public Rsc6Clip[] Clips => Rsc6DataMap.Flatten(Entries.Items, e => e.Entry.Item).ToArray();
         public Dictionary<uint, Rsc6Clip> Dict { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
-            RefCount = reader.ReadUInt32();
             AnimDict = reader.ReadPtr<Rsc6AnimDictionary>();
             AnimDictionaryOwner = reader.ReadBoolean();
             BaseNameKeys = reader.ReadBoolean();
@@ -100,8 +95,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
-            writer.WritePtr(BlockMap);
-            writer.WriteUInt32(RefCount);
             writer.WritePtr(AnimDict);
             writer.WriteBoolean(AnimDictionaryOwner);
             writer.WriteBoolean(BaseNameKeys);
@@ -123,15 +116,15 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void CreateDict()
         {
-            Dict = Rsc6DataMap.GetDictionary(Entries.Items, e => e.Item.Item);
+            Dict = Rsc6DataMap.GetDictionary(Entries.Items, e => e.Entry.Item);
         }
     }
 
-    public class Rsc6ClipDictionaryEntry : Rsc6BlockBase, Rsc6DataMapEntry<Rsc6ClipDictionaryEntry> //atMapEntry<uint, rage::crClip>
+    public class Rsc6ClipDictionaryEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6ClipDictionaryEntry> //atMapEntry<uint, rage::crClip>
     {
         public override ulong BlockLength => 12;
         public JenkHash ClipHash { get; set; }
-        public Rsc6Ptr<Rsc6Clip> Item { get; set; }
+        public Rsc6Ptr<Rsc6Clip> Entry { get; set; }
         public Rsc6Ptr<Rsc6ClipDictionaryEntry> Next { get; set; }
 
         public uint MapKey { get => ClipHash; }
@@ -140,29 +133,29 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             ClipHash = (JenkHash)reader.ReadUInt32();
-            Item = reader.ReadPtr(Rsc6Clip.Create);
+            Entry = reader.ReadPtr(Rsc6Clip.Create);
             Next = reader.ReadPtr<Rsc6ClipDictionaryEntry>();
 
-            if (Item.Item != null)
+            if (Entry.Item != null)
             {
-                Item.Item.NameHash = ClipHash;
+                Entry.Item.NameHash = ClipHash;
             }
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt32(ClipHash);
-            writer.WritePtr(Item);
+            writer.WritePtr(Entry);
             writer.WritePtr(Next);
         }
 
         public override string ToString()
         {
-            return $"{ClipHash.Hex} : {Item.Item}";
+            return $"{ClipHash.Hex} : {Entry.Item}";
         }
     }
 
-    public class Rsc6Clip : AnimationClip, Rsc6Block //rage::crClip
+    public class Rsc6Clip : AnimationClip, IRsc6Block //rage::crClip
     {
         /*
          * Represents a motion clip.
@@ -270,8 +263,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             return type switch
             {
-                Rsc6ClipType.Single => new Rsc6ClipSingle(),
-                Rsc6ClipType.Multi => new Rsc6ClipMulti(),
+                Rsc6ClipType.SINGLE => new Rsc6ClipSingle(),
+                Rsc6ClipType.MULTI => new Rsc6ClipMulti(),
                 _ => null,
             };
         }
@@ -290,7 +283,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6ClipSingle()
         {
-            ClipType = Rsc6ClipType.Single;
+            ClipType = Rsc6ClipType.SINGLE;
         }
 
         public override void Read(Rsc6DataReader reader)
@@ -339,7 +332,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6ClipMulti()
         {
-            ClipType = Rsc6ClipType.Multi;
+            ClipType = Rsc6ClipType.MULTI;
         }
 
         public override void Read(Rsc6DataReader reader)
@@ -364,22 +357,20 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6ClipTags : Rsc6Block //rage::crTags
+    public class Rsc6ClipTags : Rsc6BlockBase //rage::crTags
     {
         /*
          * Manages a time line of tags  
          * Performs containment, sorting, searching and editing operations.
          */
 
-        public ulong FilePosition { get; set; }
-        public ulong BlockLength => 16;
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 16;
         public Rsc6Str Name { get; set; } //m_Name
         public short NameLength1 { get; set; } //Name length
         public short NameLength2 { get; set; } //Name length + 1
         public Rsc6PtrArr<Rsc6ClipTag> Tags { get; set; } // m_Tags
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Name = reader.ReadStr();
             NameLength1 = reader.ReadInt16();
@@ -387,7 +378,7 @@ namespace CodeX.Games.RDR1.RSC6
             Tags = reader.ReadPtrArr<Rsc6ClipTag>();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             NameLength1 = (short)(Name.Value?.Length ?? 0);
             NameLength2 = (short)(NameLength1 + 1);
@@ -399,16 +390,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6ClipTag : Rsc6Block, MetaNode //rage::crTag
+    public class Rsc6ClipTag : Rsc6BlockBase, MetaNode //rage::crTag
     {
         /*
          * Tags are light weight phase based wrapper for properties, enabling clips (and parameterized motion)
          * to be marked up with temporal based metadata.
         */
 
-        public ulong FilePosition { get; set; }
-        public ulong BlockLength => 32;
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 32;
         public uint Unknown_0h { get; set; }
         public uint Unknown_4h { get; set; }
         public float Start { get; set; } //m_Start, tag start phase [0..1]
@@ -421,7 +410,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Unknown_1Bh { get; set; } //Always 0
         public uint Unknown_1Ch { get; set; } //Always 0
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Unknown_0h = reader.ReadUInt32();
             Unknown_4h = reader.ReadUInt32();
@@ -436,7 +425,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt32(Unknown_0h);
             writer.WriteUInt32(Unknown_4h);
@@ -495,31 +484,29 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6ClipPropertyMap : Rsc6Block //rage::crProperties
+    public class Rsc6ClipPropertyMap : Rsc6BlockBase //rage::crProperties
     {
         /*
          * Manages a collection of properties (timeless metadata)
          * Performs containment, efficient retrieval and editing operations, plus serialization.
          */
 
-        public ulong BlockLength => 12;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 12;
         public Rsc6AtMapArr<Rsc6ClipPropertyMapItem> Items { get; set; } //m_Properties
         public Rsc6ClipProperty[] Properties => Rsc6DataMap.Flatten(Items.Items, e => e?.Property.Item).ToArray();
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Items = reader.ReadAtMapArr<Rsc6ClipPropertyMapItem>();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteAtMapArr(Items);
         }
     }
 
-    public class Rsc6ClipPropertyMapItem : Rsc6BlockBase, Rsc6DataMapEntry<Rsc6ClipPropertyMapItem> //rage::crProperties::PropertyPair
+    public class Rsc6ClipPropertyMapItem : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6ClipPropertyMapItem> //rage::crProperties::PropertyPair
     {
         public override ulong BlockLength => 16;
         public JenkHash Hash { get; set; }
@@ -552,10 +539,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6ClipProperty : Rsc6BlockBase, MetaNode //rage::crProperty
+    public class Rsc6ClipProperty : Rsc6FileBase, MetaNode //rage::crProperty
     {
         public override ulong BlockLength => 8;
-        public uint VFT { get; set; }
+        public override uint VFT { get; set; }
         public Rsc6ClipPropertyAttributeType PropertyType1 { get; set; } //0, 1 or 2 - If it is 0, then PropertyType2 is used
         public Rsc6ClipPropertyAttributeType PropertyType2 { get; set; } //0 if PropertyType1 is greater than 0
         public ushort Unknown_6h { get; set; } //Always 0?
@@ -598,12 +585,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             return type switch
             {
-                Rsc6ClipPropertyAttributeType.Float => new Rsc6ClipPropertyAttributeFloat(propertyName),
-                Rsc6ClipPropertyAttributeType.Int => new Rsc6ClipPropertyAttributeInt(propertyName),
-                Rsc6ClipPropertyAttributeType.Bool => new Rsc6ClipPropertyAttributeBool(propertyName),
-                Rsc6ClipPropertyAttributeType.String => new Rsc6ClipPropertyAttributeString(propertyName),
-                Rsc6ClipPropertyAttributeType.Vector3 => new Rsc6ClipPropertyAttributeVector3(propertyName),
-                Rsc6ClipPropertyAttributeType.Vector4 => new Rsc6ClipPropertyAttributeVector4(propertyName),
+                Rsc6ClipPropertyAttributeType.FLOAT => new Rsc6ClipPropertyAttributeFloat(propertyName),
+                Rsc6ClipPropertyAttributeType.INT => new Rsc6ClipPropertyAttributeInt(propertyName),
+                Rsc6ClipPropertyAttributeType.BOOL => new Rsc6ClipPropertyAttributeBool(propertyName),
+                Rsc6ClipPropertyAttributeType.STRING => new Rsc6ClipPropertyAttributeString(propertyName),
+                Rsc6ClipPropertyAttributeType.VECTOR3 => new Rsc6ClipPropertyAttributeVector3(propertyName),
+                Rsc6ClipPropertyAttributeType.VECTOR4 => new Rsc6ClipPropertyAttributeVector4(propertyName),
                 //Rsc6ClipPropertyAttributeType.HashString => new Rsc6ClipPropertyAttributeHashString(),
                 _ => new Rsc6ClipProperty(),
             };
@@ -846,11 +833,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6AnimDictionary : Rsc6FileBase, MetaNode //rage::crAnimDictionary
+    public class Rsc6AnimDictionary : Rsc6BlockBaseMapRef, MetaNode //rage::crAnimDictionary
     {
         public override ulong BlockLength => 24;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public uint RefCount { get; set; } //m_RefCount, always 0?
+        public override uint VFT { get; set; } = 0x01322FA4;
         public Rsc6PtrArr<Rsc6AnimDictionaryEntry> AnimEntries { get; set; } //m_Animations
         public ushort Unknown_14h { get; set; } = 0xCDCD; //Pad
         public byte Unknown_16h { get; set; } = 0xCD; //Pad
@@ -861,9 +847,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
-            RefCount = reader.ReadUInt32();
+            base.Read(reader);
             AnimEntries = reader.ReadPtrArr<Rsc6AnimDictionaryEntry>(); //atMap<rage::crAnimation>
             Unknown_14h = reader.ReadUInt16();
             Unknown_16h = reader.ReadByte();
@@ -876,14 +860,14 @@ namespace CodeX.Games.RDR1.RSC6
                 if (entry.Anim.Item == null) continue;
                 list.Add(entry.Anim.Item);
             }
-            Animations = list.ToArray();
 
+            Animations = list.ToArray();
             CreateDict();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(0x01322FA4);
+            base.Write(writer);
         }
 
         public void Read(MetaNodeReader reader)
@@ -913,8 +897,18 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6AnimDictionaryEntry : Rsc6BlockBase
     {
         public override ulong BlockLength => 12;
-        public uint MapKey { get => Hash; set => Hash = value; }
-        public Rsc6AnimDictionaryEntry MapNext { get => Next.Item; set => Next = new(value); }
+
+        public uint MapKey
+        {
+            get => Hash;
+            set => Hash = value;
+        }
+
+        public Rsc6AnimDictionaryEntry MapNext
+        {
+            get => Next.Item;
+            set => Next = new(value);
+        }
 
         public JenkHash Hash; //Name hash of the anim
         public Rsc6Ptr<Rsc6Animation> Anim;
@@ -943,7 +937,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6Animation : Animation, Rsc6Block //rage::crAnimation
+    public class Rsc6Animation : Animation, IRsc6Block //rage::crAnimation
     {
         /*
          * Animations represent the change in a series of values (tracks) over a period of time (duration)
@@ -1029,12 +1023,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6AnimBlock : Rsc6Block, MetaNode //rage::crAnimBlock
+    public class Rsc6AnimBlock : Rsc6BlockBase, MetaNode //rage::crAnimBlock
     {
-        public ulong BlockLength => 32;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 32;
         public uint Offset { get; set; } //Points to the current block, if ((Flags & 1) == 0) we read Chunks
         public Rsc6PtrArr<Rsc6AnimChunk> Chunks { get; set; } //m_Chunks, rage::crAnimChunk
         public uint BlockSize { get; set; } //m_BlockSize
@@ -1044,7 +1035,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint CompactSlopSize { get; set; } //m_CompactSlopSize
         public uint Unknown_1Ch { get; set; } //Always 0?
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             Offset = reader.ReadUInt32();
             Chunks = reader.ReadPtrArr<Rsc6AnimChunk>();
@@ -1056,7 +1047,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1Ch = reader.ReadUInt32();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteUInt32(Offset);
             writer.WritePtrArr(Chunks);
@@ -1084,7 +1075,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6AnimTrack : Rsc6Block //rage::crAnimTrack
+    public class Rsc6AnimTrack : Rsc6BlockBase //rage::crAnimTrack
     {
         /*
          * Internal storage class of crAnimation
@@ -1093,26 +1084,21 @@ namespace CodeX.Games.RDR1.RSC6
          * Chunking and compressing of data is deliberately hidden from the end user.
          */
 
-        public ulong BlockLength => 16;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 16;
         public Rsc6AnimBoneId BoneId { get; set; }
         public ushort FramesPerChunk { get; set; } //m_FramesPerChunk, number of internal frames per chunk
         public ushort Flags { get; set; } //m_Flags
         public Rsc6ManagedArr<Rsc6AnimChunk> Chunks { get; set; } //m_Chunks, rage::crAnimChunk
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             BoneId = reader.ReadStruct<Rsc6AnimBoneId>();
             FramesPerChunk = reader.ReadUInt16();
             Flags = reader.ReadUInt16();
             Chunks = reader.ReadArr<Rsc6AnimChunk>();
-
-            throw new Exception($"Found Rsc6AnimTrack in {reader.FileEntry.Name}!");
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             writer.WriteStruct(BoneId);
             writer.WriteUInt16(FramesPerChunk);
@@ -1135,7 +1121,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6AnimChunk : Rsc6Block, MetaNode //rage::crAnimChunk
+    public class Rsc6AnimChunk : Rsc6BlockBase, MetaNode //rage::crAnimChunk
     {
         /*
          * Animation chunks represent the change in a value over a short period of time
@@ -1144,16 +1130,13 @@ namespace CodeX.Games.RDR1.RSC6
          * Internally they pack this changing value using one or more channels, which can use a variety of different compression techniques
          */
 
-        public ulong FilePosition { get; set; }
-        public ulong BlockLength => 16;
-        public bool IsPhysical => false;
+        public override ulong BlockLength => 16;
         public Rsc6AnimBoneId BoneId { get; set; }
         public Rsc6AnimChannel[] Channels { get; set; }
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             BoneId = reader.ReadStruct<Rsc6AnimBoneId>();
-
             var channels = new List<Rsc6AnimChannel>();
             for (int i = 0; i < 4; i++) //atFixedArray, m_Channels
             {
@@ -1166,7 +1149,7 @@ namespace CodeX.Games.RDR1.RSC6
             Channels = channels.ToArray();
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             throw new NotImplementedException();
         }
@@ -1196,23 +1179,23 @@ namespace CodeX.Games.RDR1.RSC6
 
                 switch (channel.ChannelType)
                 {
-                    case Rsc6AnimChannelType.StaticFloat:
-                    case Rsc6AnimChannelType.RawFloat:
-                    case Rsc6AnimChannelType.QuantizeFloat:
-                    case Rsc6AnimChannelType.IndirectQuantizeFloat:
-                    case Rsc6AnimChannelType.LinearFloat:
+                    case Rsc6AnimChannelType.STATIC_FLOAT:
+                    case Rsc6AnimChannelType.RAW_FLOAT:
+                    case Rsc6AnimChannelType.QUANTIZE_FLOAT:
+                    case Rsc6AnimChannelType.INDIRECT_QUANTIZE_FLOAT:
+                    case Rsc6AnimChannelType.LINEAR_FLOAT:
                         v[c] = channel.EvaluateFloat(frame);
                         c++;
                         break;
-                    case Rsc6AnimChannelType.StaticVector3:
+                    case Rsc6AnimChannelType.STATIC_VECTOR3:
                         channel.EvaluateVector(frame, c, ref v);
                         c += 3;
                         break;
-                    case Rsc6AnimChannelType.StaticQuaternion:
+                    case Rsc6AnimChannelType.STATIC_QUATERNION:
                         channel.EvaluateVector(frame, c, ref v);
                         c += 4;
                         break;
-                    case Rsc6AnimChannelType.SmallestThreeQuaternion:
+                    case Rsc6AnimChannelType.SMALLEST_THREE_QUATERNION:
                         channel.EvaluateVector(frame, c, ref v);
                         c++;
                         break;
@@ -1227,7 +1210,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6AnimChannel : Rsc6ChannelAttribute, Rsc6Block //rage::crAnimChannel
+    public class Rsc6AnimChannel : Rsc6ChannelAttribute, IRsc6Block //rage::crAnimChannel
     {
         /*
          * Animation channels represent the change in value over time of a single type.
@@ -1275,12 +1258,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             return type switch
             {
-                Rsc6AnimChannelType.StaticQuaternion => new Rsc6ChannelStaticQuaternion(),
-                Rsc6AnimChannelType.StaticVector3 => new Rsc6ChannelStaticVector3(),
-                Rsc6AnimChannelType.StaticFloat => new Rsc6ChannelStaticFloat(),
-                Rsc6AnimChannelType.RawFloat => new Rsc6ChannelRawFloat(),
-                Rsc6AnimChannelType.QuantizeFloat => new Rsc6ChannelQuantizeFloat(),
-                Rsc6AnimChannelType.SmallestThreeQuaternion => new Rsc6ChannelSmallestThreeQuaternion(),
+                Rsc6AnimChannelType.STATIC_QUATERNION => new Rsc6ChannelStaticQuaternion(),
+                Rsc6AnimChannelType.STATIC_VECTOR3 => new Rsc6ChannelStaticVector3(),
+                Rsc6AnimChannelType.STATIC_FLOAT => new Rsc6ChannelStaticFloat(),
+                Rsc6AnimChannelType.RAW_FLOAT => new Rsc6ChannelRawFloat(),
+                Rsc6AnimChannelType.QUANTIZE_FLOAT => new Rsc6ChannelQuantizeFloat(),
+                Rsc6AnimChannelType.SMALLEST_THREE_QUATERNION => new Rsc6ChannelSmallestThreeQuaternion(),
                 _ => throw new NotImplementedException($"Rsc6ChannelAttribute: Unknown type: {type}")
             };
         }
@@ -1291,7 +1274,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public abstract class Rsc6ChannelAttribute : Rsc6Block, MetaNode
+    public abstract class Rsc6ChannelAttribute : IRsc6Block, MetaNode
     {
         public virtual ulong FilePosition { get; set; }
         public virtual ulong BlockLength => 8;
@@ -1623,7 +1606,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public class QuaternionQuantizedScaleFloats : Rsc6Block //rage::crAnimChannelSmallestThreeQuaternion::QuantizedFloats::ScaleAndValues
+        public class QuaternionQuantizedScaleFloats : IRsc6Block //rage::crAnimChannelSmallestThreeQuaternion::QuantizedFloats::ScaleAndValues
         {
             public ulong FilePosition { get; set; }
             public ulong BlockLength => 16;
@@ -1698,68 +1681,67 @@ namespace CodeX.Games.RDR1.RSC6
 
     public enum Rsc6ClipType : byte
     {
-        None,
-        Single,
-        Multi,
-        Expression
+        NONE,
+        SINGLE,
+        MULTI,
+        EXPRESSION
     };
 
     public enum Rsc6ClipPropertyAttributeType : uint
     {
-        None = 0,
-        Float = 1,
-        Int = 2,
-        Bool = 3,
-        String = 4, //atString
-        BitSet = 5, //atBitSet
-        Vector3 = 6, //Vec3V
-        Vector4 = 7, //Vec4V
-        Quaternion = 8, //QuatV
-        Matrix3x4 = 9, //Mat34V
-        Situation = 10, //TransformV
-        Data = 11, //atArray<u8>
-        HashString = 12, //atHashString
+        NONE = 0,
+        FLOAT = 1,
+        INT = 2,
+        BOOL = 3,
+        STRING = 4, //atString
+        BIT_SET = 5, //atBitSet
+        VECTOR3 = 6, //Vec3V
+        VECTOR4 = 7, //Vec4V
+        QUATERNION = 8, //QuatV
+        MATRIX3X4 = 9, //Mat34V
+        SITUATION = 10, //TransformV
+        DATA = 11, //atArray<u8>
+        HASH_STRING = 12 //atHashString
     }
 
     public enum Rsc6AnimChannelType : byte
     {
-        None = 0,
-        RawFloat = 1,
-        Vector3 = 2,
-        Quaternion = 3,
-        StaticFloat = 4,
-        CurveFloat = 5,
-        QuantizeFloat = 6,
-        RawInt = 7,
-        RawBool = 8,
-        StaticQuaternion = 9,
-        DeltaFloat = 10,
-        StaticInt = 11,
-        RleInt = 12,
-        StaticVector3 = 13,
-        SmallestThreeQuaternion = 14,
-        VariableQuantizeFloat = 15,
-        IndirectQuantizeFloat = 16,
-        LinearFloat = 17,
-        QuadraticBSpline = 18,
-        CubicBSpline = 19,
-        StaticSmallestThreeQuaternion = 20,
-        Num = 21
+        NONE = 0,
+        RAW_FLOAT = 1,
+        VECTOR3 = 2,
+        QUATERNION = 3,
+        STATIC_FLOAT = 4,
+        CURVE_FLOAT = 5,
+        QUANTIZE_FLOAT = 6,
+        RAW_INT = 7,
+        RAW_BOOL = 8,
+        STATIC_QUATERNION = 9,
+        DELAT_FLOAT = 10,
+        STATIC_INT = 11,
+        RLE_INT = 12,
+        STATIC_VECTOR3 = 13,
+        SMALLEST_THREE_QUATERNION = 14,
+        VARIABLE_QUANTIZE_FLOAT = 15,
+        INDIRECT_QUANTIZE_FLOAT = 16,
+        LINEAR_FLOAT = 17,
+        QUADRATIC_BSPLINE = 18,
+        CUBIC_BSPLINE = 19,
+        STATIC_SMALLEST_THREE_QUATERNION = 20
     }
 
     public enum Rsc6TrackType : byte
     {
-        Vector3 = 0,
-        Quaternion = 1,
-        Float = 2
+        VECTOR3 = 0,
+        QUATERNION = 1,
+        FLOAT = 2
     }
 
     public enum Rsc6TrackPackFormat : byte
     {
-        FORMAT_PACK_RAW = 0x0,
-        FORMAT_PACK_XYZW = 0x4,
-        FORMAT_PACK_QUATERNION_XYZ_RECONSTRUCT = 0x8,
-        FORMAT_PACK_MASK = 0xC,
+        FORMAT_PACK_RAW = 0,
+        FORMAT_PACK_XYZW = 4,
+        FORMAT_PACK_QUATERNION_XYZ_RECONSTRUCT = 8,
+        FORMAT_PACK_MASK = 12
     }
 
     public enum Rsc6FormatReconstructOrder :uint
@@ -1773,11 +1755,11 @@ namespace CodeX.Games.RDR1.RSC6
 
     public enum Rsc6AnimationFlags
     {
-        Looped = 1 << 0,
-        Raw = 1 << 3,
-        MoverTracks = 1 << 4,
-        Packed = 1 << 8,
-        Compact = 1 << 10,
-        NonSerializableMask = Packed | Compact
+        LOOPED = 1 << 0,
+        RAW = 1 << 3,
+        MOVER_TRACKS = 1 << 4,
+        PACKED = 1 << 8,
+        COMPACT = 1 << 10,
+        NON_SERIALIZABLE_MASK = PACKED | COMPACT
     }
 }

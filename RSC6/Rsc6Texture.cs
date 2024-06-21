@@ -1,20 +1,20 @@
-﻿using CodeX.Core.Engine;
+﻿using System;
+using System.IO;
+using System.Text;
+using System.Drawing;
+using System.Numerics;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6TextureDictionary : Rsc6FileBase, MetaNode
+    public class Rsc6TextureDictionary : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 32;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMapPointer { get; set; }
+        public override uint VFT { get; set; } = 0x00A9C028;
         public uint ParentDictionary { get; set; } //Higher level dictionary (inside the resource - usually NULL)
         public uint UsageCount { get; set; } = 1; //Number of references to the object. As soon as it reaches zero, the object is released (it contains 1 inside the resource)
         public Rsc6Arr<JenkHash> Hashes { get; set; } //m_Codes
@@ -22,8 +22,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            VFT = reader.ReadUInt32();
-            BlockMapPointer = reader.ReadPtr<Rsc6BlockMap>();
+            base.Read(reader);
             ParentDictionary = reader.ReadUInt32();
             UsageCount = reader.ReadUInt32();
             Hashes = reader.ReadArr<JenkHash>();
@@ -36,8 +35,12 @@ namespace CodeX.Games.RDR1.RSC6
             bool wvd = writer.BlockList[0] is Rsc6VisualDictionary;
             bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
 
-            writer.WriteUInt32((uint)(wvd ? 0x01831108 : wfd ? 0x00ECE5FC : 0x00A9C028));
-            writer.WritePtr(BlockMapPointer);
+            if (wvd)
+                VFT = 0x01831108;
+            else if (wfd)
+                VFT = 0x00ECE5FC;
+
+            base.Write(writer);
             writer.WriteUInt32(ParentDictionary);
             writer.WriteUInt32(UsageCount);
             writer.WriteArr(Hashes);
@@ -99,10 +102,46 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureScaleForm : Rsc6FileBase
+    public class Rsc6TextureScaleForm : Rsc6BlockBaseMap //TODO: Continue researching .wsf
     {
+        /*
+         * FLASH is the default tool that is used to visually represent the UI.
+         * 
+         * UIComponent    : base class for all components, must be put top-level container such as UILayer and UIScene.
+         * UILayer        : a generic lightweight container, all childrens are managed by this component.
+         * UIScene        : a container that groups any number of components except other UIScenes.
+         * UIPanel        : a generic lightweight container that groups any number of components.
+         * UIScrollBar    : a scrollbar to determine the contents of the viewing area.
+         * UILabel        : a display area for a short text string.
+         * UIButton       : implementation of a push button.
+         * UITab          : implementation of a push button.
+         * UIIcon         : represents single images.
+         * UIList         : a component that allows the user to select one or more objects from a list, supports scrolling.
+         * UIProgressBar  : a component that communicates the progress of some work by displaying its percentage of completion.
+         * UISpinner      : a single line input field that lets the user select a number or an object value from an ordered sequence.
+         * UIContext      : an interface to an external tool that artists use to represent/decorate these UI components. Each component has its own context interface.
+         * UIFactory      : a class to map inputs to the ones that the UI uses.
+         * UIInput        : a class to manages the creation of UI elements.
+         * UINavigator    : a class to manages the navigation/transitions between various UI components.
+         * UIManager      : a class used for various subsystem that manages a UI system.
+         * 
+         * Visibility dictates if a state is shown or hidden.
+         * Ideally the textures/meshes associated with the state should not be rendered at all.
+         * 
+         * Enabled/Disabled describes how input, events, and transitions are processed on a state.
+         * Input and events are processed if this flag is true, otherwise input and events are not processed.
+         * A disabled state should never be transitioned to.
+         * 
+         * Focused describes if a component is selected or not.
+         * All states for a focused component that are on a path from that focused component to its root component should also be focused.
+         * The only way for a component to receive input is if it is focused.
+         * 
+         * Active describes if a component is running.
+         * Siblings and children of this active component may or may not be active.
+         */
+
         public override ulong BlockLength => 32;
-        public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
+        public override uint VFT { get; set; }
         public uint Stage { get; set; } //m_Stage
         public bool Updating { get; set; } //m_Updating
         public bool IsFileOwner { get; set; } //m_IsFileOwner
@@ -159,33 +198,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WritePtr(SwfObjectPointer);
-            writer.WritePtr(ItemArrayPointer);
-            writer.WriteUInt16(ItemCount);
-
-            foreach (var type in TexturesType)
-            {
-                writer.WritePtr(type);
-            }
-        }
-
-        public long MemoryUsage
-        {
-            get
-            {
-                long val = 0;
-                if (Textures != null)
-                {
-                    foreach (var tex in Textures)
-                    {
-                        if (tex != null)
-                        {
-                            val += tex.MemoryUsage;
-                        }
-                    }
-                }
-                return val;
-            }
+            throw new NotImplementedException();
         }
     }
 
@@ -195,7 +208,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint VFT { get; set; }
         public uint Unknown_4h { get; set; }
         public TextureType Type { get; set; }
-        public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers = new List<Rsc6Ptr<Rsc6BlockMap>>();
+        public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers { get; set; } = new();
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -252,20 +265,6 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6Texture : Rsc6TextureBase
     {
         public override ulong BlockLength => base.BlockLength + 52;
-
-        public long MemoryUsage
-        {
-            get
-            {
-                long val = 0;
-                if (Data != null)
-                {
-                    val += Data.LongLength;
-                }
-                return val;
-            }
-        }
-
         public byte TextureType { get; set; } //m_ImageType
         public float ColorExpR { get; set; } = 1.0f; //m_ColorExprR
         public float ColorExpG { get; set; } = 1.0f; //m_ColorExprG
@@ -523,12 +522,9 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureCRN : Rsc6Block
+    public class Rsc6TextureCRN : Rsc6BlockBase
     {
-        public ulong BlockLength => 74;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-
+        public override ulong BlockLength => 74;
         public ushort VFT { get; set; } = 0x7848;
         public ushort HeaderSize { get; set; }
         public ushort HeaderCRC16 { get; set; }
@@ -544,7 +540,7 @@ namespace CodeX.Games.RDR1.RSC6
         [DllImport("crunch.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr get_dds_from_crn(byte[] pSrc_file_data, uint src_file_size, out int outBufferSize);
 
-        public void Read(Rsc6DataReader reader)
+        public override void Read(Rsc6DataReader reader)
         {
             var pos = reader.Position;
             reader.Endianess = DataEndianess.BigEndian;
@@ -563,7 +559,6 @@ namespace CodeX.Games.RDR1.RSC6
 
             var data = reader.ReadBytes((int)DataSize);
             var resultPtr = get_dds_from_crn(data, (uint)data.Length, out int bufferSize);
-            File.WriteAllBytes(@"C:\Users\fumol\OneDrive\Bureau\test.crn", data);
 
             if (resultPtr != IntPtr.Zero)
             {
@@ -572,13 +567,13 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public override void Write(Rsc6DataWriter writer)
         {
             
         }
     }
 
-    public class Rsc6TextureBase : Texture, Rsc6Block
+    public class Rsc6TextureBase : Texture, IRsc6Block
     {
         public virtual ulong BlockLength => 32;
         public ulong FilePosition { get; set; }
@@ -680,7 +675,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureData : Rsc6Block
+    public class Rsc6TextureData : IRsc6Block
     {
         public ulong BlockLength { get; set; }
         public ulong FilePosition { get; set; }
@@ -743,26 +738,107 @@ namespace CodeX.Games.RDR1.RSC6
         ETAS = 14
     }
 
-    public enum SwfLanguage
+    public enum Rsc6UIStates
     {
-        /*
-         * flash folder abbreviations:
-         * brplu = br + pl + ru
-         * efigs = en + fr + it + de + es
-        */
-        English, //en
-        Spanish, //es
-        French, //fr
-        German, //de
-        Italian, //it
-        Japanese, //jp
-        Chinese_traditional, //cht
-        Chinese_simplified, //chs
-        Korean, //ko
-        Norwegian, //no
-        Sapnish_mexican, //mx
-        Portugese_brazilian, //bp
-        Polish, //pl
-        Russian //ru
-    }
+        UI_ENABLED = 1, //Can be focused
+        UI_INTERRUPTIBLE = 2, //Can be unfocused
+        UI_ACTIVE = 4, //Can receive events, updates
+        UI_FOCUSED = 8, //Can receive inputs
+        UI_VISIBLE = 16, //Can receive paints, draws
+        UI_ALL = 255
+    };
+
+    public enum Rsc6UITemplates
+    {
+        TEMPLATE_SIMPLE = 1, //PAUSEMENU
+        TEMPLATE_DEFAULT = 2, //DIALOGBOX & POPUP
+        TEMPLATE_MENUWITHDESCRIPTION = 3,
+        TEMPLATE_PLAYERLIST = 4,
+        TEMPLATE_LOBBY_PLAYERS = 5,
+    };
+
+    public enum Rsc6UIButtonIcons
+    {
+        NONE = 0,
+        NOTREADY = 1,
+        READY = 2,
+        BLANK = 3,
+        VOICE_ENABLED = 5,
+        VOICE_MUTED = 6,
+        VOICE_TALKING = 7,
+        CONNECTION_STRENGTH_0 = 10,
+        CONNECTION_STRENGTH_1 = 11,
+        CONNECTION_STRENGTH_2 = 12,
+        CONNECTION_STRENGTH_3 = 13,
+        CONNECTION_STRENGTH_4 = 14,
+        HASFLAG = 17,
+        PARTY_LEADER = 20,
+        PARTY_INVITE = 21,
+        PARTY_REQUESTED = 22,
+        PARTY_MEMBER = 23
+    };
+
+    public enum Rsc6UIPromptStyles
+    {
+        MESSAGE_BOX,
+        BOTTOM_SCREEN
+    };
+
+    public enum Rsc6UIPromptTypes
+    {
+        NONE,
+        OK,
+        OK_CANCEL,
+        YES_NO,
+        YES_NO_CANCEL,
+        CANCEL,
+        CONTINUE,
+        CUSTOM
+    };
+
+    public enum Rsc6UIPromptIcons
+    {
+        EMPTY0,
+        ACCEPT,
+        CANCEL,
+        LEFT,
+        UP,
+        L_SHOULDER,
+        R_SHOULDER,
+        L_TRIGGER,
+        R_TRIGGER,
+        START,
+        SELECT,
+        ANALOG_L,
+        ANALOG_L_UP_DOWN,
+        ANALOG_L_LEFT_RIGHT,
+        ANALOG_L_UP_DOWN_LEFT_RIGHT,
+        ANALOG_R,
+        ANALOG_R_UP_DOWN,
+        ANALOG_R_LEFT_RIGHT,
+        ANALOG_R_UP_DOWN_LEFT_RIGHT,
+        DPAD,
+        DPAD_LEFT_RIGHT,
+        DPAD_UP_DOWN,
+        DPAD_UP_DOWN_LEFT_RIGHT,
+        LTRIGGER_RTRIGGER,
+        LSHOULDER_RSHOULDER,
+        EMPTY1,
+        EMPTY2,
+        EMPTY3,
+        R3,
+        L3,
+        ANALOG_L_RIGHT,
+        ANALOG_L_LEFT,
+        ANALOG_L_UP,
+        ANALOG_L_DOWN,
+        ANALOG_R_RIGHT,
+        ANALOG_R_LEFT,
+        ANALOG_R_UP,
+        ANALOG_R_DOWN,
+        DPAD_RIGHT,
+        DPAD_LEFT,
+        DPAD_UP,
+        DPAD_DOWN
+    };
 }
