@@ -2,6 +2,7 @@
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
+using System.Diagnostics;
 using System.Text;
 
 namespace CodeX.Games.RDR1.Files
@@ -12,6 +13,10 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6SectorInfo StreamingItems;
         public JenkHash Hash;
         public string Name;
+
+        public WsiFile()
+        {
+        }
 
         public WsiFile(Rpf6FileEntry file) : base(file)
         {
@@ -27,6 +32,7 @@ namespace CodeX.Games.RDR1.Files
 
         public override void Load(byte[] data)
         {
+            FileEntry ??= (Rpf6FileEntry)FileInfo;
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
@@ -42,6 +48,17 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteBlock(StreamingItems);
             byte[] data = writer.Build(134);
             return data;
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            StreamingItems = new();
+            StreamingItems.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            StreamingItems?.Write(writer);
         }
     }
 }

@@ -12,6 +12,10 @@ namespace CodeX.Games.RDR1.Files
         public string Name;
         public JenkHash Hash;
 
+        public WspFile()
+        {
+        }
+
         public WspFile(Rpf6FileEntry file) : base(file)
         {
             FileEntry = file;
@@ -26,7 +30,9 @@ namespace CodeX.Games.RDR1.Files
 
         public override void Load(byte[] data)
         {
-            var e = (Rpf6ResourceFileEntry)FileEntry;
+            if (FileInfo is not Rpf6ResourceFileEntry e)
+                return;
+
             var r = new Rsc6DataReader(e, data)
             {
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
@@ -41,6 +47,17 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteBlock(Grid);
             byte[] data = writer.Build(116);
             return data;
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            Grid = new();
+            Grid.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            Grid?.Write(writer);
         }
 
         public override string ToString()

@@ -4,10 +4,12 @@ using System.Numerics;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using TC = System.ComponentModel.TypeConverterAttribute;
+using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6TreeForestGrid : Rsc6TreeForest, MetaNode //rage::TreeForestGrid
+    [TC(typeof(EXP))] public class Rsc6TreeForestGrid : Rsc6TreeForest, MetaNode //rage::TreeForestGrid
     {
         //Manages a forest using a grid culling system.
         //Each instance is put into a grid cell based on its position.
@@ -15,7 +17,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override ulong BlockLength => base.BlockLength + 112;
         public Vector4 GridMin { get; set; }
-        public Vector4 GridMax { get; set; }
+        public Vector4 GridSize { get; set; }
         public Vector4 BoundSphere { get; set; } //m_BoundSphere, W is radius
         public Rsc6ManagedArr<Rsc6TreeForestGridCell> GridCells { get; set; } //m_GridCells
         public Rsc6Arr<short> IndexList { get; set; }
@@ -35,11 +37,13 @@ namespace CodeX.Games.RDR1.RSC6
         public bool LoadedMeshes { get; set; } //m_LoadedMeshes
         public float StreamRadius { get; set; } = 0xCDCDCDCD; //m_streamRadius, always NULL
 
+        public BoundingBox BoundingBox => new(GridMin.XYZ(), GridMin.XYZ() + GridSize.XYZ());
+
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
             GridMin = reader.ReadVector4();
-            GridMax = reader.ReadVector4();
+            GridSize = reader.ReadVector4();
             BoundSphere = reader.ReadVector4();
             GridCells = reader.ReadArr<Rsc6TreeForestGridCell>(); //Rsc6TreeForestGridCell[CellsWidth][CellsHeight]
             IndexList = reader.ReadArr<short>();
@@ -59,24 +63,33 @@ namespace CodeX.Games.RDR1.RSC6
             LoadedMeshes = reader.ReadBoolean();
             StreamRadius = reader.ReadSingle();
 
-            /////////////////////// Tests /////////////////////// 
-            for (int i = 0; i < GridCells.Items.Length; i++)
+            foreach (var cell in GridCells.Items)
             {
-                if (GridCells.Items[i] == null) continue;
+                var instances = cell.CombinedInstanceListPos.Items;
+                var indices = cell.IndexList.Items;
 
-                var cell = GridCells.Items[i];
-                var bs = cell.BoundSphere;
-                var listPos = cell.CombinedInstanceListPos.Items;
-
-                if (listPos != null)
+                if (instances != null)
                 {
-                    for (int j = 0; j < listPos.Length; j++)
+                    var size = BoundingBox.Size;
+                    var min = BoundingBox.Minimum;
+
+                    for (int i = 0; i < instances.Length; i++)
                     {
-                        var t = listPos[j];
-                        var bbMin = new Vector3(bs.X - bs.W, bs.Y - bs.W, bs.Z);
-                        var bbMax = new Vector3(bs.X + bs.W, bs.Y + bs.W, bs.Z);
-                        var bbSize = bbMax - bbMin;
-                        t.Position = bbMin + bbSize * new Vector3(t.Z, t.X, t.Y) / 65535.0f;
+                        var inst = instances[i];
+                        var pos = new Vector3(inst.Z, inst.X, inst.Y) / 65535.0f; //[0..1]
+                        var scaledPos = Vector3.Multiply(size, pos);
+                        var treeIndex = 0;
+
+                        for (int index = 2; index < indices.Length; index += 2)
+                        {
+                            if (i < indices[index])
+                            {
+                                treeIndex = indices[index - 1];
+                                break;
+                            }
+                        }
+                        inst.Position = min + scaledPos;
+                        inst.TreeIndex = treeIndex;
                     }
                 }
             }
@@ -86,7 +99,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Write(writer);
             writer.WriteVector4(GridMin);
-            writer.WriteVector4(GridMax);
+            writer.WriteVector4(GridSize);
             writer.WriteVector4(BoundSphere);
             writer.WriteArr(GridCells);
             writer.WriteArr(IndexList);
@@ -110,7 +123,7 @@ namespace CodeX.Games.RDR1.RSC6
         public new void Read(MetaNodeReader reader)
         {
             GridMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMin"));
-            GridMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMax"));
+            GridSize = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMax"));
             BoundSphere = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
             Left = reader.ReadInt32("Left");
             Right = reader.ReadInt32("Right");
@@ -140,7 +153,7 @@ namespace CodeX.Games.RDR1.RSC6
         public new void Write(MetaNodeWriter writer)
         {
             writer.WriteVector4("GridMin", GridMin);
-            writer.WriteVector4("GridMax", GridMax);
+            writer.WriteVector4("GridMax", GridSize);
             writer.WriteVector4("BoundSphere", BoundSphere);
             writer.WriteInt32("Left", Left);
             writer.WriteInt32("Right", Right);
@@ -178,10 +191,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeForestGridCell : Rsc6BlockBase, MetaNode //rage::speedTreeForestGridCell
+    [TC(typeof(EXP))] public class Rsc6TreeForestGridCell : Rsc6BlockBase, MetaNode //rage::speedTreeForestGridCell
     {
         public override ulong BlockLength => 48;
-        public Vector4 BoundSphere { get; set; } //m_BoundSphere, W is the max distance from the center to any instance
+        public BoundingSphere BoundSphere { get; set; } //m_BoundSphere, W is the max distance from the center to any instance (radius)
         public Rsc6ManagedArr<Rsc6PackedInstancePos> CombinedInstanceListPos { get; set; } //m_CombinedInstanceListPos
         public Rsc6ManagedArr<Rsc6InstanceMatrix> CombinedInstanceListMatrix { get; set; } //m_CombinedInstanceListMtx
         public Rsc6Arr<short> IndexList { get; set; }
@@ -190,7 +203,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            BoundSphere = reader.ReadVector4();
+            var vector = reader.ReadVector4();
+            BoundSphere = new BoundingSphere(vector.XYZ(), vector.W);
             CombinedInstanceListPos = reader.ReadArr<Rsc6PackedInstancePos>();
             CombinedInstanceListMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
             IndexList = reader.ReadArr<short>();
@@ -200,7 +214,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteVector4(BoundSphere);
+            writer.WriteVector4(new Vector4(BoundSphere.Center, BoundSphere.Radius));
             writer.WriteArr(CombinedInstanceListPos);
             writer.WriteArr(CombinedInstanceListMatrix);
             writer.WriteArr(IndexList);
@@ -210,7 +224,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BoundSphere = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
+            var vector = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
+            BoundSphere = new BoundingSphere(vector.XYZ(), vector.W);
             CombinedInstanceListPos = new(reader.ReadNodeArray<Rsc6PackedInstancePos>("CombinedInstanceListPos"));
             CombinedInstanceListMatrix = new(reader.ReadNodeArray<Rsc6InstanceMatrix>("CombinedInstanceListMatrix"));
 
@@ -223,7 +238,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteVector4("BoundSphere", BoundSphere);
+            writer.WriteVector4("BoundSphere", new Vector4(BoundSphere.Center, BoundSphere.Radius));
             writer.WriteNodeArray("CombinedInstanceListPos", CombinedInstanceListPos.Items);
             writer.WriteNodeArray("CombinedInstanceListMatrix", CombinedInstanceListMatrix.Items);
             writer.WriteInt16Array("IndexList", IndexList.Items);
@@ -235,7 +250,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeForest : Rsc6BlockBaseMap, MetaNode //rage::TreeForest
+    [TC(typeof(EXP))] public class Rsc6TreeForest : Rsc6BlockBaseMap, MetaNode //rage::TreeForest
     {
         public override ulong BlockLength => 96;
         public override uint VFT { get; set; } = 0x04CA9264;
@@ -338,7 +353,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6PackedInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreePackedInstancePos
+    [TC(typeof(EXP))] public class Rsc6PackedInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreePackedInstancePos
     {
         public override ulong BlockLength => 8;
         public ushort X { get; set; } //x
@@ -348,6 +363,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte Seed { get; set; } //seed
 
         public Vector3 Position;
+        public int TreeIndex;
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -391,7 +407,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase, MetaNode //rage::speedTreeInstanceMtx
+    [TC(typeof(EXP))] public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase, MetaNode //rage::speedTreeInstanceMtx
     {
         public override ulong BlockLength => base.BlockLength + 64;
         public Matrix4x4 Transform { get; set; } //m_mTransform
@@ -426,7 +442,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeInstanceBase : Rsc6BlockBase, MetaNode //rage::speedTreeInstanceBase
+    [TC(typeof(EXP))] public class Rsc6TreeInstanceBase : Rsc6BlockBase, MetaNode //rage::speedTreeInstanceBase
     {
         //This is the data needed to exist an instance of a speedtree in the world
 
@@ -542,7 +558,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TreeInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreeInstancePos
+    [TC(typeof(EXP))] public class Rsc6TreeInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreeInstancePos
     {
         public override ulong BlockLength => 48;
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
@@ -598,52 +614,25 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt16("Width", Width);
             writer.WriteByte("Rotation", Rotation);
         }
+    }
 
-        //Get the world Matrix3x4 for this instance
-        public Matrix3x4 GetMatrix3x4()
+    [TC(typeof(EXP))] public struct TreeItem
+    {
+        public object Instance;
+        public Vector3 Position;
+        public JenkHash Hash;
+
+        public override string ToString()
         {
-            float ca = MathF.Cos(Position.W);
-            float sa = MathF.Sin(Position.W);
-
-            var translation = new Vector3(Position.X, Position.Y, Position.Z);
-            var scale = new Vector3(Position.X, Position.Y, Position.Z);
-            var orientation = new Quaternion(0, 0, sa, ca);
-
-            var matrix = new Matrix3x4()
-            {
-                Translation = translation,
-                Scale = scale,
-                Orientation = orientation
-            };
-            return matrix;
-        }
-
-        //Get the world Matrix4x4 for this instance
-        public Matrix4x4 GetMatrix4x4()
-        {
-            float ca = MathF.Cos(Position.W);
-            float sa = MathF.Sin(Position.W);
-            var matrix = new Matrix4x4
-            {
-                M11 = ca,
-                M13 = sa,
-                M14 = Position.X,
-                M22 = 1.0f,
-                M24 = Position.Y,
-                M31 = -sa,
-                M33 = ca,
-                M34 = Position.Z,
-                M44 = 1.0f
-            };
-            return Matrix4x4.Transpose(matrix);
+            return Hash.ToString();
         }
     }
 
     [Flags] public enum Rsc6TreeInstanceFlags
     {
-        FLAG_VISIBLE = (1 << 4),
-        FLAG_BILLBOARD_ONLY = (1 << 5),
-        FLAG_BILLBOARD_ACTIVE = (1 << 6),
-        FLAG_VALID = (1 << 7)
+        FLAG_VISIBLE = 1 << 4,
+        FLAG_BILLBOARD_ONLY = 1 << 5,
+        FLAG_BILLBOARD_ACTIVE = 1 << 6,
+        FLAG_VALID = 1 << 7
     };
 }

@@ -143,7 +143,7 @@ namespace CodeX.Games.RDR1.Prefabs
             if (entry == null) return null;
 
             Console.Write("RDR1Peds", entry.Name);
-            var was = FileManager.LoadFilePack(entry) as WasFile;
+            var was = FileManager.LoadFilePack<WasFile>(entry);
 
             lock (CacheSyncRoot)
             {

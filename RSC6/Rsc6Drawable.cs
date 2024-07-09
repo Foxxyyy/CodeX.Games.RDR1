@@ -58,6 +58,7 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i = 0; i < imax; i++)
                 {
                     Drawables.Items[i].NameHash = Hashes.Items[i];
+                    Drawables.Items[i].Name = Hashes.Items[i].ToString();
                 }
             }
         }
@@ -487,7 +488,7 @@ namespace CodeX.Games.RDR1.RSC6
             return (DoubleBuffered ? 1 : 0) & ~(int)Rsc6VertexBufferType.USE_SECONDARY_BUFFER_INDICES;
         }
 
-        public void SetShader(Rsc6ShaderFX shader, string model)
+        public void SetShader(Rsc6ShaderFX shader)
         {
             ShaderRef = shader;
             if (shader != null)
@@ -523,16 +524,11 @@ namespace CodeX.Games.RDR1.RSC6
                         SetDiffuse3Shader(shader);
                         break;
                     case 0x173D5F9D: //rdr2_grass
-                    case 0x171C9E47: //rdr2_glass_glow
                         SetupGrassShader(shader);
                         break;
                     case 0xC714B86E: //rdr2_alpha_foliage
                     case 0x592D7DC2: //rdr2_alpha_foliage_no_fade
-                    case 0x18C56B10: //rdr2_treerock_prototype
-                        if (model == "roc_rockcluster01x")
-                            SetupDefaultShader(shader);
-                        else
-                            SetupTreesShader(shader);
+                        SetupTreesShader(shader);
                         break;
                     default:
                         SetupDefaultShader(shader);
@@ -547,9 +543,9 @@ namespace CodeX.Games.RDR1.RSC6
                     case 2: ShaderBucket = ShaderBucket.Alpha1; break; //Hair
                     case 3: ShaderBucket = ShaderBucket.Alpha1; break; //AlphaMask
                     case 4: ShaderBucket = ShaderBucket.Translucency; break; //Water
-                    case 5: ShaderBucket = ShaderBucket.Alpha1; break; //Transparent
+                    case 5: ShaderBucket = ShaderBucket.Translucency; break; //Transparent
                     case 6: ShaderBucket = ShaderBucket.Alpha2; break; //DistortionGlass
-                    case 8: ShaderBucket = ShaderBucket.AlphaF; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //Alpha
+                    case 8: ShaderBucket = ShaderBucket.Alpha1; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //Alpha
                 }
 
                 switch (hash)
@@ -586,10 +582,6 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x227C5611: //rdr2_cliffwall_alpha
                         ShaderInputs.SetFloat4(0xA83AA336, new Vector4(3.640625f, 3.640625f, 0.0f, 0.0f)); //LODColourLevels    float4
-                        ShaderInputs.SetFloat(0x7CB163F5, 1.5f); //BumpScales
-                        break;
-                    case 0x707EF967: //rdr2_flattenterrain_blend
-                    case 0xC242DAA7: //rdr2_terrain_blend
                         ShaderInputs.SetFloat(0x7CB163F5, 1.5f); //BumpScales
                         break;
                 }
@@ -773,7 +765,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[4];
+            Textures = new Texture[3];
 
             for (int k = 0; k < parms.Length; k++)
             {
@@ -787,6 +779,9 @@ namespace CodeX.Games.RDR1.RSC6
                             break;
                         case 0x46B7C64F: //bumpsampler
                             Textures[1] = prm.Texture;
+                            break;
+                        case 0x0ED966D5: //terrainblendmap1
+                            Textures[2] = prm.Texture;
                             break;
                         default:
                             break;
@@ -1616,7 +1611,7 @@ namespace CodeX.Games.RDR1.RSC6
                             if (model.Meshes[j] is Rsc6DrawableGeometry mesh)
                             {
                                 var shader = (mesh.ShaderID < shaders.Length) ? shaders[mesh.ShaderID] : null;
-                                mesh.SetShader(shader, Name);
+                                mesh.SetShader(shader);
                             }
                         }
                     }
@@ -1695,7 +1690,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        private void CreateTexturePack(GameArchiveEntry e)
+        private void CreateTexturePack(GameArchiveFileInfo e)
         {
             var txd = WfdFile.TextureDictionary.Item; //TODO: only include embedded textures
             if (txd == null) return;
@@ -2872,10 +2867,10 @@ namespace CodeX.Games.RDR1.RSC6
             var n = Hash.ToString() + ": ";
             if (Texture != null)
                 return n + Texture.ToString();
-            if (Array.Array != null)
-                return n + "Count: " + Array.Array.ToString();
-            if (DataType != 0)
-                return n + Array.Vector.ToString();
+            if (Array != null)
+                return n + "Count: " + Array.Array?.Length.ToString();
+            if (Vector != null)
+                return n + Vector.Vector.ToString();
             return n + DataType.ToString() + ": " + DataPointer.ToString();
         }
     }

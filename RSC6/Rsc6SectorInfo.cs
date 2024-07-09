@@ -9,7 +9,6 @@ using CodeX.Core.Numerics;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -55,8 +54,8 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6StreamableBase VLowVisualDictionary { get; set; } = new Rsc6StreamableBase();
         public Rsc6StreamableBase BoundDictionary { get; set; } = new Rsc6StreamableBase();
         public uint Unknown_170h { get; set; } //Always 0
-        public float LowLODFade { get; set; } = 1.0f; //Always 1.0f
-        public JenkHash SectorNameLower { get; set; }
+        public float LowLODFade { get; set; } = 1.0f; //m_VLowLODFade, always 1.0f
+        public JenkHash SectorNameLower { get; set; } //m_NameHash
         public Rsc6ManagedArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
         public uint LastVisibleMarker { get; set; } //m_LastVisibleMarker, always 0
         public uint ResidentStatus { get; set; } = 85; //m_ResidentStatus - 0 or 85
@@ -91,12 +90,8 @@ namespace CodeX.Games.RDR1.RSC6
         public byte InnerPropsAge { get; set; } //m_InnerPropsAge, always 0
         public byte RawPropsGroup { get; set; } //m_RawPropsGroup, always 0
         public byte GroupFileFlags { get; set; } //m_GroupFileFlags, always 0
-        public uint BoundInstances { get; set; } //m_BoundInstances, rage::atArray<sagBoundInstance>
-        public uint NamedNodeMap { get; set; } //m_NamedNodeMap, rage::atMap<int,rage::datRef<RDR2NameAttribute>>
-        public byte Unknown_1D8h { get; set; }
-        public byte Unknown_1D9h { get; set; } = 0xCD; //Padding
-        public uint Unknown_1DAh { get; set; }
-        public ushort Unknown_1DEh { get; set; } //Always 0
+        public Rsc6ManagedArr<Rsc6BoundInstance> BoundInstances { get; set; } //m_BoundInstances
+        public ulong NamedNodeMap { get; set; } //m_NamedNodeMap, rage::atMap<int,rage::datRef<RDR2NameAttribute>>
         public BoundingBox Bounds { get; set; }
 
         public override void Read(Rsc6DataReader reader)
@@ -181,13 +176,31 @@ namespace CodeX.Games.RDR1.RSC6
             InnerPropsAge = reader.ReadByte();
             RawPropsGroup = reader.ReadByte();
             GroupFileFlags = reader.ReadByte();
-            BoundInstances = reader.ReadUInt32();
-            NamedNodeMap = reader.ReadUInt32();
-            Unknown_1D8h = reader.ReadByte();
-            Unknown_1D9h = reader.ReadByte();
-            Unknown_1DAh = reader.ReadUInt32();
-            Unknown_1DEh = reader.ReadUInt16();
+            BoundInstances = reader.ReadArr<Rsc6BoundInstance>();
+            NamedNodeMap = reader.ReadUInt64();
             Bounds = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
+
+            /*Debug.WriteLine("--------------------------------------");
+            Debug.WriteLine("Name: " + Name.ToString());
+            Debug.WriteLine("Unknown_1B8h: " + Unknown_1B8h.ToString());
+            Debug.WriteLine("Unknown_1BAh: " + Unknown_1BAh.ToString());
+            Debug.WriteLine("CurrentLOD: " + CurrentLOD.ToString());
+            Debug.WriteLine("District: " + District.ToString());
+            Debug.WriteLine("IsTerrain: " + IsTerrain.ToString());
+            Debug.WriteLine("TotallyAllInstancesLoaded: " + TotallyAllInstancesLoaded.ToString());
+            Debug.WriteLine("HasDictFlags: " + HasDictFlags.ToString());
+            Debug.WriteLine("InstanceAge: " + InstanceAge.ToString());
+            Debug.WriteLine("BoundAge: " + BoundAge.ToString());
+            Debug.WriteLine("PropsAge: " + PropsAge.ToString());
+            Debug.WriteLine("RefCount: " + RefCount.ToString());
+            Debug.WriteLine("ParentChildIndex: " + ParentChildIndex.ToString());
+            Debug.WriteLine("Flags: " + Flags.ToString());
+            Debug.WriteLine("InnerPropsInstanciated: " + InnerPropsInstanciated.ToString());
+            Debug.WriteLine("InnerPropsAge: " + InnerPropsAge.ToString());
+            Debug.WriteLine("RawPropsGroup: " + RawPropsGroup.ToString());
+            Debug.WriteLine("GroupFileFlags: " + GroupFileFlags.ToString());
+            Debug.WriteLine("BoundInstances: " + BoundInstances.ToString());
+            Debug.WriteLine("NamedNodeMap: " + NamedNodeMap.ToString());*/
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -272,12 +285,8 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(InnerPropsAge);
             writer.WriteByte(RawPropsGroup);
             writer.WriteByte(GroupFileFlags);
-            writer.WriteUInt32(BoundInstances);
-            writer.WriteUInt32(NamedNodeMap);
-            writer.WriteByte(Unknown_1D8h);
-            writer.WriteByte(Unknown_1D9h);
-            writer.WriteUInt32(Unknown_1DAh);
-            writer.WriteUInt16(Unknown_1DEh);
+            writer.WriteArr(BoundInstances);
+            writer.WriteUInt64(NamedNodeMap);
         }
 
         public void Read(MetaNodeReader reader)
@@ -333,9 +342,8 @@ namespace CodeX.Games.RDR1.RSC6
             District = reader.ReadBool("District");
             RefCount = reader.ReadByte("RefCount");
             Flags = reader.ReadUInt32("Flags");
-            BoundInstances = reader.ReadUInt32("BoundInstances");
-            NamedNodeMap = reader.ReadUInt32("NamedNodeMap");
-            Unknown_1DAh = reader.ReadUInt32("Unknown_1DAh");
+            BoundInstances = new(reader.ReadNodeArray<Rsc6BoundInstance>("BoundInstances"));
+            NamedNodeMap = reader.ReadUInt64("NamedNodeMap");
 
             if (Attributes.Items != null && DoorsAttributes.Items != null)
             {
@@ -395,9 +403,8 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBool("District", District);
             writer.WriteByte("RefCount", RefCount);
             writer.WriteUInt32("Flags", Flags);
-            if (BoundInstances != 0) writer.WriteUInt32("BoundInstances", BoundInstances);
-            if (NamedNodeMap != 0) writer.WriteUInt32("NamedNodeMap", NamedNodeMap);
-            if (Unknown_1DAh != 0) writer.WriteUInt32("Unknown_1DAh", Unknown_1DAh);
+            if (BoundInstances.Count > 0) writer.WriteNodeArray("BoundInstances", BoundInstances.Items);
+            if (NamedNodeMap != 0) writer.WriteUInt64("NamedNodeMap", NamedNodeMap);
         }
 
         public override string ToString()
@@ -444,21 +451,24 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var parentsPos = new Rsc6ScopedSectorParent[ParentsNames.Count];
-            for (int i = 0; i < ParentsNames.Count; i++)
+            if (ParentsNames != null) //When reading xml, project explorer skips this part
             {
-                if (i == 0)
+                var parentsPos = new Rsc6ScopedSectorParent[ParentsNames.Count];
+                for (int i = 0; i < ParentsNames.Count; i++)
                 {
-                    parentsPos[i] = new Rsc6ScopedSectorParent();
-                    continue;
-                }
+                    if (i == 0)
+                    {
+                        parentsPos[i] = new Rsc6ScopedSectorParent();
+                        continue;
+                    }
 
-                parentsPos[i] = new Rsc6ScopedSectorParent()
-                {
-                    Parent = Sectors.Items.FirstOrDefault(p => p.Name.Value.ToLower() == ParentsNames[i].ToLower())
-                };
+                    parentsPos[i] = new Rsc6ScopedSectorParent()
+                    {
+                        Parent = Sectors.Items.FirstOrDefault(p => p.Name.Value.ToLower() == ParentsNames[i].ToLower())
+                    };
+                }
+                SectorsParents = new Rsc6ManagedArr<Rsc6ScopedSectorParent>(parentsPos);
             }
-            SectorsParents = new Rsc6ManagedArr<Rsc6ScopedSectorParent>(parentsPos);
 
             writer.WritePtrArr(Sectors);
             writer.WriteArr(SectorsParents);
@@ -727,7 +737,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Room : Rsc6FileBase, MetaNode //rage::rmpRoom
+    [TC(typeof(EXP))] public class Rsc6Room : Rsc6FileBase, MetaNode //rage::rmpRoom + rdrRoom
     {
         public override ulong BlockLength => 144;
         public override uint VFT { get; set; } = 0x019130E0;
@@ -741,7 +751,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6PtrArr<Rsc6Portal> Portals { get; set; } //m_Portals
         public uint Flags { get; set; } //m_Flags - 0, 2, 4, 20 or 22
         public uint Unknown_7Ch { get; set; } //Always 0
-        public Rsc6Str ReverbName { get; set; } //m_ReverbName
+        public Rsc6Str ReverbName { get; set; } //m_ReverbName, start of rdrRoom
         public int VisibleTimestamp { get; set; } //m_VisibleTimestamp
         public uint StreamingVolume { get; set; } //m_StreamingVolume, always 0
         public uint Unknown_8Ch { get; set; } //Always 0
@@ -1316,7 +1326,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PropInstanceInfo : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6PropInstanceInfo : Rsc6BlockBase, MetaNode //propInstanceInfo
     {
         public override ulong BlockLength => 48;
         public Rsc6Str EntityName { get; set; } //m_TypeName
@@ -1328,7 +1338,10 @@ namespace CodeX.Games.RDR1.RSC6
         public byte AO { get; set; } //m_AO (64, 84, 57, 22, 18, 41, 27, 33, etc)
         public Vector4 EntityPosition { get; set; } //m_Offset
         public uint Unknown_20h { get; set; } //Always 0
-        public uint Unknown_24h { get; set; } //Mostly 0 or can be 1 when called from RDR2AttribBase
+        public byte ModMode { get; set; } //m_ModMode
+        public byte NetworkingFlags { get; set; } //m_NetworkingFlags
+        public byte RotationType { get; set; } //m_RotationType
+        public byte ClassTypeAndExtraFlags { get; set; } //m_ClassTypeAndExtraFlags
         public uint PortalOffset { get; set; } //m_Portal
         public uint Unknown_2Ch { get; set; } //Always 0
 
@@ -1343,7 +1356,10 @@ namespace CodeX.Games.RDR1.RSC6
             AO = reader.ReadByte();
             EntityPosition = reader.ReadVector4();
             Unknown_20h = reader.ReadUInt32();
-            Unknown_24h = reader.ReadUInt32();
+            ModMode = reader.ReadByte();
+            NetworkingFlags = reader.ReadByte();
+            RotationType = reader.ReadByte();
+            ClassTypeAndExtraFlags = reader.ReadByte();
             PortalOffset = reader.ReadUInt32();
             Unknown_2Ch = reader.ReadUInt32();
         }
@@ -1359,7 +1375,10 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(AO);
             writer.WriteVector4(EntityPosition);
             writer.WriteUInt32(Unknown_20h);
-            writer.WriteUInt32(Unknown_24h);
+            writer.WriteByte(ModMode);
+            writer.WriteByte(NetworkingFlags);
+            writer.WriteByte(RotationType);
+            writer.WriteByte(ClassTypeAndExtraFlags);
             writer.WriteUInt32(PortalOffset);
             writer.WriteUInt32(Unknown_2Ch);
         }
@@ -1372,6 +1391,9 @@ namespace CodeX.Games.RDR1.RSC6
             RotationZ = (Half)reader.ReadSingle("RotationZ");
             Flags = reader.ReadByte("Flags");
             AO = reader.ReadByte("AO");
+            ModMode = reader.ReadByte("ModMode");
+            NetworkingFlags = reader.ReadByte("NetworkingFlags");
+            RotationType = reader.ReadByte("RotationType");
             EntityPosition = Rpf6Crypto.ToXYZ(reader.ReadVector4("EntityPosition"));
             PortalOffset = reader.ReadUInt32("PortalOffset");
         }
@@ -1384,6 +1406,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle("RotationZ", (float)RotationZ);
             writer.WriteByte("Flags", Flags);
             writer.WriteByte("AO", AO);
+            writer.WriteByte("ModMode", ModMode);
+            writer.WriteByte("NetworkingFlags", NetworkingFlags);
+            writer.WriteByte("RotationType", RotationType);
             writer.WriteVector4("EntityPosition", EntityPosition);
             writer.WriteUInt32("PortalOffset", PortalOffset);
         }
@@ -2234,32 +2259,31 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class WsiEntity : Entity
+    [TC(typeof(EXP))] public class WsiEntity : Entity
     {
-        public new string Name => ModelName.ToString();
-        public JenkHash ModelName;
         public bool ResetPos = false;
-        public string ParentName; //Used for lights
-        public Vector3 ParentPosition; //Used for lights
+        public JenkHash ModelName;
+
+        public string ParentName;
+        public Half RotationX;
+        public Half RotationY;
+        public Half RotationZ;
+        public byte Flags;
+        public byte AO;
+        public byte ModMode;
+        public byte NetworkingFlags;
+        public byte RotationType;
+
+        public override string Name => ModelName.ToString();
+        public RDR1MapData Wsi => Level as RDR1MapData;
 
         public WsiEntity()
         {
         }
 
-        public WsiEntity(string modelName)
-        {
-            ModelName = JenkHash.GenHash(modelName);
-        }
-
-        public WsiEntity(Rpf6StoreItem item)
-        {
-            ModelName = item.Hash;
-            Position = item.Box.Center;
-        }
-
         public WsiEntity(Rsc6PropInstanceInfo entity) //Fragments, props
         {
-            var name = entity.EntityName.Value.ToLowerInvariant();
+            var name = entity.EntityName.ToString().ToLowerInvariant();
             if (name.Contains('/'))
             {
                 name = name[(name.LastIndexOf("/") + 1)..];
@@ -2268,31 +2292,43 @@ namespace CodeX.Games.RDR1.RSC6
             var yaw = (float)entity.RotationZ;
             var pitch = (float)entity.RotationX;
             var roll = (float)entity.RotationY;
-            var rotation = Quaternion.CreateFromYawPitchRoll(yaw, pitch, roll);
+
+            if (entity.RotationType == 2)
+            {
+                roll = -roll;
+            }
+            else if (entity.RotationType == 0 && pitch > 1.0f && yaw < 1.0f)
+            {
+                roll = -roll;
+            }
 
             Position = entity.EntityPosition.XYZ();
-            Orientation = Quaternion.Inverse(rotation);
-            OrientationInv = rotation;
+            Orientation = Quaternion.CreateFromYawPitchRoll(yaw, pitch, roll);
+            OrientationInv = Quaternion.Inverse(Orientation);
             ModelName = JenkHash.GenHash(name);
             LodDistMax = 100.0f;
+            RotationX = entity.RotationX;
+            RotationY = entity.RotationY;
+            RotationZ = entity.RotationZ;
+            Flags = entity.Flags;
+            AO = entity.AO;
+            ModMode = entity.ModMode;
+            NetworkingFlags = entity.NetworkingFlags;
+            RotationType = entity.RotationType;
         }
 
-        public WsiEntity(Rsc6PlacedLight light, string parent) //Lights
+        public WsiEntity(Rsc6DrawableInstanceBase entity) //Fragments, props
         {
-            Position = light.Position.XYZ();
-            ParentPosition = light.ParentPosition.XYZ();
-            ParentName = parent;
-            ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
-            LodDistMax = 100.0f;
-            ResetPos = true;
+            var name = entity.Name.ToString().ToLowerInvariant();
+            entity.Matrix.Decompose(out var scale, out var rot, out var translation);
+            rot = new Quaternion(rot.Z, rot.X, rot.Y, rot.W);
 
-            var pos = light.Position.XYZ();
-            var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
-            var ty = dir.GetPerpVec();
-            var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
-            var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
-            var l = Light.CreateSpot(pos, dir, tx, ty, col, 1.0f, 10.0f, 5.0f, 0.3f, 1.5f);
-            Lights = new Light[] { l };
+            Position = translation;
+            Orientation = rot;
+            OrientationInv = Quaternion.Inverse(rot);
+            Scale = scale;
+            ModelName = JenkHash.GenHash(name);
+            LodDistMax = 500.0f;
         }
 
         public override void SetPiece(Piece p)
@@ -2326,13 +2362,103 @@ namespace CodeX.Games.RDR1.RSC6
             BoundingSphere = new BoundingSphere(aabb.Center, aabb.Size.Length() * 0.5f);
             ResetPos = true;
         }
+    }
 
-        public override string ToString()
+    [TC(typeof(EXP))] public class RDR1LightEntity : Entity
+    {
+        public bool ResetPos = false;
+        public string ParentName;
+        public Vector3 ParentPosition;
+        public JenkHash ModelName;
+
+        public override string Name => ModelName.ToString();
+        public RDR1MapData Wsi => Level as RDR1MapData;
+
+        public RDR1LightEntity(Rsc6PlacedLight light, string parent)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("\t\tObject Name : " + ModelName);
-            sb.AppendLine("\t\tObject Position : " + Position);
-            return sb.ToString();
+            Position = light.Position.XYZ();
+            ParentPosition = light.ParentPosition.XYZ();
+            ParentName = parent;
+            ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
+            LodDistMax = 500.0f;
+            ResetPos = true;
+
+            var pos = light.Position.XYZ();
+            var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
+            var ty = dir.GetPerpVec();
+            var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
+            var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
+            var intensity = light.Intensity;
+            var range = light.Range;
+            var innerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
+            var outerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
+            var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
+            //var l = Light.CreatePoint(pos, col, intensity, range, 5.0f);
+            Lights = new Light[] { l };
+        }
+
+        public override void SetPiece(Piece p)
+        {
+            var changed = p != Piece;
+            Piece = p;
+
+            if ((p != null) && changed)
+            {
+                var pos = Position;
+                if (ResetPos)
+                {
+                    Position = Vector3.Zero;
+                }
+                UpdateBounds();
+                Position = pos;
+                EnsurePieceLightInstances();
+            }
+        }
+    }
+
+    [TC(typeof(EXP))] public class RDR1GridForestEntity : Entity
+    {
+        public JenkHash TreeName;
+        public override string Name => TreeName.ToString();
+        public RDR1MapData Wsp => Level as RDR1MapData;
+
+        public RDR1GridForestEntity(Rsc6PackedInstancePos inst, JenkHash name) //Trees
+        {
+            TreeName = name;
+            LodDistMax = 100.0f;
+            Position = inst.Position;
+        }
+
+        public RDR1GridForestEntity(Rsc6InstanceMatrix inst, JenkHash name) //Debris and foliages around buildings and roads
+        {
+            inst.Transform.Decompose(out var scale, out var rot, out var translation);
+            TreeName = name;
+            LodDistMax = 100.0f;
+            Position = translation;
+            Orientation = new Quaternion(rot.Z, rot.X, rot.Y, rot.W);
+            OrientationInv = Quaternion.Inverse(Orientation);
+            Scale = scale;
+        }
+
+        public static RDR1GridForestEntity CreateFromGrid(object instance, JenkHash name)
+        {
+            if (instance is Rsc6PackedInstancePos instPos)
+                return new RDR1GridForestEntity(instPos, name);
+            else if (instance is Rsc6InstanceMatrix instMatrix)
+                return new RDR1GridForestEntity(instMatrix, name);
+            else
+                return null;
+        }
+
+        public override void SetPiece(Piece p)
+        {
+            var changed = p != Piece;
+            Piece = p;
+
+            if ((p != null) && changed)
+            {
+                UpdateBounds();
+            }
         }
     }
 

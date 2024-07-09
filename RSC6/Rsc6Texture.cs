@@ -58,7 +58,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteNodeArray("Textures", Textures.Items);
         }
 
-        private void CreateTexturePack(GameArchiveEntry e)
+        private void CreateTexturePack(GameArchiveFileInfo e)
         {
             var texs = Textures.Items;
             var txp = new TexturePack(e)

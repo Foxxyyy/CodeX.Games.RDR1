@@ -10,6 +10,10 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rsc6Fragment Fragment;
 
+        public WftFile()
+        {
+        }
+
         public WftFile(Rpf6FileEntry file) : base(file)
         {
         }
@@ -45,7 +49,7 @@ namespace CodeX.Games.RDR1.Files
                 {
                     Piece.Collider = b;
                 }
-                Pieces.Add(e.ShortNameHash, d.Drawable);
+                Pieces[e.ShortNameHash] = d.Drawable;
             }
         }
 

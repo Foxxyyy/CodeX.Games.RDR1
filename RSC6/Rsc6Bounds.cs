@@ -1922,8 +1922,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public static void Init(Rpf6FileManager fman)
         {
-            Core.Engine.Console.Write("Rsc6BoundsMaterialTypes", "Initialising bounds materials...");
+            if (fman.AllArchives.Count == 0)
+            {
+                return;
+            }
 
+            Core.Engine.Console.Write("Rsc6BoundsMaterialTypes", "Initialising bounds materials...");
             var list = new List<Rsc6BoundsMaterialData>();
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "tune_switch.rpf");
             var rootMatList = rpf.AllEntries.FirstOrDefault(e => e.Name == "materials.list" && e.Parent.Parent.Name == "tune"); //There's two materials.list with same parents...

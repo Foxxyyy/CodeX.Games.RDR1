@@ -463,6 +463,7 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class Rsc6DataWriter : BlockWriter
     {
+        public static bool UseProjectExplorer; //Should only be true when using the project explorer
         public HashSet<object> PhysicalBlocks = new HashSet<object>();
 
         protected override bool ValidatePaging(uint[] pageCounts, uint baseShift, uint pageCount, ulong currentPosition, ulong currentTotalSize)
@@ -703,6 +704,30 @@ namespace CodeX.Games.RDR1.RSC6
         {
             byte[] buffer = new byte[8];
             BufferUtil.WriteStruct(buffer, 0, ref value);
+            this.WriteBytes(buffer);
+        }
+
+        public new void WriteVector3(Vector3 value)
+        {
+            if (UseProjectExplorer)
+            {
+                value = Rpf6Crypto.ToXYZ(value);
+            }
+
+            byte[] buffer = new byte[12];
+            BufferUtil.WriteVector3(buffer, 0, ref value);
+            this.WriteBytes(buffer);
+        }
+
+        public new void WriteVector4(Vector4 value)
+        {
+            if (UseProjectExplorer)
+            {
+                value = Rpf6Crypto.ToXYZ(value);
+            }
+
+            byte[] buffer = new byte[16];
+            BufferUtil.WriteVector4(buffer, 0, ref value);
             this.WriteBytes(buffer);
         }
 

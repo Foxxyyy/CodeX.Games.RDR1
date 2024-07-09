@@ -1,4 +1,5 @@
 ﻿using CodeX.Core.Engine;
+using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 
@@ -8,6 +9,10 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6ExpressionDictionary Expressions;
+
+        public WedtFile()
+        {
+        }
 
         public WedtFile(Rpf6FileEntry file) : base(file)
         {
@@ -21,7 +26,9 @@ namespace CodeX.Games.RDR1.Files
 
         public override void Load(byte[] data)
         {
-            var e = (Rpf6ResourceFileEntry)FileEntry;
+            if (FileInfo is not Rpf6ResourceFileEntry e)
+                return;
+
             var r = new Rsc6DataReader(e, data)
             {
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
@@ -35,6 +42,17 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteBlock(Expressions);
             byte[] data = writer.Build(11);
             return data;
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            Expressions = new();
+            Expressions.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            Expressions?.Write(writer);
         }
     }
 }

@@ -7,10 +7,13 @@ using System.Numerics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using CodeX.Core.Engine;
+using CodeX.Core.Editor;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RSC6;
 using CodeX.Games.RDR1.Files;
+using TC = System.ComponentModel.TypeConverterAttribute;
+using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -108,6 +111,7 @@ namespace CodeX.Games.RDR1.RPF6
         public override void InitCreateInfos()
         {
             InitCreateInfo(".wtd", "WTD", CreateNewWtd);
+            InitCreateInfo(".wsi", "WSI", CreateNewWsi);
         }
 
         public override bool Init()
@@ -311,58 +315,30 @@ namespace CodeX.Games.RDR1.RPF6
                 case ".meta":
                     newfilename = file.Name;
                     return TextUtil.GetUTF8Text(data);
+
+                case ".wft": return ConvertToXml<WftFile>(file, data, out newfilename, "RDR1Fragment", GetXmlFileFolder(file, folder));
+                case ".wfd": return ConvertToXml<WfdFile>(file, data, out newfilename, "RDR1FragDrawable", GetXmlFileFolder(file, folder));
+                case ".wvd": return ConvertToXml<WvdFile>(file, data, out newfilename, "RDR1VisualDictionary", GetXmlFileFolder(file, folder));
+                case ".wsi": return ConvertToXml<WsiFile>(file, data, out newfilename, "RDR1SectorInfo");
+                case ".wcdt": return ConvertToXml<WcdtFile>(file, data, out newfilename, "RDR1ClipDictionary");
+                case ".wedt": return ConvertToXml<WedtFile>(file, data, out newfilename, "RDR1ExpressionsDictionary");
+                case ".wtd": return ConvertToXml<WtdFile>(file, data, out newfilename, "RDR1TextureDictionary", GetXmlFileFolder(file, folder));
+                case ".was": return ConvertToXml<WasFile>(file, data, out newfilename, "RDR1AnimationSet");
+                case ".wsg": return ConvertToXml<WsgFile>(file, data, out newfilename, "RDR1SectorGrass");
+                case ".wsp": return ConvertToXml<WspFile>(file, data, out newfilename, "RDR1SpeedTree");
+                case ".wbd": return ConvertToXml<WbdFile>(file, data, out newfilename, "RDR1BoundsDictionary");
+                case ".sst": return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
             }
 
-            var fmtext = "";
-            if (file is Rpf6ResourceFileEntry re && re.FlagInfos.IsResource)
+            newfilename = file.Name + ".xml";
+            var pack = LoadDataBagPack(file, data);
+
+            if (pack != null)
             {
-                var isResFilepack = re.ResourceType switch
-                {
-                    Rpf6FileExt.generic => true,
-                    Rpf6FileExt.wft => true,
-                    Rpf6FileExt.wvd => true,
-                    Rpf6FileExt.wsi => true,
-                    Rpf6FileExt.was => true,
-                    Rpf6FileExt.wsp => true,
-                    Rpf6FileExt.wbd_wcdt => true,
-                    Rpf6FileExt.wedt => true,
-                    _ when (re.ResourceType == Rpf6FileExt.wsg_wgd) && (fileext == ".wsg") => true,
-                    _ when (re.ResourceType == Rpf6FileExt.wtd_wtx) && (fileext == ".wtd") => true,
-                    _ => throw new NotImplementedException("Sorry, CodeX currently cannot convert RDR1 " + re.ResourceType.ToString() + " files to XML.\nCodeX is a work in progress and this is a planned future feature."),
-                };
-
-                if ((re.ResourceType == Rpf6FileExt.generic && fileext != ".wfd" && fileext != ".sst") || !isResFilepack)
-                {
-                    newfilename = file.Name;
-                    return string.Empty;
-                }
-
-                newfilename = file.Name + ".xml";
-                var fp = LoadFilePack(re, data, false);
-                if (fp is WvdFile wvd) return XmlMetaNodeWriter.GetXml("RDR1VisualDictionary", wvd.VisualDictionary, GetXmlFileFolder(file, folder));
-                if (fp is WfdFile wfd) return XmlMetaNodeWriter.GetXml("RDR1FragDrawable", wfd.FragDrawable, GetXmlFileFolder(file, folder));
-                if (fp is WsiFile wsi) return XmlMetaNodeWriter.GetXml("RDR1SectorInfo", wsi.StreamingItems, GetXmlFileFolder(file, folder));
-                if (fp is WcdtFile wcdt) return XmlMetaNodeWriter.GetXml("RDR1ClipDictionary", wcdt.Clips, GetXmlFileFolder(file, folder));
-                if (fp is WedtFile wedt) return XmlMetaNodeWriter.GetXml("RDR1ExpressionsDictionary", wedt.Expressions, GetXmlFileFolder(file, folder));
-                if (fp is WtdFile wtd) return XmlMetaNodeWriter.GetXml("RDR1TextureDictionary", wtd.TextureDictionary, GetXmlFileFolder(file, folder));
-                if (fp is WasFile was) return XmlMetaNodeWriter.GetXml("RDR1AnimationSet", was.AnimSet, GetXmlFileFolder(file, folder));
-                if (fp is WsgFile wsg) return XmlMetaNodeWriter.GetXml("RDR1SectorGrass", wsg.GrassField, GetXmlFileFolder(file, folder));
-                if (fp is WspFile wsp) return XmlMetaNodeWriter.GetXml("RDR1SpeedTree", wsp.Grid, GetXmlFileFolder(file, folder));
-                if (fp is WbdFile wbd) return XmlMetaNodeWriter.GetXml("RDR1BoundsDictionary", wbd.BoundsDictionary, GetXmlFileFolder(file, folder));
-                if (fp is SstFile sst) return XmlMetaNodeWriter.GetXml("RDR1StringTable", sst.StringTable, GetXmlFileFolder(file, folder));
-                if (fp is WftFile wft) return XmlMetaNodeWriter.GetXml("RDR1Fragment", wft.Fragment, GetXmlFileFolder(file, folder));
-                throw new Exception("There was an error converting the " + re.ResourceType.ToString() + " file to XML.");
-            }
-
-            newfilename = file.Name + fmtext + ".xml";
-            var bag = LoadMetadata(file, data);
-
-            if (bag != null)
-            {
-                infoObject = bag.Owner ?? bag;
-                return bag.ToXml();
+                infoObject = pack;
+                return pack.Bag.ToXml();
             }        
-            return string.Empty;
+            return "Sorry, CodeX currently cannot convert this file to XML.";
         }
 
         public override byte[] ConvertFromXml(string xml, string filename, string folder = "")
@@ -387,7 +363,7 @@ namespace CodeX.Games.RDR1.RPF6
                 var wfd = new WfdFile(XmlMetaNodeReader.GetMetaNode<Rsc6FragDrawable>(xml, null, folder));
                 return wfd.Save();
             }
-            /*else if (filename.EndsWith(".wft.xml"))
+            else if (filename.EndsWith(".wft.xml"))
             {
                 var wft = new WftFile(XmlMetaNodeReader.GetMetaNode<Rsc6Fragment>(xml, null, folder));
                 return wft.Save();
@@ -396,7 +372,7 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 var wsi = new WsiFile(XmlMetaNodeReader.GetMetaNode<Rsc6SectorInfo>(xml));
                 return wsi.Save();
-            }*/
+            }
             else if (filename.EndsWith(".wtd.xml"))
             {
                 var wtd = new WtdFile(XmlMetaNodeReader.GetMetaNode<Rsc6TextureDictionary>(xml, null, folder));
@@ -434,10 +410,6 @@ namespace CodeX.Games.RDR1.RPF6
         public override string ConvertToText(GameArchiveFileInfo file, byte[] data, out string newfilename)
         {
             newfilename = file.Name;
-            if (file is Rpf6ResourceFileEntry entry && entry.FlagInfos.IsResource)
-            {
-                return LoadFilePack(entry).ToString();
-            }
             return TextUtil.GetUTF8Text(data);
         }
 
@@ -474,80 +446,93 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public FilePack LoadFilePack(Rpf6FileEntry entry, byte[] data = null, bool loadDependencies = true)
+        public FilePack LoadFilePack(Rpf6FileEntry entry, byte[] data, bool loadDependencies = true)
         {
             if (entry == null) return null;
             data = EnsureFileData(entry, data);
             if (data == null) return null;
 
-            switch (entry.ResourceType)
+            var enl = entry.NameLower;
+            if (enl.EndsWith(".wft")) //Fragments
             {
-                case Rpf6FileExt.wft: //fragments
-                    var wft = new WftFile(entry);
-                    wft.Load(data);
-                    if (loadDependencies) LoadDependencies(wft);
-                    return wft;
-                case Rpf6FileExt.wvd: //visual dictionary
-                    var wvd = new WvdFile(entry);
-                    wvd.Load(data);
-                    if (loadDependencies) LoadDependencies(wvd);
-                    return wvd;
-                case Rpf6FileExt.wsi: //sector info
-                    var wsi = new WsiFile(entry);
-                    wsi.Load(data);
-                    return wsi;
-                case Rpf6FileExt.wsg_wgd: //grass
-                    var wsg = new WsgFile(entry);
-                    wsg.Load(data);
-                    return wsg;
-                case Rpf6FileExt.wsp: //trees
-                    var wsp = new WspFile(entry);
-                    wsp.Load(data);
-                    return wsp;
-                case Rpf6FileExt.wtb: //territory bounds
-                    var wtb = new WtbFile(entry);
-                    wtb.Load(data);
-                    return wtb;
-                case Rpf6FileExt.wedt: //expressions
-                    var wedt = new WedtFile(entry);
-                    wedt.Load(data);
-                    return wedt;
-                case Rpf6FileExt.was: //animation set
-                    var was = new WasFile(entry);
-                    was.Load(data);
-                    return was;
-                case Rpf6FileExt.wtd_wtx: //texture dictionary
-                    var wtd = new WtdFile(entry);
-                    wtd.Load(data);
-                    return wtd;
-                case Rpf6FileExt.generic: //frag drawable or string table (generic can be different resources...)
-                    if (entry.Name.EndsWith(".wfd"))
-                    {
-                        var wfd = new WfdFile(entry);
-                        wfd.Load(data);
-                        if (loadDependencies) LoadDependencies(wfd);
-                        return wfd;
-                    }
-                    else if (entry.Name.EndsWith(".sst"))
-                    {
-                        var sst = new SstFile(entry);
-                        sst.Load(data);
-                        return sst;
-                    }
-                    break;
-                case Rpf6FileExt.wbd_wcdt: //bounds dictionary & clip dictionary
-                    if (entry.Name.EndsWith(".wbd"))
-                    {
-                        var wbd = new WbdFile(entry);
-                        wbd.Load(data);
-                        return wbd;
-                    }
-                    else
-                    {
-                        var wcdt = new WcdtFile(entry);
-                        wcdt.Load(data);
-                        return wcdt;
-                    }
+                var wft = new WftFile(entry);
+                wft.Load(data);
+                if (loadDependencies) LoadDependencies(wft);
+                return wft;
+            }
+            else if (enl.EndsWith(".wvd")) //Visual dictionary
+            {
+                var wvd = new WvdFile(entry);
+                wvd.Load(data);
+                if (loadDependencies) LoadDependencies(wvd);
+                return wvd;
+            }
+            else if (enl.EndsWith(".wsi")) //Sector info
+            {
+                var wsi = new WsiFile(entry);
+                wsi.Load(data);
+                return wsi;
+            }
+            else if (enl.EndsWith(".wsg")) //Grass
+            {
+                var wsg = new WsgFile(entry);
+                wsg.Load(data);
+                return wsg;
+            }
+            else if (enl.EndsWith(".wsp")) //Trees
+            {
+                var wsp = new WspFile(entry);
+                wsp.Load(data);
+                return wsp;
+            }
+            else if (enl.EndsWith(".wtb")) //Territory bounds
+            {
+                var wtb = new WtbFile(entry);
+                wtb.Load(data);
+                return wtb;
+            }
+            else if (enl.EndsWith(".wedt")) //Expressions
+            {
+                var wedt = new WedtFile(entry);
+                wedt.Load(data);
+                return wedt;
+            }
+            else if (enl.EndsWith(".was")) //Animations set
+            {
+                var was = new WasFile(entry);
+                was.Load(data);
+                return was;
+            }
+            else if (enl.EndsWith(".wtd")) //Texture dictionary
+            {
+                var wtd = new WtdFile(entry);
+                wtd.Load(data);
+                return wtd;
+            }
+            else if (enl.EndsWith(".wfd")) //Frag drawables
+            {
+                var wfd = new WfdFile(entry);
+                wfd.Load(data);
+                if (loadDependencies) LoadDependencies(wfd);
+                return wfd;
+            }
+            else if (entry.Name.EndsWith(".sst")) //Stringtable
+            {
+                var sst = new SstFile(entry);
+                sst.Load(data);
+                return sst;
+            }
+            else if (entry.Name.EndsWith(".wbd")) //Bounds dictionary
+            {
+                var wbd = new WbdFile(entry);
+                wbd.Load(data);
+                return wbd;
+            }
+            else if (entry.Name.EndsWith(".wcdt")) //Clips dictionary
+            {
+                var wcdt = new WcdtFile(entry);
+                wcdt.Load(data);
+                return wcdt;
             }
             return null;
         }
@@ -670,6 +655,16 @@ namespace CodeX.Games.RDR1.RPF6
                 TextureDictionary = new Rsc6TextureDictionary()
             };
             var data = wtd.Save();
+            return data;
+        }
+
+        public static byte[] CreateNewWsi(string name)
+        {
+            var wsi = new WsiFile()
+            {
+                StreamingItems = new Rsc6SectorInfo()
+            };
+            var data = wsi.Save();
             return data;
         }
 
@@ -877,7 +872,7 @@ namespace CodeX.Games.RDR1.RPF6
             return Textures.ToArray();
         }
 
-        public override DataBag2 LoadMetadata(GameArchiveFileInfo file, byte[] data = null)
+        public override DataBagPack LoadDataBagPack(GameArchiveFileInfo file, byte[] data = null)
         {
             data = EnsureFileData(file, data);
             if (data == null) return null;
@@ -893,19 +888,77 @@ namespace CodeX.Games.RDR1.RPF6
                             case ".strtbl":
                                 var strtbl = new StrtblFile(entry);
                                 strtbl.Load(data);
-                                return strtbl.Bag;
+                                return strtbl;
                             case ".xml":
                             case ".meta":
-                                return DataBag2.FromXml(TextUtil.GetUTF8Text(data));
+                                return DataBagPack.FromXml(file, TextUtil.GetUTF8Text(data));
                         }
                         break; //unknown?
                     case 0x30464252: //RBF0 
                         var rbf = new RbfFile();
                         rbf.Load(data);
-                        return rbf.Bag;
+                        return rbf;
                 }
             }
             return null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Rpf6FileExt GetRpf6FileExt(string filename)
+        {
+            var extstr = Path.GetExtension(filename).Replace(".", "").ToLowerInvariant();
+            Enum.TryParse<Rpf6FileExt>(extstr, out var ext);
+            return ext;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static JenkHash GetRpf6FileHash(string filename)
+        {
+            return new JenkHash(Path.GetFileNameWithoutExtension(filename).ToLowerInvariant());
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetRpf6FileHashExt(string filename, out JenkHash hash, out Rpf6FileExt ext)
+        {
+            hash = GetRpf6FileHash(filename);
+            ext = GetRpf6FileExt(filename);
+        }
+
+        public override void UpdateProjectItem(ProjectItem item, ProjectItemAction action)
+        {
+            base.UpdateProjectItem(item, action);
+
+            var dfm = DataFileMgr;
+            if (dfm == null) return;
+            var gamepath = item.GamePath;
+            if (string.IsNullOrEmpty(gamepath)) return;
+            GetRpf6FileHashExt(gamepath, out var hash, out var ext);
+
+            if (action == ProjectItemAction.LoadFile)
+            {
+                JenkIndex.Ensure(Path.GetFileNameWithoutExtension(gamepath).ToLowerInvariant(), "RDR1"); //Make sure project file names have hashes in the index
+
+                if (item.FileInfo is not Rpf6FileEntry entry) return;
+                item.OrigFile ??= dfm.TryGetStreamEntry(hash, ext);
+                dfm.AddStreamEntry(hash, ext, entry);
+            }
+
+            if (action == ProjectItemAction.UnloadFile)
+            {
+                if (item.OrigFile is Rpf6FileEntry orig)
+                {
+                    dfm.AddStreamEntry(hash, ext, orig);
+                }
+                else
+                {
+                    orig = dfm.TryGetStreamEntry(hash, ext);
+                    if (orig == item.FileInfo)
+                    {
+                        dfm.RemoveStreamEntry(hash, ext);
+                    }
+                }
+            }
+
         }
 
         public override void LoadStartupCache()
@@ -950,7 +1003,7 @@ namespace CodeX.Games.RDR1.RPF6
                 strtime = File.GetLastWriteTime(strfile).ToBinary();
             }
 
-            Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache...");
+            Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache");
 
             using var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
@@ -1101,7 +1154,7 @@ namespace CodeX.Games.RDR1.RPF6
                                             }
                                         }
                                     }
-                                    catch (Exception ex)
+                                    catch
                                     {
 
                                     }
@@ -1380,6 +1433,22 @@ namespace CodeX.Games.RDR1.RPF6
             }
             return null;
         }
+
+        public void AddStreamEntry(JenkHash hash, Rpf6FileExt ext, Rpf6FileEntry entry)
+        {
+            if ((int)ext < StreamEntries.Values.Count)
+            {
+                StreamEntries[ext][hash] = entry;
+            }
+        }
+
+        public void RemoveStreamEntry(JenkHash hash, Rpf6FileExt ext)
+        {
+            if ((int)ext < StreamEntries.Values.Count)
+            {
+                StreamEntries[ext].Remove(hash);
+            }
+        }
     }
 
     public class Rpf6DataFileDevice
@@ -1417,63 +1486,71 @@ namespace CodeX.Games.RDR1.RPF6
 
         public void SaveStartupCache(BinaryWriter bw)
         {
-            var archives = FileMan.RootArchives;
             var bounds = new List<Rpf6StoreItem>();
             var territoryBounds = new List<Rpf6StoreItem>();
             var tiles = new List<Rpf6StoreItem>();
+            var wbds = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wbd_wcdt];
+            var wtbs = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wtb];
+            var wvds = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wvd];
 
-            foreach (var archive in archives.Cast<Rpf6File>())
+            Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Bounds dictionary");
+            foreach (var kv in wbds)
             {
-                if (archive.Path.StartsWith("backup")) continue;
-                foreach (var entry in archive.AllEntries.Cast<Rpf6Entry>())
+                var value = kv.Value;
+                if (value == null || !value.Name.EndsWith(".wbd") || value.NameLower.Contains("props")) continue;
+                var pack = FileMan.LoadPiecePack(value);
+
+                if (pack != null)
                 {
-                    if (entry is Rpf6ResourceFileEntry re)
+                    var wbd = (WbdFile)pack;
+                    var item = new Rpf6StoreItem
                     {
-                        if (re.NameLower.EndsWith(".wbd") && !re.NameLower.Contains("props")) //Save terrain collisions
-                        {
-                            var wbd = FileMan.LoadPiecePack(re);
-                            if (wbd != null)
-                            {
-                                var item = new Rpf6StoreItem
-                                {
-                                    Path = re.PathLower,
-                                    Hash = re.ShortNameHash,
-                                    Box = ((WbdFile)wbd).BoundingBox
-                                };
-                                bounds.Add(item);
-                            }
-                        }
-                        if (re.NameLower.EndsWith(".wtb")) //Save territory bounds
-                        {
-                            var wtb = FileMan.LoadPiecePack(re);
-                            if (wtb != null)
-                            {
-                                if (wtb.Piece?.Collider is Rsc6BoundSurface) continue;
-                                var item = new Rpf6StoreItem
-                                {
-                                    Path = re.PathLower,
-                                    Hash = re.ShortNameHash,
-                                    Box = ((WtbFile)wtb).BoundingBox
-                                };
-                                territoryBounds.Add(item);
-                            }
-                        }
-                        else if (re.NameLower.EndsWith(".wvd") && re.NameLower.StartsWith("tile_") && !RDR1Map.ShouldSkipObject(re)) //Save terrain tiles
-                        {
-                            var tile = FileMan.LoadPiecePack(re);
-                            if (tile != null)
-                            {
-                                var hash = new JenkHash(re.ShortNameLower + (re.Parent.Name == "resource_2" ? ".wvd_lod2" : ""));
-                                var item = new Rpf6StoreItem
-                                {
-                                    Path = re.PathLower,
-                                    Hash = hash,
-                                    Box = ((WvdFile)tile).BoundingBox
-                                };
-                                tiles.Add(item);
-                            }
-                        }
-                    }
+                        Path = value.PathLower,
+                        Hash = value.ShortNameHash,
+                        Box = wbd.BoundingBox
+                    };
+                    bounds.Add(item);
+                }
+            }
+
+            Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Territory bounds");
+            foreach (var kv in wtbs)
+            {
+                var value = kv.Value;
+                if (value == null) continue;
+                var pack = FileMan.LoadPiecePack(value);
+
+                if (pack != null)
+                {
+                    var wtb = (WtbFile)pack;
+                    var item = new Rpf6StoreItem
+                    {
+                        Path = value.PathLower,
+                        Hash = value.ShortNameHash,
+                        Box = wtb.BoundingBox
+                    };
+                    territoryBounds.Add(item);
+                }
+            }
+
+            Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Visual dictionary");
+            foreach (var kv in wvds)
+            {
+                var value = kv.Value;
+                if (value == null || !value.NameLower.StartsWith("tile_") && !RDR1Map.ShouldSkipVisualDict(value)) continue;
+                var pack = FileMan.LoadPiecePack(value);
+
+                if (pack != null)
+                {
+                    var wvd = (WvdFile)pack;
+                    var hash = new JenkHash(value.ShortNameLower);
+                    var item = new Rpf6StoreItem
+                    {
+                        Path = value.PathLower,
+                        Hash = hash,
+                        Box = wvd.BoundingBox
+                    };
+                    tiles.Add(item);
                 }
             }
 
@@ -1548,7 +1625,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
     }
 
-    public struct Rpf6StoreItem
+    [TC(typeof(EXP))] public struct Rpf6StoreItem
     {
         public string Path;
         public JenkHash Hash;

@@ -14,6 +14,10 @@ namespace CodeX.Games.RDR1.Files
         public WvdFile Parent;
         public BoundingBox BoundingBox;
 
+        public WvdFile()
+        {
+        }
+
         public WvdFile(Rpf6FileEntry file) : base(file)
         {
             
@@ -52,7 +56,6 @@ namespace CodeX.Games.RDR1.Files
                     }
 
                     var hash = (i < hashes.Length) ? hashes[i] : 0;
-                    Piece = drawable;
                     Pieces[hash] = drawable;
                     BoundingBox = BoundingBox.Merge(BoundingBox, drawable.BoundingBox); //Expand the global bounding box to encompass all pieces
                 }

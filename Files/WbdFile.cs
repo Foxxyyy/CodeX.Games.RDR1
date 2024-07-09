@@ -12,6 +12,10 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6BoundsDictionary BoundsDictionary;
         public BoundingBox BoundingBox;
 
+        public WbdFile()
+        {
+        }
+
         public WbdFile(Rpf6FileEntry file) : base(file)
         {
 

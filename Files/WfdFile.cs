@@ -11,6 +11,10 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6FragDrawable FragDrawable;
         public static Rsc6Ptr<Rsc6TextureDictionary> TextureDictionary;
 
+        public WfdFile()
+        {
+        }
+
         public WfdFile(Rpf6FileEntry file) : base(file)
         {
             

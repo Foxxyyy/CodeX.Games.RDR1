@@ -107,8 +107,13 @@ namespace CodeX.Games.RDR1.RSC6
 
                 for (int i = 0; i < data.Length; i += 4)
                 {
-                    var d = FloatUtil.Dec3NToVector4(br.ReadUInt32());
-                    d = new Vector4(d.Z, d.X, d.Y, d.Z);
+                    var color = new Colour(br.ReadUInt32());
+                    var r = color.R * (1.0f / (1 << 16));
+                    var g = color.G * (1.0f / (1 << 16));
+                    var b = color.B * (1.0f / (1 << 16));
+                    var a = color.A * (1.0f / (1 << 16));
+
+                    var d = new Vector4(b, r, g, a);
                     var loc = (d * AABBScale) + AABBOffset;
 
                     /*var x = br.ReadByte();
@@ -315,8 +320,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public static void Init(Rpf6FileManager fman)
         {
-            Core.Engine.Console.Write("Rsc6GrassManager", "Initialising grass manager...");
+            if (fman.AllArchives.Count == 0)
+            {
+                return;
+            }
 
+            Core.Engine.Console.Write("Rsc6GrassManager", "Initialising grass manager...");
             var textures = new List<Rsc6Texture>();
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "grassres.rpf");
             var entries = rpf.AllEntries.Where(e => e.Name.EndsWith(".wtd")).ToList();

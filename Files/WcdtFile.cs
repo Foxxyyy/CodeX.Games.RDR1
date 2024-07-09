@@ -1,4 +1,5 @@
 ﻿using CodeX.Core.Engine;
+using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 
@@ -7,6 +8,10 @@ namespace CodeX.Games.RDR1.Files
     public class WcdtFile : FilePack
     {
         public Rsc6ClipDictionary Clips;
+
+        public WcdtFile()
+        {
+        }
 
         public WcdtFile(Rpf6FileEntry info) : base(info)
         {
@@ -31,6 +36,17 @@ namespace CodeX.Games.RDR1.Files
             w.WriteBlock(Clips);
             var data = w.Build(58);
             return data;
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            Clips = new();
+            Clips.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            Clips?.Write(writer);
         }
     }
 }
