@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
 {
-    class WbdFile : PiecePack
+    public class WbdFile : PiecePack
     {
         public Rsc6BoundsDictionary BoundsDictionary;
         public BoundingBox BoundingBox;

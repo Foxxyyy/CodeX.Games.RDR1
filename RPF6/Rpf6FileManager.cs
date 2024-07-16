@@ -52,12 +52,12 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wsg", "Sector Grass", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wsi", "Sector Info", FileTypeIcon.Process, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wcs", "Cover Set", FileTypeIcon.SystemFile);
-            InitFileType(".wgd", "Gringo Dictionary", FileTypeIcon.SystemFile);
+            InitFileType(".wgd", "Gringo Dictionary", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wsf", "ScaleForm", FileTypeIcon.Image, FileTypeAction.ViewTextures);
-            InitFileType(".wsp", "Speed Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
+            InitFileType(".wsp", "Speed Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
             InitFileType(".sst", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml);
             InitFileType(".wst", "String Table", FileTypeIcon.TextFile);
-            InitFileType(".wtb", "Terrain Bounds", FileTypeIcon.Collisions, FileTypeAction.ViewModels, false, false, true);
+            InitFileType(".wtb", "Terrain Bounds", FileTypeIcon.Collisions, FileTypeAction.ViewModels, true, false, true);
             InitFileType(".wtd", "Texture Dictionary", FileTypeIcon.Image, FileTypeAction.ViewTextures, true, true, true);
             InitFileType(".wtl", "Terrain World", FileTypeIcon.SystemFile);
             InitFileType(".wtx", "Texture Map", FileTypeIcon.Image);
@@ -325,9 +325,10 @@ namespace CodeX.Games.RDR1.RPF6
                 case ".wtd": return ConvertToXml<WtdFile>(file, data, out newfilename, "RDR1TextureDictionary", GetXmlFileFolder(file, folder));
                 case ".was": return ConvertToXml<WasFile>(file, data, out newfilename, "RDR1AnimationSet");
                 case ".wsg": return ConvertToXml<WsgFile>(file, data, out newfilename, "RDR1SectorGrass");
-                case ".wsp": return ConvertToXml<WspFile>(file, data, out newfilename, "RDR1SpeedTree");
                 case ".wbd": return ConvertToXml<WbdFile>(file, data, out newfilename, "RDR1BoundsDictionary");
                 case ".sst": return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
+                case ".wtb": return ConvertToXml<WtbFile>(file, data, out newfilename, "RDR1TerritoryBounds");
+                case ".wgd": return ConvertToXml<WgdFile>(file, data, out newfilename, "RDR1GringoDictionary");
             }
 
             newfilename = file.Name + ".xml";
@@ -383,11 +384,6 @@ namespace CodeX.Games.RDR1.RPF6
                 var wsg = new WsgFile(XmlMetaNodeReader.GetMetaNode<Rsc6SectorGrass>(xml));
                 return wsg.Save();
             }
-            else if (filename.EndsWith(".wsp.xml"))
-            {
-                var wsp = new WspFile(XmlMetaNodeReader.GetMetaNode<Rsc6TreeForestGrid>(xml));
-                return wsp.Save();
-            }
             else if (filename.EndsWith(".wbd.xml"))
             {
                 var wbd = new WbdFile(XmlMetaNodeReader.GetMetaNode<Rsc6BoundsDictionary>(xml));
@@ -397,6 +393,11 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 var wedt = new WedtFile(XmlMetaNodeReader.GetMetaNode<Rsc6ExpressionDictionary>(xml));
                 return wedt.Save();
+            }
+            else if (filename.EndsWith(".wtb.xml"))
+            {
+                var wtb = new WtbFile(XmlMetaNodeReader.GetMetaNode<Rsc6TerrainBound>(xml));
+                return wtb.Save();
             }
             return null;
         }
@@ -643,6 +644,7 @@ namespace CodeX.Games.RDR1.RPF6
                     case ".wbd": return Rsc6DataReader.Analyze<Rsc6BoundsDictionary>(rfe, data);
                     case ".sst": return Rsc6DataReader.Analyze<Rsc6StringTable>(rfe, data);
                     case ".wedt": return Rsc6DataReader.Analyze<Rsc6ExpressionDictionary>(rfe, data);
+                    case ".wgd": return Rsc6DataReader.Analyze<Rsc6GringoDictionary>(rfe, data);
                 }
             }
             return new Tuple<string>("Unable to analyze file.");
@@ -1277,6 +1279,7 @@ namespace CodeX.Games.RDR1.RPF6
         public Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>> StreamEntries;
         public Dictionary<JenkHash, WsiFile> WsiFiles;
         public Dictionary<JenkHash, WspFile> WspFiles;
+        public Dictionary<JenkHash, WsgFile> WsgFiles;
         public List<Rsc6Texture> SwAll; //swAll.wtd
         public List<Rsc6Texture> FragTextures; //fragmenttexturelist.wtd
 
@@ -1293,6 +1296,7 @@ namespace CodeX.Games.RDR1.RPF6
             this.StreamEntries = new Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>>();
             this.WsiFiles = new Dictionary<JenkHash, WsiFile>();
             this.WspFiles = new Dictionary<JenkHash, WspFile>();
+            this.WsgFiles = new Dictionary<JenkHash, WsgFile>();
             this.SwAll = new List<Rsc6Texture>();
             this.FragTextures = new List<Rsc6Texture>();
 
@@ -1300,6 +1304,7 @@ namespace CodeX.Games.RDR1.RPF6
             this.LoadGeneralTextures();
             this.LoadSectorInfoResources();
             this.LoadSectorTrees();
+            this.LoadSectorGrass();
         }
 
         private void LoadFiles()
@@ -1418,6 +1423,26 @@ namespace CodeX.Games.RDR1.RPF6
                     var hash = fe.ShortNameHash;
                     JenkIndex.Ensure(wsp.Name, "RDR1");
                     this.WspFiles[hash] = wsp;
+                }
+            }
+        }
+
+        private void LoadSectorGrass()
+        {
+            foreach (var se in this.StreamEntries[Rpf6FileExt.wsg_wgd])
+            {
+                var fe = se.Value;
+                if (!fe.Name.EndsWith(".wsg")) continue;
+                var wsgdata = fe.Archive.ExtractFile(fe);
+
+                if (wsgdata != null)
+                {
+                    var wsg = new WsgFile(fe);
+                    wsg.Load(wsgdata);
+
+                    var hash = fe.ShortNameHash;
+                    JenkIndex.Ensure(wsg.Name, "RDR1");
+                    this.WsgFiles[hash] = wsg;
                 }
             }
         }

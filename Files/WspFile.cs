@@ -51,13 +51,10 @@ namespace CodeX.Games.RDR1.Files
 
         public override void Read(MetaNodeReader reader)
         {
-            Grid = new();
-            Grid.Read(reader);
         }
 
         public override void Write(MetaNodeWriter writer)
         {
-            Grid?.Write(writer);
         }
 
         public override string ToString()

@@ -34,7 +34,7 @@ namespace CodeX.Games.RDR1
             {
                 case "Peds":
                     EnsurePeds();
-                    return Peds?.PedNames.ToArray();
+                    return Peds?.PedNames;
                 case "Vehicles":
                     EnsureVehicles();
                     return Vehicles?.VehicleNames;

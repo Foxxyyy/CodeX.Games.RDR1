@@ -9,6 +9,7 @@ using CodeX.Core.Numerics;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -2418,36 +2419,78 @@ namespace CodeX.Games.RDR1.RSC6
 
     [TC(typeof(EXP))] public class RDR1GridForestEntity : Entity
     {
+        public Rsc6TreeForestGridCell GridCell;
         public JenkHash TreeName;
+        public Vector3 OriginalPosition; //Used so if we're moving a tree in the map viewer, we can find it back from a #sp using its original position.
+        public bool Created = false; //Used to make sure we'll update new trees
+        
         public override string Name => TreeName.ToString();
-        public RDR1MapData Wsp => Level as RDR1MapData;
+        public RDR1TreeMapData Wsp => Level as RDR1TreeMapData;
 
-        public RDR1GridForestEntity(Rsc6PackedInstancePos inst, JenkHash name) //Trees
+        public RDR1GridForestEntity(BaseCreateArgs args, float dist) //Create
         {
-            TreeName = name;
-            LodDistMax = 100.0f;
-            Position = inst.Position;
+            TreeName = args.Asset;
+            LodDistMax = dist;
+            Position = args.Position;
+            Orientation = args.Rotation;
+            OrientationInv = Orientation.IsIdentity ? Quaternion.Identity : Quaternion.Inverse(Orientation);
+            Scale = args.Scale;
+            Created = true;
         }
 
-        public RDR1GridForestEntity(Rsc6InstanceMatrix inst, JenkHash name) //Debris and foliages around buildings and roads
+        public RDR1GridForestEntity(Rsc6PackedInstancePos inst, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist) //Trees
+        {
+            TreeName = name;
+            GridCell = gridCell;
+            LodDistMax = dist;
+            Position = inst.Position;
+            OriginalPosition = Position;
+        }
+
+        public RDR1GridForestEntity(Rsc6InstanceMatrix inst, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist) //Debris and foliages around buildings and roads
         {
             inst.Transform.Decompose(out var scale, out var rot, out var translation);
             TreeName = name;
-            LodDistMax = 100.0f;
+            GridCell = gridCell;
+            LodDistMax = dist;
             Position = translation;
+            OriginalPosition = Position;
             Orientation = new Quaternion(rot.Z, rot.X, rot.Y, rot.W);
             OrientationInv = Quaternion.Inverse(Orientation);
             Scale = scale;
         }
 
-        public static RDR1GridForestEntity CreateFromGrid(object instance, JenkHash name)
+        public static RDR1GridForestEntity CreateFromGrid(object instance, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist)
         {
             if (instance is Rsc6PackedInstancePos instPos)
-                return new RDR1GridForestEntity(instPos, name);
+                return new RDR1GridForestEntity(instPos, gridCell, name, dist);
             else if (instance is Rsc6InstanceMatrix instMatrix)
-                return new RDR1GridForestEntity(instMatrix, name);
+                return new RDR1GridForestEntity(instMatrix, gridCell, name, dist);
             else
                 return null;
+        }
+
+        public override void SetPiece(Piece p)
+        {
+            var changed = p != Piece;
+            Piece = p;
+
+            if ((p != null) && changed)
+            {
+                UpdateBounds();
+            }
+        }
+    }
+
+    [TC(typeof(EXP))] public class RDR1GrassEntity : Entity
+    {
+        public JenkHash GrassName;
+        public override string Name => GrassName.ToString();
+
+        public RDR1GrassEntity(string name, Vector3 pos)
+        {
+            GrassName = new(name);
+            Position = pos;
         }
 
         public override void SetPiece(Piece p)

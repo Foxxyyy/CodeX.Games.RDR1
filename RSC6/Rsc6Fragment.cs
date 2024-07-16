@@ -1056,12 +1056,12 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteEnum("@type", Type);
-            writer.WriteString("Name", Name.ToString());
-            writer.WriteNode("Bounds", Bounds.Item);
+            if (Name.Value != null) writer.WriteString("Name", Name.ToString());
             writer.WriteEnum("TypeFlags", TypeFlags);
             writer.WriteInt32("IncludeFlags", IncludeFlags);
             writer.WriteUInt16("PropertyFlags", PropertyFlags);
             writer.WriteUInt16("RefCount", RefCount);
+            writer.WriteNode("Bounds", Bounds.Item);
         }
 
         public bool MatchFlags(uint includeFlags, uint typeFlags)

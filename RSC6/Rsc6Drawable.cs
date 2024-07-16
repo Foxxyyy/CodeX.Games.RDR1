@@ -12,7 +12,6 @@ using CodeX.Games.RDR1.RPF6;
 using ICSharpCode.SharpZipLib.Checksum;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
-using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -1909,7 +1908,6 @@ namespace CodeX.Games.RDR1.RSC6
                 bone.Parent = pr.Item;
             }
 
-            var tr = InverseJointScaleOrients.Items;
             var bonesSorted = Bones.ToList();
             bonesSorted.Sort((a, b) => a.Index.CompareTo(b.Index));
 
@@ -1918,12 +1916,11 @@ namespace CodeX.Games.RDR1.RSC6
                 var bone = bonesSorted[i];
                 bone.UpdateAnimTransform();
                 bone.AbsTransform = bone.AnimTransform;
-                bone.BindTransformInv = (i < (tr?.Length ?? 0)) ? tr[i] : Matrix4x4Ext.Invert(bone.AnimTransform);
+                bone.BindTransformInv = Matrix4x4Ext.Invert(bone.AnimTransform);
                 bone.BindTransformInv.M44 = 1.0f;
                 bone.UpdateSkinTransform();
             }
-
-            BuildBoneTags();
+            BuildBoneTags(false);
             UpdateBoneTransforms();
             BuildBonesDictionary();
         }
@@ -1973,7 +1970,7 @@ namespace CodeX.Games.RDR1.RSC6
             BuildIndices();
             AssignBoneParents();
             BuildTransformations();
-            BuildBoneTags();
+            BuildBoneTags(true);
 
             if (Signature <= 0)
             {
@@ -2054,7 +2051,7 @@ namespace CodeX.Games.RDR1.RSC6
             return false;
         }
 
-        public void BuildBoneTags()
+        public void BuildBoneTags(bool fromXml)
         {
             BonesMap = new Dictionary<Rsc6BoneIdEnum, Rsc6BoneData>();
             var tags = new List<Rsc6SkeletonBoneTag>();
@@ -2075,6 +2072,7 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
 
+            if (!fromXml) return;
             var skip = tags.Count < 1;
             if (tags.Count == 1)
             {

@@ -14,7 +14,7 @@ using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6TerrainBound : Rsc6BlockBaseMap //terrainBoundTile
+    [TC(typeof(EXP))] public class Rsc6TerrainBound : Rsc6BlockBaseMap, MetaNode //terrainBoundTile
     {
         public override ulong BlockLength => 40; //terrainBoundTile + terrainTileScanData
         public override uint VFT { get; set; } = 0x04A007B8;
@@ -36,7 +36,7 @@ namespace CodeX.Games.RDR1.RSC6
             MinElevation = reader.ReadSingle();
             ElevationRange = reader.ReadSingle();
             ScanData = reader.ReadArr<Rsc6ScanData>();
-        }
+        } //14802140_bnd
 
         public override void Write(Rsc6DataWriter writer)
         {
@@ -49,9 +49,29 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle(ElevationRange);
             writer.WriteArr(ScanData);
         }
+
+        public void Read(MetaNodeReader reader)
+        {
+            ResourceDict = new(reader.ReadNode<Rsc6TerrainDictBoundResource>("ResourceDict"));
+            PointMaterials_AND = reader.ReadUInt32("PointMaterials_AND");
+            PointMaterials_OR = reader.ReadUInt32("PointMaterials_OR");
+            MinElevation = reader.ReadSingle("MinElevation");
+            ElevationRange = reader.ReadSingle("ElevationRange");
+            ScanData = new(reader.ReadNodeArray<Rsc6ScanData>("ScanData"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("PointMaterials_AND", PointMaterials_AND);
+            writer.WriteUInt32("PointMaterials_OR", PointMaterials_OR);
+            writer.WriteSingle("MinElevation", MinElevation);
+            writer.WriteSingle("ElevationRange", ElevationRange);
+            writer.WriteNode("ResourceDict", ResourceDict.Item);
+            writer.WriteNodeArray("ScanData", ScanData.Items);
+        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundResource : Rsc6BlockBaseMap //pgDictionary<terrainBoundResource>
+    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundResource : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundResource>
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x04A007D0;
@@ -75,10 +95,25 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(RefCount);
             writer.WriteArr(Codes);
+            writer.WritePtrArr(Entries);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            RefCount = reader.ReadUInt32("RefCount");
+            Codes = new(reader.ReadJenkHashArray("Codes"));
+            Entries = new(reader.ReadNodeArray<Rsc6TerrainBoundResource>("Entries"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("RefCount", RefCount);
+            writer.WriteJenkHashArray("Codes", Codes.Items);
+            writer.WriteNodeArray("Entries", Entries.Items);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainBoundResource : Rsc6BlockBase //terrainBoundResource
+    [TC(typeof(EXP))] public class Rsc6TerrainBoundResource : Rsc6BlockBase, MetaNode //terrainBoundResource
     {
         public override ulong BlockLength => 12;
         public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound
@@ -94,11 +129,33 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            
+            writer.WritePtr(Bounds);
+            writer.WritePtr(Archetype);
+            writer.WritePtr(InstanceDict);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            InstanceDict = new(reader.ReadNode<Rsc6TerrainDictBoundInstance>("InstanceDict"));
+            if (InstanceDict.Item?.Entries.Items != null)
+            {
+                var entry = InstanceDict.Item?.Entries.Items[0];
+                if (entry != null && entry.Instance.Item?.Archetype != null)
+                {
+                    var arch = entry.Instance.Item.Archetype;
+                    Archetype = arch;
+                    Bounds = arch.Item.Bounds;
+                }
+            }
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteNode("InstanceDict", InstanceDict.Item);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundInstance : Rsc6BlockBaseMap //pgDictionary<terrainBoundInstance>
+    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundInstance : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundInstance>
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x04A007D0;
@@ -122,10 +179,25 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_8h);
             writer.WriteUInt32(RefCount);
             writer.WriteArr(Codes);
+            writer.WritePtrArr(Entries);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            RefCount = reader.ReadUInt32("RefCount");
+            Codes = new(reader.ReadJenkHashArray("Codes"));
+            Entries = new(reader.ReadNodeArray<Rsc6TerrainBoundInstance>("Entries"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("RefCount", RefCount);
+            writer.WriteJenkHashArray("Codes", Codes.Items);
+            writer.WriteNodeArray("Entries", Entries.Items);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainBoundInstance : Rsc6BlockBase //terrainBoundInstance
+    [TC(typeof(EXP))] public class Rsc6TerrainBoundInstance : Rsc6BlockBase, MetaNode //terrainBoundInstance
     {
         public override ulong BlockLength => 4;
         public Rsc6Ptr<Rsc6PhysicsInstance> Instance { get; set; } //m_phInst
@@ -139,9 +211,19 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WritePtr(Instance);
         }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Instance = new(reader.ReadNode<Rsc6PhysicsInstance>("Instance"));
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteNode("Instance", Instance.Item);
+        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ScanData : IRsc6Block //terrainTileScanData
+    [TC(typeof(EXP))] public class Rsc6ScanData : IRsc6Block, MetaNode //terrainTileScanData
     {
         public ulong BlockLength => 8;
         public bool IsPhysical => false;
@@ -159,6 +241,18 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteUInt32(MaterialId);
             writer.WriteUInt32(PackedElevation);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            MaterialId = reader.ReadUInt32("MaterialId");
+            PackedElevation = reader.ReadUInt32("PackedElevation");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteUInt32("MaterialId", MaterialId);
+            writer.WriteUInt32("PackedElevation", PackedElevation);
         }
     }
 

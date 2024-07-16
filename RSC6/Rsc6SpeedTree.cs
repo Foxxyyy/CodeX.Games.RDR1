@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Linq;
 using System.Numerics;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6TreeForestGrid : Rsc6TreeForest, MetaNode //rage::TreeForestGrid
+    [TC(typeof(EXP))] public class Rsc6TreeForestGrid : Rsc6TreeForest //rage::TreeForestGrid
     {
         //Manages a forest using a grid culling system.
         //Each instance is put into a grid cell based on its position.
@@ -18,7 +16,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => base.BlockLength + 112;
         public Vector4 GridMin { get; set; }
         public Vector4 GridSize { get; set; }
-        public Vector4 BoundSphere { get; set; } //m_BoundSphere, W is radius
+        public BoundingSphere BoundSphere { get; set; } //m_BoundSphere, W is radius
         public Rsc6ManagedArr<Rsc6TreeForestGridCell> GridCells { get; set; } //m_GridCells
         public Rsc6Arr<short> IndexList { get; set; }
         public int Left { get; set; } //m_nLeft
@@ -44,7 +42,8 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             GridMin = reader.ReadVector4();
             GridSize = reader.ReadVector4();
-            BoundSphere = reader.ReadVector4();
+            var vector = reader.ReadVector4();
+            BoundSphere = new BoundingSphere(vector.XYZ(), vector.W);
             GridCells = reader.ReadArr<Rsc6TreeForestGridCell>(); //Rsc6TreeForestGridCell[CellsWidth][CellsHeight]
             IndexList = reader.ReadArr<short>();
             Left = reader.ReadInt32();
@@ -100,7 +99,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
             writer.WriteVector4(GridMin);
             writer.WriteVector4(GridSize);
-            writer.WriteVector4(BoundSphere);
+            writer.WriteVector4(new Vector4(BoundSphere.Center, BoundSphere.Radius));
             writer.WriteArr(GridCells);
             writer.WriteArr(IndexList);
             writer.WriteInt32(Left);
@@ -119,79 +118,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBoolean(LoadedMeshes);
             writer.WriteSingle(StreamRadius);
         }
-
-        public new void Read(MetaNodeReader reader)
-        {
-            GridMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMin"));
-            GridSize = Rpf6Crypto.ToXYZ(reader.ReadVector4("GridMax"));
-            BoundSphere = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
-            Left = reader.ReadInt32("Left");
-            Right = reader.ReadInt32("Right");
-            Top = reader.ReadInt32("Top");
-            Bottom = reader.ReadInt32("Bottom");
-            WidthStep = reader.ReadInt32("WidthStep");
-            HeightStep = reader.ReadInt32("HeightStep");
-            Width = reader.ReadInt32("Width");
-            Height = reader.ReadInt32("Height");
-            CellsWidth = reader.ReadInt32("CellsWidth");
-            CellsHeight = reader.ReadInt32("CellsHeight");
-            YUp = reader.ReadBool("YUp");
-            EnableGrid = reader.ReadBool("EnableGrid");
-            EntireCellCull = reader.ReadBool("EntireCellCull");
-            LoadedMeshes = reader.ReadBool("LoadedMeshes");
-            StreamRadius = reader.ReadSingle("StreamRadius");
-            base.Read(reader);
-            GridCells = new(reader.ReadNodeArray<Rsc6TreeForestGridCell>("GridCells"));
-
-            var iList = reader.ReadInt16Array("IndexList");
-            if (iList != null)
-            {
-                IndexList = new(iList);
-            }
-        }
-
-        public new void Write(MetaNodeWriter writer)
-        {
-            writer.WriteVector4("GridMin", GridMin);
-            writer.WriteVector4("GridMax", GridSize);
-            writer.WriteVector4("BoundSphere", BoundSphere);
-            writer.WriteInt32("Left", Left);
-            writer.WriteInt32("Right", Right);
-            writer.WriteInt32("Top", Top);
-            writer.WriteInt32("Bottom", Bottom);
-            writer.WriteInt32("WidthStep", WidthStep);
-            writer.WriteInt32("HeightStep", HeightStep);
-            writer.WriteInt32("Width", Width);
-            writer.WriteInt32("Height", Height);
-            writer.WriteInt32("CellsWidth", CellsWidth);
-            writer.WriteInt32("CellsHeight", CellsHeight);
-            writer.WriteBool("YUp", YUp);
-            writer.WriteBool("EnableGrid", EnableGrid);
-            writer.WriteBool("EntireCellCull", EntireCellCull);
-            writer.WriteBool("LoadedMeshes", LoadedMeshes);
-            writer.WriteSingle("StreamRadius", StreamRadius);
-            base.Write(writer);
-            writer.WriteNodeArray("GridCells", GridCells.Items);
-            writer.WriteInt16Array("IndexList", IndexList.Items);
-        }
-
-        //Get the coordinates of the grid cell where a position is in.
-        public void GetGridCell(Vector3 vPosition, out int nCellW, out int nCellH)
-        {
-            if (YUp)
-            {
-                nCellW = (int)((vPosition.X - Left) / WidthStep);
-                nCellH = (int)((vPosition.Z - Top) / HeightStep);
-            }
-            else
-            {
-                nCellW = ((int)vPosition.X - Left) / WidthStep;
-                nCellH = ((int)vPosition.Y - Top) / HeightStep;
-            }
-        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeForestGridCell : Rsc6BlockBase, MetaNode //rage::speedTreeForestGridCell
+    [TC(typeof(EXP))] public class Rsc6TreeForestGridCell : Rsc6BlockBase //rage::speedTreeForestGridCell
     {
         public override ulong BlockLength => 48;
         public BoundingSphere BoundSphere { get; set; } //m_BoundSphere, W is the max distance from the center to any instance (radius)
@@ -222,35 +151,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_2Ch);
         }
 
-        public void Read(MetaNodeReader reader)
-        {
-            var vector = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundSphere"));
-            BoundSphere = new BoundingSphere(vector.XYZ(), vector.W);
-            CombinedInstanceListPos = new(reader.ReadNodeArray<Rsc6PackedInstancePos>("CombinedInstanceListPos"));
-            CombinedInstanceListMatrix = new(reader.ReadNodeArray<Rsc6InstanceMatrix>("CombinedInstanceListMatrix"));
-
-            var iList = reader.ReadInt16Array("IndexList");
-            if (iList != null)
-            {
-                IndexList = new(iList);
-            }
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteVector4("BoundSphere", new Vector4(BoundSphere.Center, BoundSphere.Radius));
-            writer.WriteNodeArray("CombinedInstanceListPos", CombinedInstanceListPos.Items);
-            writer.WriteNodeArray("CombinedInstanceListMatrix", CombinedInstanceListMatrix.Items);
-            writer.WriteInt16Array("IndexList", IndexList.Items);
-        }
-
         public override string ToString()
         {
             return BoundSphere.ToString() + ", instances: " + (CombinedInstanceListPos.Count + CombinedInstanceListMatrix.Count).ToString();
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeForest : Rsc6BlockBaseMap, MetaNode //rage::TreeForest
+    [TC(typeof(EXP))] public class Rsc6TreeForest : Rsc6BlockBaseMap //rage::TreeForest
     {
         public override ulong BlockLength => 96;
         public override uint VFT { get; set; } = 0x04CA9264;
@@ -277,7 +184,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             Trees = reader.ReadArr<uint>();
             TreeHashes = reader.ReadArr<JenkHash>();
-            TreeNames = reader.ReadPtrStr(0x10);
+            TreeNames = reader.ReadPtrStr(32);
             TreeInstancePos = reader.ReadArr<Rsc6TreeInstancePos>();
             CombinedVisibleInstancePos = reader.ReadArr<Rsc6PackedInstancePos>();
             TreeInstanceMatrix = reader.ReadArr<Rsc6InstanceMatrix>();
@@ -315,45 +222,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_58h);
             writer.WriteUInt32(Unknown_5Ch);
         }
-
-        public void Read(MetaNodeReader reader)
-        {
-            var names = reader.ReadStringArray("TreeNames") ?? Array.Empty<string>();
-            TreeNames = new(names.Select(s => new Rsc6Str(s)).ToArray());
-            TreeHashes = new(reader.ReadJenkHashArray("TreeHashes"));
-            TreeInstancePos = new(reader.ReadNodeArray<Rsc6TreeInstancePos>("TreeInstancePos"));
-            CombinedVisibleInstancePos = new(reader.ReadNodeArray<Rsc6PackedInstancePos>("CombinedVisibleInstancePos"));
-            TreeInstanceMatrix = new(reader.ReadNodeArray<Rsc6InstanceMatrix>("TreeInstanceMatrix"));
-            CombinedVisibleTreeInstanceMatrix = new(reader.ReadNodeArray<Rsc6InstanceMatrix>("CombinedVisibleTreeInstanceMatrix"));
-            MaxBillboardsPerFrame = reader.ReadInt32("MaxBillboardsPerFrame");
-            BillboardBlendRange = reader.ReadSingle("BillboardBlendRange");
-            RegenerateAll = reader.ReadBool("RegenerateAll");
-            UseBillboardSizeSelection = reader.ReadBool("UseBillboardSizeSelection");
-
-            var treeValues = new uint[names.Length];
-            for (int i = 0; i < treeValues.Length; i++)
-            {
-                treeValues[i] = uint.MaxValue;
-            }
-            Trees = new(treeValues);
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteStringArray("TreeNames", TreeNames.Items.Select(s => s.Value).ToArray());
-            writer.WriteJenkHashArray("TreeHashes", TreeHashes.Items);
-            writer.WriteNodeArray("TreeInstancePos", TreeInstancePos.Items);
-            writer.WriteNodeArray("CombinedVisibleInstancePos", CombinedVisibleInstancePos.Items);
-            writer.WriteNodeArray("TreeInstanceMatrix", TreeInstanceMatrix.Items);
-            writer.WriteNodeArray("CombinedVisibleTreeInstanceMatrix", CombinedVisibleTreeInstanceMatrix.Items);
-            writer.WriteInt32("MaxBillboardsPerFrame", MaxBillboardsPerFrame);
-            writer.WriteSingle("BillboardBlendRange", BillboardBlendRange);
-            writer.WriteBool("RegenerateAll", RegenerateAll);
-            writer.WriteBool("UseBillboardSizeSelection", UseBillboardSizeSelection);
-        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PackedInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreePackedInstancePos
+    [TC(typeof(EXP))] public class Rsc6PackedInstancePos : Rsc6BlockBase //rage::speedTreePackedInstancePos
     {
         public override ulong BlockLength => 8;
         public ushort X { get; set; } //x
@@ -364,6 +235,17 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Vector3 Position;
         public int TreeIndex;
+
+        public Rsc6PackedInstancePos()
+        {
+        }
+
+        public Rsc6PackedInstancePos(Vector3 pos)
+        {
+            Position = pos;
+            Fade = 80;
+            Seed = 27;
+        }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -383,31 +265,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Seed);
         }
 
-        public void Read(MetaNodeReader reader)
-        {
-            X = reader.ReadUInt16("Y");
-            Y = reader.ReadUInt16("Z");
-            Z = reader.ReadUInt16("X");
-            Fade = reader.ReadByte("Fade");
-            Seed = reader.ReadByte("Seed");
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteUInt16("X", Z);
-            writer.WriteUInt16("Y", X);
-            writer.WriteUInt16("Z", Y);
-            writer.WriteByte("Fade", Fade);
-            writer.WriteByte("Seed", Seed);
-        }
-
         public override string ToString()
         {
-            return $"Seed: {Seed} - X: {X}, Y: {Y}, Z: {Z}";
+            return Position.ToString();
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase, MetaNode //rage::speedTreeInstanceMtx
+    [TC(typeof(EXP))] public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase //rage::speedTreeInstanceMtx
     {
         public override ulong BlockLength => base.BlockLength + 64;
         public Matrix4x4 Transform { get; set; } //m_mTransform
@@ -424,25 +288,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4(Transform);
         }
 
-        public new void Read(MetaNodeReader reader)
-        {
-            base.Read(reader);
-            Transform = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Transform"), true);
-        }
-
-        public new void Write(MetaNodeWriter writer)
-        {
-            base.Write(writer);
-            writer.WriteMatrix4x4("Transform", Transform);
-        }
-
         public override string ToString()
         {
             return Transform.Translation.ToString();
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeInstanceBase : Rsc6BlockBase, MetaNode //rage::speedTreeInstanceBase
+    [TC(typeof(EXP))] public class Rsc6TreeInstanceBase : Rsc6BlockBase //rage::speedTreeInstanceBase
     {
         //This is the data needed to exist an instance of a speedtree in the world
 
@@ -475,24 +327,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Pad0);
             writer.WriteSingle(FadeOut);
             writer.WriteUInt32(Pad1);
-        }
-
-        public void Read(MetaNodeReader reader)
-        {
-            LODDist = reader.ReadSingle("LODDist");
-            LODLevels = reader.ReadByte("LODLevels");
-            Flags = reader.ReadEnum<Rsc6TreeInstanceFlags>("Flags");
-            TreeTypeID = reader.ReadByte("TreeTypeID");
-            FadeOut = reader.ReadSingle("FadeOut");
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteSingle("LODDist", LODDist);
-            writer.WriteByte("LODLevels", LODLevels);
-            writer.WriteEnum("Flags", Flags);
-            writer.WriteByte("TreeTypeID", TreeTypeID);
-            writer.WriteSingle("FadeOut", FadeOut);
         }
 
         public int GetBranchLod() //Get the descreet branch level of detail from the speedtree runtime
@@ -558,7 +392,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeInstancePos : Rsc6BlockBase, MetaNode //rage::speedTreeInstancePos
+    [TC(typeof(EXP))] public class Rsc6TreeInstancePos : Rsc6BlockBase //rage::speedTreeInstancePos
     {
         public override ulong BlockLength => 48;
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
@@ -595,24 +429,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Unknown_1Bh);
             writer.WriteUInt32(Unknown_1Ch);
             writer.WriteUInt32(Unknown_20h);
-        }
-
-        public void Read(MetaNodeReader reader)
-        {
-            InstanceBase = reader.ReadNode<Rsc6TreeInstanceBase>("InstanceBase");
-            Position = Rpf6Crypto.ToXYZ(reader.ReadVector4("Position"));
-            Tilt = reader.ReadUInt16("Tilt");
-            Width = reader.ReadUInt16("Width");
-            Rotation = reader.ReadByte("Rotation");
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteNode("InstanceBase", InstanceBase);
-            writer.WriteVector4("Position", Position);
-            writer.WriteUInt16("Tilt", Tilt);
-            writer.WriteUInt16("Width", Width);
-            writer.WriteByte("Rotation", Rotation);
         }
     }
 

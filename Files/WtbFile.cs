@@ -3,9 +3,7 @@ using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using SharpDX.Direct2D1.Effects;
 using System.Collections.Generic;
-using System.Numerics;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -15,14 +13,25 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6TerrainBound TileBounds;
         public BoundingBox BoundingBox;
 
+        public WtbFile()
+        {
+        }
+
         public WtbFile(Rpf6FileEntry file) : base(file)
         {
             FileEntry = file;
         }
 
+        public WtbFile(Rsc6TerrainBound bound) : base(null)
+        {
+            TileBounds = bound;
+        }
+
         public override void Load(byte[] data)
         {
-            var e = (Rpf6ResourceFileEntry)FileEntry;
+            if (FileInfo is not Rpf6ResourceFileEntry e)
+                return;
+
             var r = new Rsc6DataReader(e, data)
             {
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
@@ -69,7 +78,22 @@ namespace CodeX.Games.RDR1.Files
 
         public override byte[] Save()
         {
-            throw new System.NotImplementedException();
+            if (TileBounds == null) return null;
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(TileBounds);
+            byte[] data = writer.Build(36);
+            return data;
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            TileBounds = new();
+            TileBounds.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            TileBounds?.Write(writer);
         }
 
         public override string ToString()

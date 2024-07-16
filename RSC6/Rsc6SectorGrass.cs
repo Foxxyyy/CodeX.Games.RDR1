@@ -59,7 +59,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 AABBMax { get; set; } //m_aabbMax
         public Vector4 AABBMin { get; set; } //m_aabbMin
         public Vector4 AABBScale { get; set; } //m_aabbScale
-        public Vector4 AABBOffset { get; set; } //m_aabbOffset
+        public Vector4 AABBOffset { get; set; } //m_aabbOffset, same as m_aabbMin but with W as number of patches per field
         public Rsc6Ptr<Rsc6TexPlacementValues> TexPlacement { get; set; } //m_tp, texPlacementValues, always NULL
         public Rsc6Ptr<Rsc6VertexDeclaration> Layout { get; set; } //m_VertexDeclaration, always NULL
         public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer { get; set; } //m_VertexBuffer
@@ -74,11 +74,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public List<EntityBatchInstance3> Batchs { get; set; }
         public byte[] BatchData { get; set; }
-
-        public const int MAX_PATCHES_PER_FIELD = 64000;
-        public const float MINIMUM_PATCH_HEIGHT = 0.2f;
-        public const float SPAWN_KIDS_HEIGHT = 0.1f;
-        public const float SPAWN_KID_MULTIPLIER = 4.0f;
+        public List<RDR1GrassEntity> GrassEntities { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -98,61 +94,6 @@ namespace CodeX.Games.RDR1.RSC6
             NameLength2 = reader.ReadUInt16();
             NameHash = reader.ReadUInt32();
             Unknown_6Ch = reader.ReadUInt32();
-
-            if (VertexBuffer.Item != null) //Shouldn't be the case
-            {
-                Batchs = new List<EntityBatchInstance3>();
-                var data = VertexBuffer.Item?.VertexData.Items;
-                var br = new BinaryReader(new MemoryStream(data));
-
-                for (int i = 0; i < data.Length; i += 4)
-                {
-                    var color = new Colour(br.ReadUInt32());
-                    var r = color.R * (1.0f / (1 << 16));
-                    var g = color.G * (1.0f / (1 << 16));
-                    var b = color.B * (1.0f / (1 << 16));
-                    var a = color.A * (1.0f / (1 << 16));
-
-                    var d = new Vector4(b, r, g, a);
-                    var loc = (d * AABBScale) + AABBOffset;
-
-                    /*var x = br.ReadByte();
-                    var y = br.ReadByte();
-                    var z = br.ReadByte();
-                    var scale = br.ReadByte();
-                    var pos = new Vector3(z, x, y);
-
-                    var float16min = new Vector3(6.1035156e-5f, 6.1035156e-5f, 6.1035156e-5f);
-                    var invScale = new Vector3
-                    {
-                        X = Math.Abs(AABBScale.X) < float.Epsilon ? 0 : 1.0f / AABBScale.X,
-                        Y = Math.Abs(AABBScale.Y) < float.Epsilon ? 0 : 1.0f / AABBScale.Y,
-                        Z = Math.Abs(AABBScale.Z) < float.Epsilon ? 0 : 1.0f / AABBScale.Z
-                    };
-
-                    pos = (pos - AABBOffset.XYZ()) * invScale;
-                    pos = Vector3.Max(pos, float16min);
-                    var center = new Vector4(pos.X, pos.Y, pos.Z, scale * 0.9f);*/
-
-                    var batch = new EntityBatchInstance3
-                    {
-                        Position = loc
-                    };
-                    Batchs.Add(batch);
-                }
-
-                BatchData = new byte[Batchs.Count * 64];
-                for (int i = 0; i < Batchs.Count; i++)
-                {
-                    var batch = Batchs[i];
-                    var temp = new byte[64];
-                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Position), 0, temp, 0, 16);
-                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Extents), 0, temp, 16, 16);
-                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Colour), 0, temp, 32, 16);
-                    Buffer.BlockCopy(Rpf6Crypto.Vector4ToByteArray(batch.Params), 0, temp, 48, 16);
-                    Buffer.BlockCopy(temp, 0, BatchData, i * 64, temp.Length);
-                }
-            }
         }
 
         public override void Write(Rsc6DataWriter writer)

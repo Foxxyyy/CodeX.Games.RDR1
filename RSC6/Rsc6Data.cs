@@ -445,10 +445,10 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6PtrStr ReadPtrStr(uint pad = 0)
+        public Rsc6PtrStr ReadPtrStr(uint size = 0) //Optional size for fixed-size string block
         {
             var str = new Rsc6PtrStr();
-            str.Read(this, pad);
+            str.Read(this, size);
             return str;
         }
 
@@ -1701,14 +1701,11 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void ReadAsArray(Rsc6DataReader reader, uint pad)
+        public void ReadAsArray(Rsc6DataReader reader, uint size)
         {
-            Value = reader.ReadString();
-            if (Value.Length <= pad) pad += 16;
-            if ((reader.Position % pad) != 0)
-            {
-                reader.Position += (ushort)(pad - (ushort)(reader.Position % pad));
-            }
+            var block = reader.ReadBytes((int)size);
+            Value = Encoding.UTF8.GetString(block);
+            Value = Value[..Value.LastIndexOf('\0')];
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -1841,7 +1838,7 @@ namespace CodeX.Games.RDR1.RSC6
             Items = items;
         }
 
-        public void Read(Rsc6DataReader reader, uint pad)
+        public void Read(Rsc6DataReader reader, uint size)
         {
             Position = reader.ReadUInt32();
             Count = reader.ReadUInt16();
@@ -1855,10 +1852,10 @@ namespace CodeX.Games.RDR1.RSC6
 
                 for (int i = 0; i < Count; i++)
                 {
-                    if (pad > 0) //Used for rage::speedTreeDebugName (fixed-size string)
+                    if (size > 0) //Used for rage::speedTreeDebugName (fixed-size string)
                     {
                         Items[i] = new Rsc6Str(reader.Position);
-                        Items[i].ReadAsArray(reader, pad);
+                        Items[i].ReadAsArray(reader, size);
                     }
                     else Items[i] = reader.ReadStr();
                 }

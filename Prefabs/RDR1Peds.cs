@@ -16,15 +16,13 @@ namespace CodeX.Games.RDR1.Prefabs
 {
     public class RDR1Peds
     {
-        public Rpf6FileManager FileManager;
-
-        //CodeX stuff
-        public List<string> PedNames;
         public string[] WasNames;
         public string[] ClipsNames;
+        public string[] PedNames;
+        public object CacheSyncRoot = new();
+        public Rpf6FileManager FileManager;
         public Dictionary<string, RDR1PedPrefab> Prefabs = new();
         public SimpleCache<JenkHash, WasFile> WasCache = new();
-        public object CacheSyncRoot = new();
 
         public void Init(Rpf6FileManager fman)
         {
@@ -63,15 +61,17 @@ namespace CodeX.Games.RDR1.Prefabs
                 .Select(e => e.Value.Name.Replace(".wft", ""))
                 .ToList();
 
-            PedNames = peds.ToList();
+            PedNames = peds.ToArray();
+            var list = PedNames.ToList();
             for (int i = 0; i < frags.Count; i++)
             {
                 var f = frags[i];
-                if (!PedNames.Any(name => name.Contains(f)))
+                if (!list.Any(name => name.Contains(f)))
                 {
-                    PedNames.Add(f);
+                    list.Add(f);
                 }
             }
+            PedNames = list.ToArray();
 
             foreach (var name in PedNames)
             {

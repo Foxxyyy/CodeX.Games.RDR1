@@ -8,8 +8,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using CodeX.Games.RDR1.Files;
-using CodeX.Core.UI;
-using BepuPhysics.Trees;
 
 namespace CodeX.Games.RDR1
 {
@@ -34,6 +32,7 @@ namespace CodeX.Games.RDR1
         public static readonly Setting EnableTreesSetting = Settings.Register("RDR1Map.EnableTrees", SettingType.Bool, true);
         public static readonly Setting EnablePropsSetting = Settings.Register("RDR1Map.EnableProps", SettingType.Bool, true);
         public static readonly Setting EnableLightsSetting = Settings.Register("RDR1Map.EnableLights", SettingType.Bool, false);
+        public static readonly Setting TreesDistanceSetting = Settings.Register("RDR1Map.TreesDistance", SettingType.Float, 100.0f, false);
         
         public Statistic NodeCountStat = Statistics.Register("RDR1Map.NodeCount", StatisticType.Counter);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
@@ -59,7 +58,7 @@ namespace CodeX.Games.RDR1
                 "Rathskeller Fork" => new Vector3(2123.8f, -3661.3f, 48.4f),
                 "Ridgewood Farm" => new Vector3(2721.0f, -3274.5f, 20.2f),
                 "Tesoro Azul" => new Vector3(4547.6f, -3261.8f, 41.6f),
-                "Thieve's Landing" => new Vector3(2230.7f, -134.1f, 76.4f),
+                "Thieve's Landing" => new Vector3(2333.3f, 73.3f, 76.4f),
                 "Torquemada" => new Vector3(3456.4f, 370.5f, 80.7f),
                 "Tumbleweed" => new Vector3(2950.4f, -3941.5f, 32.6f),
                 "Twin Rocks" => new Vector3(2141.6f, -2430.9f, 28.0f),
@@ -130,29 +129,6 @@ namespace CodeX.Games.RDR1
                     StreamCollisionsRange = 1000.0f;
                 }
             }
-            
-            /*var grassRpf = this.FileManager.AllArchives.FirstOrDefault(e => e.Name == "grassres.rpf");
-            var grassEntries = grassRpf.AllEntries.Where(e => e.Name.EndsWith(".wsg")).ToList();
-            this.GrassBatchs = new HashSet<Entity>();
-
-            for (int i = 0; i < grassEntries.Count; i++)
-            {
-                var ent = (Rpf6FileEntry)grassEntries[i];
-                var pack = (WsgFile)this.FileManager.LoadFilePack(ent);
-                var fields = pack?.GrassField?.GrassItems.Items;
-
-                if (fields == null) continue;
-                for (int j = 0; j < fields.Length; j++)
-                {
-                    var field = fields[j];
-                    var batch = new RDR1GrassBatch(field, this);
-
-                    if (batch != null)
-                    {
-                        GrassBatchs.Add(batch);
-                    }
-                }
-            }*/
 
             if (colMode != "Only collisions")
             {
@@ -160,7 +136,7 @@ namespace CodeX.Games.RDR1
                 {
                     foreach (var wsp in dfm.WspFiles)
                     {
-                        var node = new RDR1MapNode(wsp.Value);
+                        var node = new RDR1MapNode(wsp.Value, this);
                         this.MapNodeDict[node.NameHash] = node;
                     }
                 }
@@ -220,13 +196,42 @@ namespace CodeX.Games.RDR1
                 }
             }
 
-            if (this.GrassBatchs != null) //Grass batches
+            /*if (this.GrassBatchs != null) //Grass batches
             {
                 foreach (var batch in this.GrassBatchs)
                 {
                     RecurseAddStreamEntity((WsiEntity)batch, ref spos, ents);
                 }
             }
+
+            foreach (var wsg in this.FileManager.DataFileMgr.WsgFiles)
+            {
+                foreach (var item in wsg.Value.GrassField.GrassItems.Items)
+                {
+                    if (Vector3.Distance(item.GetFieldCenter().XYZ(), StreamPosition) > 50.0f) continue;
+                    if (item.VertexBuffer.Item == null) continue;
+
+                    item.GrassEntities = new List<RDR1GrassEntity>();
+                    var data = item.VertexBuffer.Item.VertexData.Items;
+                    var aabbScale = item.AABBScale.XYZ();
+                    var aabbOffset = item.AABBOffset.XYZ();
+                    var itemName = item.Name.ToString();
+
+                    using var br = new BinaryReader(new MemoryStream(data));
+                    int length = data.Length;
+                    for (int i = 0; i < length; i += 4)
+                    {
+                        var value = br.ReadUInt32();
+                        var color = new Colour(value);
+                        color = new Colour(color.B, color.R, color.G, color.A);
+                        var scaledPos = Vector3.Multiply(aabbScale, color.ToVector4().XYZ());
+                        var loc = aabbOffset + scaledPos;
+                        var ent = new RDR1GrassEntity(itemName, loc);
+                        ents.Add(ent);
+                    }
+                }
+            }
+            */
 
             foreach (var node in nodes) //Find current entities for max lod level
             {
@@ -244,13 +249,13 @@ namespace CodeX.Games.RDR1
             foreach (var ent in ents.ToList()) //Make sure all current entities assets are loaded
             {
                 JenkHash hash = 0u;
-                if (ent is RDR1GrassBatch grassEnt)
-                {
-                    hash = new JenkHash("p_" + grassEnt.Name + "x");
-                }
-                else if (ent is RDR1GridForestEntity treeEnt)
+                if (ent is RDR1GridForestEntity treeEnt)
                 {
                     hash = treeEnt.TreeName;
+                }
+                else if (ent is RDR1GrassEntity grassEnt)
+                {
+                    hash = new JenkHash("p_" + grassEnt.Name + "x");
                 }
                 else if (ent is RDR1LightEntity lightEnt)
                 {
@@ -651,9 +656,9 @@ namespace CodeX.Games.RDR1
             Enabled = true;
         }
 
-        public RDR1MapNode(WspFile wsp) //Trees
+        public RDR1MapNode(WspFile wsp, RDR1Map map) //Trees
         {
-            MapData = new RDR1MapData(wsp);
+            MapData = new RDR1TreeMapData(wsp, map);
             NameHash = wsp.FileEntry.ShortNameHash;
             BoundingBox = MapData.BoundingBox;
             StreamingBox = MapData.StreamingBox;
@@ -839,50 +844,6 @@ namespace CodeX.Games.RDR1
             }
         }
 
-        public RDR1MapData(WspFile wsp)
-        {
-            var dist = new Vector3(700.0f);
-            FilePack = wsp;
-            FilePack.EditorObject = this; //Allow the editor access to this
-            Name = wsp.Name;
-            BoundingBox = wsp.Grid.BoundingBox;
-            StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
-
-            var grid = wsp.Grid;
-            foreach (var gridCell in grid?.GridCells.Items)
-            {
-                var pos = gridCell.CombinedInstanceListPos;
-                var matrices = gridCell.CombinedInstanceListMatrix;
-
-                //Trees
-                for (int i = 0; i < pos.Items.Length; i++)
-                {
-                    var inst = pos.Items[i];
-                    var name = grid.TreeNames.Items[inst.TreeIndex].ToString();
-                    if (name == null) continue;
-
-                    name = name.Replace(".spt", "x"); //SpeedTree to fragment name
-                    var hash = new JenkHash(name);
-                    var entity = RDR1GridForestEntity.CreateFromGrid(inst, hash);
-                    this.Add(entity);
-                }
-
-                //Debris and foliages around buildings and roads
-                for (int i = 0; i < matrices.Items.Length; i++)
-                {
-                    var inst = matrices.Items[i];
-                    var name = grid.TreeNames.Items[inst.TreeTypeID].ToString();
-                    if (name == null) continue;
-
-                    name = name.Replace(".spt", "x"); //SpeedTree to fragment name
-                    var hash = new JenkHash(name);
-                    var entity = RDR1GridForestEntity.CreateFromGrid(inst, hash);
-                    this.Add(entity);
-                }
-            }
-        }
-        
-
         public override void PreSaveUpdate()
         {
             base.PreSaveUpdate();
@@ -903,7 +864,6 @@ namespace CodeX.Games.RDR1
             foreach (var ent in entities)
             {
                 if (ent.ParentName == null) continue;
-
                 if (!parentEntitiesDict.TryGetValue(ent.ParentName, out var parentEntities))
                 {
                     parentEntities = new List<Rsc6PropInstanceInfo>();
@@ -937,6 +897,359 @@ namespace CodeX.Games.RDR1
                     parent.Entities = new(newEntities);
                 }
             }
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
+    public class RDR1TreeMapData : RDR1BaseMapData
+    {
+        private readonly RDR1Map Map;
+        public WspFile Wsp;
+
+        public RDR1TreeMapData(WspFile wsp, RDR1Map map)
+        {
+            var dist = new Vector3(700.0f);
+            Map = map;
+            FilePack = wsp;
+            FilePack.EditorObject = this; //Allow the editor access to this
+            Name = wsp.Name;
+            Wsp = wsp;
+            BoundingBox = wsp.Grid.BoundingBox;
+            StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
+
+            var grid = wsp.Grid;
+            foreach (var gridCell in grid?.GridCells.Items)
+            {
+                var pos = gridCell.CombinedInstanceListPos;
+                var matrices = gridCell.CombinedInstanceListMatrix;
+
+                //Trees
+                for (int i = 0; i < pos.Items.Length; i++)
+                {
+                    var inst = pos.Items[i];
+                    var name = grid.TreeNames.Items[inst.TreeIndex].ToString();
+                    if (name == null) continue;
+
+                    name = name.Replace(".spt", "x"); //SpeedTree to fragment name
+                    var hash = new JenkHash(name);
+                    var entity = RDR1GridForestEntity.CreateFromGrid(inst, gridCell, hash, RDR1Map.TreesDistanceSetting.GetFloat());
+                    this.Add(entity);
+                }
+
+                //Debris and foliages around buildings and roads
+                for (int i = 0; i < matrices.Items.Length; i++)
+                {
+                    var inst = matrices.Items[i];
+                    var name = grid.TreeNames.Items[inst.TreeTypeID].ToString();
+                    if (name == null) continue;
+
+                    name = name.Replace(".spt", "x"); //SpeedTree to fragment name
+                    var hash = new JenkHash(name);
+                    var entity = RDR1GridForestEntity.CreateFromGrid(inst, gridCell, hash, RDR1Map.TreesDistanceSetting.GetFloat());
+                    this.Add(entity);
+                }
+            }
+        }
+
+        public override BaseCreateType[] GetCreateTypes()
+        {
+            return new[] { BaseCreateType.Entity };
+        }
+
+        public override BaseObject CreateObject(BaseCreateArgs args)
+        {
+            if (args.Type.Name == "Entity")
+            {
+                var ent = new RDR1GridForestEntity(args, RDR1Map.TreesDistanceSetting.GetFloat())
+                {
+                    Level = this
+                };
+                AddObject(ent);
+                return ent;
+            }
+            return null;
+        }
+
+        public override void AddObject(BaseObject obj, int id = -1)
+        {
+            if (obj is RDR1GridForestEntity ent == false) return;
+            Map.StreamInvoke(() => //Make sure this runs on stream thread to synchronise Entities use
+            {
+                if ((id >= 0) && (id <= Entities.Count) && (ent.Index == id)) //This insert case happens for undo delete
+                {
+                    Entities.Insert(id, ent);
+                    if (ent.ParentInParentLevel || (ent.ParentIndex < 0)) RootEntities.Add(ent);
+                    UpdateEntityIndexes();
+                    ent.LodParent?.AddLodChild(ent);
+                }
+                else
+                {
+                    ent.Index = Entities.Count;
+                    Entities.Add(ent);
+                    if (ent.ParentInParentLevel || (ent.ParentIndex < 0)) RootEntities.Add(ent);
+                }
+            });
+        }
+
+        public override void PreSaveUpdate()
+        {
+            base.PreSaveUpdate();
+            UpdateEntitiesArray();
+        }
+
+        private void UpdateEntityIndexes()
+        {
+            for (int i = 0; i < Entities.Count; i++)
+            {
+                var e = Entities[i];
+                if (e == null) continue;
+                e.Index = i;
+            }
+        }
+
+        private void UpdateEntitiesArray()
+        {
+            var grid = Wsp.Grid;
+            var entities = new List<RDR1GridForestEntity>();
+
+            foreach (var ent in Entities)
+            {
+                if (ent is not RDR1GridForestEntity wspEnt) continue;
+                entities.Add(wspEnt);
+            }
+
+            //Fist step, update existing trees
+            foreach (var ent in entities)
+            {
+                if (ent.Position == ent.OriginalPosition) continue;
+                foreach (var gridCell in grid.GridCells.Items)
+                {
+                    if (ent.GridCell != gridCell) continue;
+                    var instances = gridCell.CombinedInstanceListPos.Items;
+                    UpdatePackedInstanceList(ent, instances);
+                    break;
+                }
+            }
+
+            //Second step, update added trees
+            var newEntities = entities.Where(e => e.Created == true).ToList();
+            if (newEntities.Any())
+            {
+                var newInstances = new List<Rsc6PackedInstancePos>();
+                var newIndices = new List<short>();
+                var newCell = new Rsc6TreeForestGridCell();
+                var newEntNames = newEntities.Select(e => e.Name.Replace(e.Name.Last().ToString(), ".spt")).Distinct().ToList();
+                var treeNamesSet = new HashSet<string>(grid.TreeNames.Items.Select(tn => tn.ToString()));
+
+                //An undefined tree type was added, rebuild the grid data
+                if (newEntNames.Any(name => !treeNamesSet.Contains(name)))
+                {
+                    var treeValues = Enumerable.Repeat(uint.MaxValue, (int)(grid.Trees.Count + newEntNames.Count)).ToArray();
+                    var treeNames = grid.TreeNames.Items.ToList();
+                    treeNames.AddRange(newEntNames.Select(s => new Rsc6Str(s)).ToArray());
+
+                    var treeHashes = grid.TreeHashes.Items.ToList();
+                    foreach (var n in newEntNames)
+                    {
+                        treeHashes.Add(GetHashTree(n));
+                    }
+
+                    grid.Trees = new(treeValues);
+                    grid.TreeHashes = new(treeHashes.ToArray());
+                    grid.TreeNames = new(treeNames.ToArray());
+                }
+
+                newEntities.Sort((x, y) => string.Compare(x.Name, y.Name));
+                newIndices.Add(0);
+
+                short lastIndex = -1;
+                for (int i = 0; i < newEntities.Count; i++)
+                {
+                    var ent = newEntities[i];
+                    if (ent.Position == ent.OriginalPosition || ent.GridCell != null) continue;
+
+                    var treeIndex = (short)Array.FindIndex(grid.TreeNames.Items, n => n.ToString() == ent.Name.Replace(ent.Name.Last().ToString(), ".spt"));
+                    var maxIndex = (short)(newEntities.FindLastIndex(e => e.Name == ent.Name) + 1);
+                    var inst = new Rsc6PackedInstancePos(ent.Position);
+                    UpdatePackedInstance(inst, ent.Position);
+
+                    newInstances.Add(inst);
+                    if (maxIndex > lastIndex)
+                    {
+                        newIndices.Add(treeIndex);
+                        newIndices.Add(maxIndex);
+                        lastIndex = maxIndex;
+                    }
+                }
+
+                var sphere = CalculateCellSphere(newEntities);
+                newCell.BoundSphere = sphere;
+                newCell.CombinedInstanceListPos = new(newInstances.ToArray());
+                newCell.IndexList = new(newIndices.ToArray()); //Atleast 3 indices for a single tree [startIndex, treeType, endIndex]
+
+                //Find and use a empty cell if there's one
+                var cellFound = false;
+                var cells = grid.GridCells.Items.ToList();
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    if (cells[i].BoundSphere != new BoundingSphere()) continue;
+                    cells.RemoveAt(i);
+                    cells.Insert(i, newCell);
+                    cellFound = true;
+                    break;
+                }
+
+                //If all the cells are used, we'll increase the number of cell and fill the array with empty cells
+                if (!cellFound)
+                {
+                    var total = grid.CellsHeight * grid.CellsWidth;
+                    var newTotal = (grid.CellsHeight + 1) * (grid.CellsWidth + 1);
+                    var gap = newTotal - total;
+                    
+                    grid.CellsHeight += 1;
+                    grid.CellsWidth += 1;
+                    cells.Add(newCell);
+
+                    for (int i = 0; i < gap - 1; i++)
+                    {
+                        var cell = new Rsc6TreeForestGridCell();
+                        cells.Add(cell);
+                    }
+                }
+                grid.GridCells = new(cells.ToArray());
+            }
+        }
+
+        private void UpdatePackedInstanceList(RDR1GridForestEntity ent, Rsc6PackedInstancePos[] instances)
+        {
+            if (instances == null) return;
+            for (int i = 0; i < instances.Length; i++)
+            {
+                var inst = instances[i];
+                if (inst.Position == ent.Position || inst.Position != ent.OriginalPosition) continue;
+                UpdatePackedInstance(inst, ent.Position);
+                instances[i] = inst;
+                break;
+            }
+        }
+
+        private void UpdatePackedInstance(Rsc6PackedInstancePos inst, Vector3 pos)
+        {
+            inst.Position = pos;
+            var bb = Wsp.Grid.BoundingBox;
+            var scaledPos = pos - bb.Minimum;
+            var normalizedPos = Vector3.Divide(scaledPos, bb.Size);
+            var newPos = Vector3.Multiply(normalizedPos, 65535.0f);
+
+            inst.Z = (ushort)Math.Clamp((int)Math.Round(newPos.X), 0, 65535);
+            inst.X = (ushort)Math.Clamp((int)Math.Round(newPos.Y), 0, 65535);
+            inst.Y = (ushort)Math.Clamp((int)Math.Round(newPos.Z), 0, 65535);
+        }
+
+        private static void UpdateInstanceMatrices(RDR1GridForestEntity ent, Rsc6InstanceMatrix[] matrices)
+        {
+            if (matrices == null) return;
+            for (int i = 0; i < matrices.Length; i++)
+            {
+                var inst = matrices[i];
+                if (inst.Transform.Translation == ent.Position || inst.Transform.Translation != ent.OriginalPosition) continue;
+                var pos = new Vector3(ent.Position.Y, ent.Position.Z, ent.Position.X);
+                var ori = new Quaternion(ent.Orientation.Y, ent.Orientation.Z, ent.Orientation.X, ent.Orientation.W);
+                inst.Transform = Matrix4x4.CreateTranslation(pos);
+                inst.Transform = Matrix4x4.CreateRotationX(ori.X);
+                inst.Transform = Matrix4x4.CreateRotationY(ori.Y);
+                inst.Transform = Matrix4x4.CreateRotationZ(ori.Z);
+                break;
+            }
+        }
+
+        public BoundingSphere CalculateCellSphere(List<RDR1GridForestEntity> ents)
+        {
+            var emin = new Vector3(float.MaxValue);
+            var emax = new Vector3(float.MinValue);
+
+            foreach (var ent in ents)
+            {
+                if (ent is RDR1GridForestEntity ge)
+                {
+                    var bmin = ge.BoundingBox.Minimum;
+                    var bmax = ge.BoundingBox.Maximum;
+                    emin = Vector3.Min(emin, bmin);
+                    emax = Vector3.Max(emax, bmax);
+                }
+            }
+
+            if (emin == new Vector3(float.MaxValue)) emin = Vector3.Zero;
+            if (emax == new Vector3(float.MinValue)) emax = Vector3.Zero;
+
+            var bb = new BoundingBox(emin, emax);
+            var center = bb.Center;
+            return new BoundingSphere(center, bb.Width);
+        }
+
+        //Returns the correct hash for a tree...
+        //R* use different params to generate them, with filename or path of a speedtree file, seed, size, size variance.
+        private static JenkHash GetHashTree(string treeName)
+        {
+            return treeName switch
+            {
+                "st_cornstalks01.spt" => 0xB8A3DB31,
+                "st_liveoak01.spt" => 0x60AD9B35,
+                "st_mesquite01.spt" => 0x1B6184D7,
+                "st_scruboak01.spt" => 0xCA2D914E,
+                "st_silvermaple01.spt" => 0xC0E46185,
+                "st_silvermaplefall01.spt" => 0xDA32F6CE,
+                "st_silvermaple02.spt" => 0x97553B61,
+                "st_liveoak02.spt" => 0x6A96467E,
+                "st_fanpalm01.spt" => 0x76074199,
+                "st_sugarpine01.spt" => 0xF42F32E2,
+                "st_easternredcedarsnow01.spt" => 0xBF2300A8,
+                "st_longleafpine01.spt" => 0x602DE683,
+                "st_chollocactus01.spt" => 0x80574FA5,
+                "st_creosotebush01.spt" => 0x1CBB5242,
+                "st_joshuatree01.spt" => 0xE660F06C,
+                "st_sagebrush01.spt" => 0xA7F39B37,
+                "st_joshuatree02.spt" => 0x863F9426,
+                "st_joshuatree03.spt" => 0x391ABB79,
+                "st_joshuatree04.spt" => 0x6CAB0040,
+                "st_joshuatree05.spt" => 0x2F4E0093,
+                "st_beavertailcactus01.spt" => 0x1725062E,
+                "st_desertbroom01.spt" => 0x3E9D7F48,
+                "st_giantsaguarocactus01.spt" => 0xF4490729,
+                "st_pricklypearcactus01.spt" => 0xA9CC30B7,
+                "st_saguarocactus01.spt" => 0x5E60C97B,
+                "st_saguarocactus02.spt" => 0xC8E50CCE,
+                "st_saguarocactus03.spt" => 0x30A897E9,
+                "st_snakeweed01.spt" => 0x3C8C07A0,
+                "st_agave01.spt" => 0x9F3D3B74,
+                "st_aloevera01.spt" => 0xB85CC136,
+                "st_catclaw01.spt" => 0xE02D85F8,
+                "st_desertironwood01.spt" => 0x06322E4D,
+                "st_rata01.spt" => 0xE5649386,
+                "st_rata02.spt" => 0x2C69F02D,
+                "st_russianolivefall01.spt" => 0xFD3E3877,
+                "st_snakeweedflower01.spt" => 0xEE238496,
+                "st_bigberrymanzanita01.spt" => 0x512D274C,
+                "st_columnarenglishoak01.spt" => 0x3C2219A3,
+                "st_columnarenglishoakwinter01.spt" => 0x0D63C017,
+                "st_douglasfirdead01.spt" => 0x690ACF60,
+                "st_easternredcedar01.spt" => 0x48AC619A,
+                "st_greypoplar01.spt" => 0x93024E3E,
+                "st_sugarpinedead01.spt" => 0x05455926,
+                "st_utahjuniper01.spt" => 0x1C218FB9,
+                "st_whitepine01.spt" => 0x032099CF,
+                "st_hangingtreefrontier01.spt" => 0xE628516D,
+                "st_americanboxwood01.spt" => 0x4E84FA81,
+                "st_bottlebrushtree01.spt" => 0xF4B6B5F4,
+                "st_palmetto01.spt" => 0x169B6E51,
+                "st_riverbirch01.spt" => 0x761147C3,
+                "st_whitebirch01.spt" => 0xEC4F25FC,
+                _ => 0,
+            };
         }
 
         public override string ToString()
