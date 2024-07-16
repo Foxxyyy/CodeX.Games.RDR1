@@ -21,10 +21,10 @@ Here are some of the features :
 * View & edit multiple .RPF files at the same time (unlike MagicRDR)
 * Search for files, as well as search for words, text, or hex within all the files.
 * A significant number of files have been researched and can be viewed.
-* Some files can be exported to XML (sometimes re-imported) : `.wvd, .wfd, .wsp, .wsg, .wtd, .wbd, .wedt, .sst, .strtbl, .fonttex, etc.`      
+* Some files can be exported to XML (sometimes re-imported) : `.wvd, .wfd, .wsg, .wtd, .wbd, .wedt, .sst, .strtbl, .fonttex, etc.`      
 
 I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), it can import `WFD & WVD` files (no exports yet).                       
-Fragments can technically be imported if you rename the XML extension from `.wft.wml` to `.wfd.xml` and manually edit the file to keep the `<Drawable>` node part.
+Fragments can technically be imported if you rename the XML extension from `.wft.wml` to `.wfd.xml` and manually edit the file to only keep the `<Drawable>` node part.
 
 # CodeX Contributors
 * dexyfex     
@@ -47,8 +47,9 @@ Fragments can technically be imported if you rename the XML extension from `.wft
 * CabooseSayzWTF                                      
 
 # Random Pictures
-![Screenshot](Files/Properties/codex_explorer.png)
 ![Screenshot](Files/Properties/codex_scene_preview.png)
+![Screenshot](Files/Properties/codex_browser_explorer.png)
+![Screenshot](Files/Properties/codex_explorer.png)
 ![Screenshot](Files/Properties/map_viewer.png)
 ![Screenshot](Files/Properties/model_viewer_1.png)
 ![Screenshot](Files/Properties/model_viewer_2.png)
