@@ -2487,10 +2487,11 @@ namespace CodeX.Games.RDR1.RSC6
         public JenkHash GrassName;
         public override string Name => GrassName.ToString();
 
-        public RDR1GrassEntity(string name, Vector3 pos)
+        public RDR1GrassEntity(string name, float dist, Vector3 pos)
         {
             GrassName = new(name);
             Position = pos;
+            LodDistMax = dist;
         }
 
         public override void SetPiece(Piece p)

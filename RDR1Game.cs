@@ -64,9 +64,11 @@ namespace CodeX.Games.RDR1
                 RDR1Map.LoadBoundsSetting,
                 RDR1Map.EnabledSetting,
                 RDR1Map.EnableTreesSetting,
+                RDR1Map.EnableInstancedGrass,
                 RDR1Map.EnablePropsSetting,
                 RDR1Map.EnableLightsSetting,
-                RDR1Map.TreesDistanceSetting
+                RDR1Map.TreesDistanceSetting,
+                RDR1Map.GrassDistanceSetting
             };
         }
 

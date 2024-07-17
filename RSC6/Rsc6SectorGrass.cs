@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Collections.Generic;
 using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using System.IO;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -59,7 +57,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 AABBMax { get; set; } //m_aabbMax
         public Vector4 AABBMin { get; set; } //m_aabbMin
         public Vector4 AABBScale { get; set; } //m_aabbScale
-        public Vector4 AABBOffset { get; set; } //m_aabbOffset, same as m_aabbMin but with W as number of patches per field
+        public Vector4 AABBOffset { get; set; } //m_aabbOffset, same as m_aabbMin but with W as 'offset fade'
         public Rsc6Ptr<Rsc6TexPlacementValues> TexPlacement { get; set; } //m_tp, texPlacementValues, always NULL
         public Rsc6Ptr<Rsc6VertexDeclaration> Layout { get; set; } //m_VertexDeclaration, always NULL
         public Rsc6Ptr<Rsc6VertexBuffer> VertexBuffer { get; set; } //m_VertexBuffer
@@ -71,10 +69,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NameLength2 { get; set; } //Name length + 1 (null terminator)
         public JenkHash NameHash { get; set; } //m_TypeHash
         public uint Unknown_6Ch { get; set; } = 0xCDCDCDCD; //m_Pad1
-
-        public List<EntityBatchInstance3> Batchs { get; set; }
-        public byte[] BatchData { get; set; }
-        public List<RDR1GrassEntity> GrassEntities { get; set; }
+        public List<Vector3> GrassPositions { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -94,6 +89,24 @@ namespace CodeX.Games.RDR1.RSC6
             NameLength2 = reader.ReadUInt16();
             NameHash = reader.ReadUInt32();
             Unknown_6Ch = reader.ReadUInt32();
+
+            if (VertexBuffer.Item != null)
+            {
+                GrassPositions = new List<Vector3>();
+                var data = VertexBuffer.Item.VertexData.Items;
+                var br = new BinaryReader(new MemoryStream(data));
+
+                for (int i = 0; i < data.Length; i += 4)
+                {
+                    var value = br.ReadUInt32();
+                    var color = new Colour(value);
+                    color = new Colour(color.R, color.B, color.G, color.A);
+
+                    var scaledPos = Vector3.Multiply(AABBScale.XYZ(), color.ToVector4().XYZ());
+                    var loc = AABBMin.XYZ() + scaledPos;
+                    GrassPositions.Add(loc);
+                }
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -186,28 +199,9 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public Vector4 GetFieldCenter()
-        {
-	        var center = AABBMin + AABBMax;
-            return center * 0.5f;
-        }
-
         public BoundingBox GetAABB()
         {
             return new BoundingBox(AABBMin.XYZ(), AABBMax.XYZ());
-        }
-
-        public Vector4 GetAABBSize()
-        {
-            return new Vector4(GetAABB().Size, 0.0f);
-        }
-
-        public void SetBounds(Vector4 min, Vector4 max)
-        {
-            AABBMin = min;
-            AABBMax = max;
-            AABBScale = new Vector4(AABBMax.XYZ() - AABBMin.XYZ(), 0.0f);
-            AABBOffset = new Vector4(AABBMin.XYZ(), 16000.0f);
         }
 
         public override string ToString()
@@ -252,37 +246,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector3Array("Patches", Patches.Items);
             writer.WriteSingleArray("HeightScales", HeightScales.Items);
             writer.WriteUInt32Array("Colors", Colors.Items);
-        }
-    }
-
-    public static class Rsc6GrassManager
-    {
-        public static List<Rsc6Texture> Textures;
-
-        public static void Init(Rpf6FileManager fman)
-        {
-            if (fman.AllArchives.Count == 0)
-            {
-                return;
-            }
-
-            Core.Engine.Console.Write("Rsc6GrassManager", "Initialising grass manager...");
-            var textures = new List<Rsc6Texture>();
-            var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "grassres.rpf");
-            var entries = rpf.AllEntries.Where(e => e.Name.EndsWith(".wtd")).ToList();
-
-            if (entries != null)
-            {
-                foreach (var entry in entries.Cast<Rpf6FileEntry>())
-                {
-                    var pack = fman.LoadTexturePack(entry);
-                    foreach (var texture in pack.Textures)
-                    {
-                        textures.Add((Rsc6Texture)texture.Value);
-                    }
-                }
-            }
-            Textures = textures;
         }
     }
 }

@@ -20,7 +20,6 @@ namespace CodeX.Games.RDR1
         public List<Rpf6StoreItem> WbdBoundsStore; //Basic data of bounds dictionary to render
         public List<Rpf6StoreItem> WtbBoundsStore; //Basic data of tiles collisions to render
         public List<TreeItem> Trees; //Basic data of trees, debris, rocks & placed grass
-        public HashSet<Entity> GrassBatchs; //The grass batches //TODO:
 
         public Dictionary<JenkHash, RDR1MapNode> MapNodeDict;
         public StreamingSet<RDR1MapNode> StreamNodes;
@@ -31,8 +30,11 @@ namespace CodeX.Games.RDR1
         public static readonly Setting EnabledSetting = Settings.Register("RDR1Map.Enabled", SettingType.Bool, true, true);
         public static readonly Setting EnableTreesSetting = Settings.Register("RDR1Map.EnableTrees", SettingType.Bool, true);
         public static readonly Setting EnablePropsSetting = Settings.Register("RDR1Map.EnableProps", SettingType.Bool, true);
+        public static readonly Setting EnableInstancedGrass = Settings.Register("RDR1Map.EnableInstancedGrass", SettingType.Bool, true);
         public static readonly Setting EnableLightsSetting = Settings.Register("RDR1Map.EnableLights", SettingType.Bool, false);
+
         public static readonly Setting TreesDistanceSetting = Settings.Register("RDR1Map.TreesDistance", SettingType.Float, 100.0f, false);
+        public static readonly Setting GrassDistanceSetting = Settings.Register("RDR1Map.GrassDistance", SettingType.Float, 50.0f, false);
         
         public Statistic NodeCountStat = Statistics.Register("RDR1Map.NodeCount", StatisticType.Counter);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
@@ -183,7 +185,7 @@ namespace CodeX.Games.RDR1
             this.StreamBVH.BeginIteration();
             this.StreamBVH.AddStreamPosition(spos);
 
-            
+
             foreach (var node in this.StreamBVH.StreamItems.Cast<RDR1MapNode>())
             {
                 var n = node;
@@ -196,42 +198,20 @@ namespace CodeX.Games.RDR1
                 }
             }
 
-            /*if (this.GrassBatchs != null) //Grass batches
+            if (EnableInstancedGrass.GetBool())
             {
-                foreach (var batch in this.GrassBatchs)
+                foreach (var wsg in this.FileManager.DataFileMgr.WsgFiles)
                 {
-                    RecurseAddStreamEntity((WsiEntity)batch, ref spos, ents);
-                }
-            }
-
-            foreach (var wsg in this.FileManager.DataFileMgr.WsgFiles)
-            {
-                foreach (var item in wsg.Value.GrassField.GrassItems.Items)
-                {
-                    if (Vector3.Distance(item.GetFieldCenter().XYZ(), StreamPosition) > 50.0f) continue;
-                    if (item.VertexBuffer.Item == null) continue;
-
-                    item.GrassEntities = new List<RDR1GrassEntity>();
-                    var data = item.VertexBuffer.Item.VertexData.Items;
-                    var aabbScale = item.AABBScale.XYZ();
-                    var aabbOffset = item.AABBOffset.XYZ();
-                    var itemName = item.Name.ToString();
-
-                    using var br = new BinaryReader(new MemoryStream(data));
-                    int length = data.Length;
-                    for (int i = 0; i < length; i += 4)
+                    foreach (var item in wsg.Value.GrassField.GrassItems.Items)
                     {
-                        var value = br.ReadUInt32();
-                        var color = new Colour(value);
-                        color = new Colour(color.B, color.R, color.G, color.A);
-                        var scaledPos = Vector3.Multiply(aabbScale, color.ToVector4().XYZ());
-                        var loc = aabbOffset + scaledPos;
-                        var ent = new RDR1GrassEntity(itemName, loc);
-                        ents.Add(ent);
+                        if (Vector3.Distance(item.GetAABB().Center, StreamPosition) > 50.0f) continue;
+                        foreach (var grassPos in item.GrassPositions)
+                        {
+                            ents.Add(new RDR1GrassEntity(item.Name.ToString(), GrassDistanceSetting.GetFloat(), grassPos));
+                        }
                     }
                 }
             }
-            */
 
             foreach (var node in nodes) //Find current entities for max lod level
             {
@@ -387,23 +367,6 @@ namespace CodeX.Games.RDR1
 
         private static void RecurseAddStreamEntity(Entity e, ref Vector3 spos, HashSet<Entity> ents)
         {
-            if (e.Batch != null)
-            {
-                var d = (e.Position - spos).Length();
-                if (d > e.LodDistMax) return;
-                e.StreamingDistance = (e.Batch.Lods == null) ? 1000.0f : d;
-
-                if (e.Batch.Lods == null)
-                {
-                    if (e.BoundingBox.Contains(ref spos) == ContainmentType.Contains)
-                    {
-                        e.StreamingDistance = 0.0f;
-                    }
-                }
-                ents.Add(e);
-                return;
-            }
-
             e.StreamingDistance = (e.Position - spos).Length();
             if (e.BoundingBox.Contains(ref spos) == ContainmentType.Contains)
             {
@@ -543,93 +506,6 @@ namespace CodeX.Games.RDR1
             foreach (var kv in fragments)
             {
                 assets.Add(new RDR1MapAsset(this, kv.Key));
-            }
-        }
-    }
-
-    public class RDR1GrassBatch : WsiEntity
-    {
-        public float CellSize;
-        public sbyte GridSizeX;
-        public sbyte GridSizeY;
-        public string GrassFieldName;
-
-        public RDR1GrassBatch(Rsc6GrassField field, Level level)
-        {
-            if (field == null) return;
-            SetFieldBatch(field);
-
-            Level = level;
-            GrassFieldName = field.Name.Value;
-
-            var b = new EntityBatch(this)
-            {
-                InstanceCount = field.Batchs.Count,
-                InstanceLayout = 3,
-                InstanceScaleParams = field.AABBScale,
-                InstanceBatchMin = field.AABBMin,
-                InstanceBatchSize = field.GetAABBSize(),
-                Data = field.BatchData
-            };
-
-            var bbs = field.GetAABBSize();
-            var csx = bbs.X / 32;
-            var csy = bbs.Y / 32;
-
-            var x = (sbyte)(bbs.X > 127 ? 127 : Math.Abs((sbyte)bbs.X));
-            var y = (sbyte)(bbs.Y > 127 ? 127 : Math.Abs((sbyte)bbs.Y));
-
-            if (csx >= csy)
-            {
-                CellSize = csx;
-                GridSizeX = x;
-                GridSizeY = y;
-            }
-            else
-            {
-                CellSize = csy;
-                GridSizeY = x;
-                GridSizeX = y;
-            }
-
-            b.InitGrid(GridSizeX, GridSizeY, CellSize);
-            SetBatch(b);
-        }
-
-        protected Entity CreateBatchLodEntity(EntityBatchLod lod, Piece p, int pieceLod)
-        {
-            var e = new Entity
-            {
-                Level = Level,
-                Piece = p,
-                Name = GrassFieldName,
-                PieceLodOverride = pieceLod,
-                CurrentDistance = lod.LodDist,
-                BoundingBox = BoundingBox,
-                BoundingSphere = BoundingSphere,
-                Position = BoundingBox.Center,
-                Orientation = Quaternion.Identity,
-                Scale = Vector3.One,
-                ParentIndex = -1
-            };
-            e.SetBatchLod(lod);
-            e.UpdateWorldTransform();
-            return e;
-        }
-
-        public override void SetPiece(Piece p)
-        {
-            var changed = p != Piece;
-            base.SetPiece(p);
-
-            if (changed)
-            {
-                if ((Batch?.Grid != null) && (p is Rsc6Drawable d))
-                {
-                    var hdist = d.LodDistHigh;
-                    Batch.InitLods(hdist);
-                    Batch.Lods[0].RenderEntity = CreateBatchLodEntity(Batch.Lods[0], p, 0);
-                }
             }
         }
     }
@@ -790,6 +666,9 @@ namespace CodeX.Games.RDR1
                     var drawableInstances = sector.DrawableInstances.Items;
                     if (drawableInstances != null && drawableInstances.Length > 0)
                     {
+                        var ident = Matrix4x4.Identity;
+                        ident.M44 = 0.0f;
+
                         foreach (var instance in drawableInstances)
                         {
                             if (instance.Name.ToString().ToLower() == name)
@@ -797,19 +676,20 @@ namespace CodeX.Games.RDR1
                                 continue;
                             }
 
-                            var ident = Matrix4x4.Identity;
-                            ident.M44 = 0.0f;
-                            var global = instance.Matrix.Equals(ident);
-                            var bb = new BoundingBox(instance.BoundingBoxMin.XYZ(), instance.BoundingBoxMax.XYZ());
-
                             var e = new WsiEntity(instance)
                             {
                                 Index = Entities.Count,
                                 ParentName = name,
                                 Level = this,
-                                ResetPos = global,
-                                Position = global ? bb.Center : new Vector3()
                             };
+
+                            var isIdent = instance.Matrix.Equals(ident);
+                            if (isIdent)
+                            {
+                                var bb = new BoundingBox(instance.BoundingBoxMin.XYZ(), instance.BoundingBoxMax.XYZ());
+                                e.Position = bb.Center;
+                                e.ResetPos = true;
+                            }
                             this.Add(e);
                         }
                     }

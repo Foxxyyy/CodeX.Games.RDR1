@@ -199,13 +199,9 @@ namespace CodeX.Games.RDR1.RPF6
         private void InitGameFiles()
         {
             Core.Engine.Console.Write("RDR1.InitGameFiles", "Initialising RDR1...");
-
             Rsc6BoundsMaterialTypes.Init(this);
-            Rsc6GrassManager.Init(this);
-
             DataFileMgr ??= new Rpf6DataFileMgr(this);
             DataFileMgr.Init();
-
             Core.Engine.Console.Write("RDR1.InitGameFiles", "RDR1 Initialised.");
         }
 
