@@ -116,7 +116,7 @@ namespace CodeX.Games.RDR1.RSC6
     [TC(typeof(EXP))] public class Rsc6TerrainBoundResource : Rsc6BlockBase, MetaNode //terrainBoundResource
     {
         public override ulong BlockLength => 12;
-        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound
+        public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound, same as m_Archetype.Bounds
         public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_Archetype
         public Rsc6Ptr<Rsc6TerrainDictBoundInstance> InstanceDict { get; set; } //m_InstanceDict
 
@@ -728,7 +728,7 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_2Dh = reader.ReadByte();
 
             MaterialsIDs = reader.ReadRawArrItems(MaterialsIDs, MaterialsCount);
-            PolyMatIndexList = reader.ReadRawArrItems(PolyMatIndexList, PolygonsCount);
+            PolyMatIndexList = reader.ReadRawArrItems(PolyMatIndexList, Math.Max(1, PolygonsCount));
 
             base.Materials = MaterialsIDs.Items;
             base.PolygonMaterialIndices = PolyMatIndexList.Items;
@@ -738,8 +738,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            BuildMaterials();
             base.Write(writer);
+            BuildMaterials();
+
             writer.WriteRawArr(MaterialsIDs);
             writer.WriteUInt32(Unknown_22Ch);
             writer.WriteRawArr(PolyMatIndexList);
@@ -1535,8 +1536,10 @@ namespace CodeX.Games.RDR1.RSC6
             }
             else
             {
-                PolygonsData = new Rsc6RawArr<byte>();
-                PolygonMaterialIndices = Array.Empty<byte>();
+                var arr = new byte[1] { 0xCD };
+                PolygonsData = new Rsc6RawArr<byte>(arr);
+                PolygonMaterialIndices = arr;
+                return;
             }
             PolygonsCount = (uint)(Polygons != null ? Polygons.Length : 0);
         }
@@ -1795,7 +1798,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawArr<Matrix4x4> LastMatrices { get; set; } //m_LastMatrices, previous (last update) matrices for each sub-bound, same as m_CurrentMatrices
         public Rsc6RawArr<BoundingBox4> LocalBoxMinMaxs { get; set; } //m_LocalBoxMinMaxs, the bounding boxes, in part local space, of all of the sub-bounds
         public Rsc6RawArr<Rsc6BoundCompositeChildrenFlags> TypeFlags { get; set; } //m_OwnedTypeAndIncludeFlags, optional per-component type flags
-        public Rsc6RawArr<Rsc6BoundCompositeChildrenFlags> IncludeFlags { get; set; } //m_OwnedTypeAndIncludeFlags, optional per-component include flags
+        public Rsc6RawArr<Rsc6BoundCompositeChildrenFlags> IncludeFlags { get; set; } //Points to m_OwnedTypeAndIncludeFlags
         public ushort MaxNumBounds { get; set; } //m_MaxNumBounds
         public ushort NumBounds { get; set; } //m_NumBounds
         public bool ContainsBVH { get; set; } //m_ContainsBVH
@@ -1872,7 +1875,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteRawArr(LastMatrices);
             writer.WriteRawArr(LocalBoxMinMaxs);
             writer.WriteRawArr(TypeFlags);
-            writer.WritePtrEmbed(TypeFlags, TypeFlags, 0); //TODO: make sure this points correctly to 'OwnedTypeFlags.Position'
+            writer.WriteRawArr(IncludeFlags);
             writer.WriteUInt16(MaxNumBounds);
             writer.WriteUInt16(NumBounds);
             writer.WriteBoolean(ContainsBVH);
@@ -1884,15 +1887,16 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Read(reader);
             Childrens = new(reader.ReadNodeArray("Childrens", Create));
-            CurrentMatrices = new(Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4Array("Matrices")));
-            TypeFlags = new(reader.ReadStructArray<Rsc6BoundCompositeChildrenFlags>("TypeFlags"));
+            CurrentMatrices = new(Rpf6Crypto.ToZXY(reader.ReadMatrix4x4Array("Matrices")));
+            TypeFlags = new(reader.ReadNodeArray<Rsc6BoundCompositeChildrenFlags>("OwnedTypeAndIncludeFlags"));
+            IncludeFlags = TypeFlags;
             ContainsBVH = reader.ReadBool("ContainsBVH");
             NumActiveBounds = reader.ReadUInt16("NumActiveBounds");
 
             if (Childrens.Items != null)
             {
-                MaxNumBounds = (ushort)(Childrens.Items.Length);
-                NumBounds = (ushort)(Childrens.Items.Length);
+                MaxNumBounds = (ushort)Childrens.Items.Length;
+                NumBounds = (ushort)Childrens.Items.Length;
 
                 var localBbs = new BoundingBox4[NumBounds];
                 for (int i = 0; i < NumBounds; i++)
@@ -1911,7 +1915,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
             writer.WriteNodeArray("Childrens", Childrens.Items);
             writer.WriteMatrix4x4Array("Matrices", CurrentMatrices.Items);
-            writer.WriteStructArray("TypeFlags", TypeFlags.Items);
+            writer.WriteNodeArray("OwnedTypeAndIncludeFlags", TypeFlags.Items);
             writer.WriteBool("ContainsBVH", ContainsBVH);
             writer.WriteUInt16("NumActiveBounds", NumActiveBounds);
         }
@@ -2672,10 +2676,22 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundCompositeChildrenFlags
+    public struct Rsc6BoundCompositeChildrenFlags : MetaNode
     {
         public Rsc6ObjectTypeFlags TypeFlags; //type(s) for this object
         public Rsc6ObjectTypeFlags IncludeFlags; //what type(s) this object can collide with
+
+        public void Read(MetaNodeReader reader)
+        {
+            TypeFlags = reader.ReadEnum<Rsc6ObjectTypeFlags>("TypeFlags");
+            IncludeFlags = reader.ReadEnum<Rsc6ObjectTypeFlags>("IncludeFlags");
+        }
+
+        public readonly void Write(MetaNodeWriter writer)
+        {
+            writer.WriteEnum("TypeFlags", TypeFlags);
+            writer.WriteEnum("IncludeFlags", IncludeFlags);
+        }
 
         public override string ToString()
         {

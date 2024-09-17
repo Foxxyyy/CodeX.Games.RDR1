@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
+using System.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -844,6 +845,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6Animation[] Animations { get; set; }
         public Dictionary<uint, Rsc6Animation> Dict;
+        public string[] AnimTypes;
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -863,6 +865,28 @@ namespace CodeX.Games.RDR1.RSC6
 
             Animations = list.ToArray();
             CreateDict();
+
+            AnimTypes = new string[Animations.Length];
+            for (int i = 0; i < Animations.Length; i++)
+            {
+                var anim = Animations[i];
+                var str = "animationCompress";
+                var name = anim.Name;
+
+                if (name.Contains("animOut") || !name.Contains(str))
+                {
+                    AnimTypes[i] = "animTest";
+                    continue;
+                }
+
+                var start = name.IndexOf(str) + str.Length + 1;
+                int nextSlashIndex = name.IndexOf('\\', start);
+
+                if (nextSlashIndex != -1)
+                    AnimTypes[i] = name[start..nextSlashIndex];
+                else
+                    AnimTypes[i] = name[start..];
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -962,6 +986,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public List<Rsc6AnimBoneId> BoneIds { get; set; }
         public JenkHash Hash { get; set; } //Used by XML
+        public string RefactoredName => Name[(Name.LastIndexOf('\\') + 1)..];
 
         public void Read(Rsc6DataReader reader)
         {
@@ -1161,9 +1186,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteByte("TrackId", BoneId.TrackId);
+            writer.WriteEnum("TrackId", BoneId.TrackId);
             writer.WriteByte("FormatId", BoneId.TypeId);
-            writer.WriteString("BoneId", BoneId.BoneId.ToString());
+            writer.WriteString("BoneId", BoneId.ID.ToString());
             writer.WriteNodeArray("Channels", Channels);
         }
 
@@ -1174,6 +1199,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < Channels.Length; i++)
             {
+                var pack = BoneId.GetPack();
                 var channel = Channels[i];
                 if (channel == null) continue;
 
@@ -1206,7 +1232,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override string ToString()
         {
-            return $"{BoneId.BoneId} : {Channels.Length} channels";
+            return $"{BoneId.ID} : {Channels.Length} channels";
         }
     }
 
@@ -1494,10 +1520,10 @@ namespace CodeX.Games.RDR1.RSC6
             Offset = reader.ReadSingle();
             Unknown_Ch = reader.ReadUInt32();
 
-            var words = QuantizedValues.Items;
-            Values = new float[words.Length];
+            var count = QuantizedValues.ElementMax;
+            Values = new float[count];
 
-            for (uint i = 0; i < words.Length; i++)
+            for (uint i = 0; i < count; i++)
             {
                 Values[i] = (QuantizedValues.GetElement(i) * Scale) + Offset;
             }
@@ -1513,7 +1539,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-
+            base.Read(reader);
+            Values = reader.ReadSingleArray("Values");
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1526,9 +1553,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             if (Values == null) return 0;
             return Values[frame % Values.Length];
-
-            //var val = QuantizedValues.GetElement((uint)Math.Clamp(frame, 0, QuantizedValues.ElementMax - 1));
-            //return (val * Scale) + Offset;
         }
     }
 
@@ -1576,9 +1600,9 @@ namespace CodeX.Games.RDR1.RSC6
             vector = QuantizedOrder switch
             {
                 Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_X => new Vector4(w, x, y, z), //w, z, x, y
-                Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_Y => new Vector4(x, w, y, z), //z, w, y, x
+                Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_Y => new Vector4(x, w, y, z), //z, w, x, y
                 Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_Z => new Vector4(x, y, w, z), //z, x, w, y
-                Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_W => new Vector4(x, x, z, w), //z, x, y, w
+                Rsc6FormatReconstructOrder.FORMAT_RECONSTRUCT_W => new Vector4(x, y, z, w), //z, x, y, w
                 _ => vector,
             };
         }
@@ -1635,30 +1659,24 @@ namespace CodeX.Games.RDR1.RSC6
 
     public struct Rsc6AnimBoneId
     {
-        public byte TrackId; //m_Track
+        public Rsc6TrackID TrackId; //m_Track
         public byte TypeId; //m_Format, 0=Vector3, 1=Quaternion, 2=Float
-        public Rsc6BoneIdEnum BoneId; //m_Id
+        public Rsc6BoneIdEnum ID; //m_Id
 
         public uint Packed
         {
-            get => (ushort)BoneId + ((uint)TypeId << 16) + ((uint)TrackId << 24);
+            get => (ushort)ID + ((uint)TypeId << 16) + ((uint)TrackId << 24);
             set
             {
-                BoneId = (Rsc6BoneIdEnum)(value & 0xFFFF);
-                TypeId = (byte)(((value >> 16) & 0x3) | ((uint)TypeId & 0xFC));
-                TrackId = (byte)((value >> 24) & 0xFF);
+                ID = (Rsc6BoneIdEnum)(value & 0xFFFF);
+                TypeId = (byte)((value >> 16) & 0xFF);
+                TrackId = (Rsc6TrackID)((value >> 24) & 0xFF);
             }
         }
 
-        public Rsc6TrackType TrackType
+        public Rsc6AnimBoneId(Rsc6BoneIdEnum boneId, byte typeId, Rsc6TrackID trackId)
         {
-            get => (Rsc6TrackType)(TypeId & 0x3);
-            set => TypeId = (byte)((TypeId & 0xFC) | ((byte)value & 0x3));
-        }
-
-        public Rsc6AnimBoneId(ushort boneId, byte typeId, byte trackId)
-        {
-            BoneId = (Rsc6BoneIdEnum)boneId;
+            ID = boneId;
             TypeId = typeId;
             TrackId = trackId;
         }
@@ -1668,14 +1686,14 @@ namespace CodeX.Games.RDR1.RSC6
             Packed = packed;
         }
 
-        public Rsc6TrackPackFormat GetTrackPack() //Returns information about storage packing used
+        public Rsc6TrackPackFormat GetPack() //Returns information about storage packing used
         {
             return (Rsc6TrackPackFormat)(TypeId & (byte)Rsc6TrackPackFormat.FORMAT_PACK_MASK);
         }
 
         public override string ToString()
         {
-            return $"{BoneId} : {TypeId} : {TrackId}";
+            return $"{ID} : {TypeId} : {TrackId}";
         }
     }
 
@@ -1761,5 +1779,57 @@ namespace CodeX.Games.RDR1.RSC6
         PACKED = 1 << 8,
         COMPACT = 1 << 10,
         NON_SERIALIZABLE_MASK = PACKED | COMPACT
+    }
+
+    public enum Rsc6TrackID : byte
+    {
+        BONE_TRANSLATION,
+        BONE_ROTATION,
+        BONE_SCALE,
+        MOVER_TRANSLATION,
+        MOVER_ROTATION,
+        MOVER_SCALE,
+        VISIBILITY,
+        BLEND_SHAPE,
+        ANIMATED_NORMAL_MAPS,
+        CAMERA_FOCAL_LENGTH,
+        CAMERA_F_STOP,
+        CAMERA_FOCUS_DISTANCE,
+        CAMERA_TRANSLATION,
+        CAMERA_ROTATION,
+        CAMERA_FIELD_OF_VIEW,
+        CAMERA_DEPTH_OF_FIELD_STRENGTH,
+        SHADER_SLIDE_U,
+        SHADER_SLIDE_V,
+        COLOR,
+        LIGHT_INTENSITY,
+        LIGHT_FALL_OFF,
+        LIGHT_EXP_FALL_OFF,
+        LIGHT_CONE_ANGLE,
+        FACIAL_CONTROL,
+        FACIAL_TRANSLATION,
+        FACIAL_ROTATION,
+        FACIAL_TINTING,
+        GENERIC_CONTROL,
+        GENERIC_TRANSLATION,
+        GENERIC_ROTATION,
+        CAMERA_DEPTH_OF_FIELD,
+        FACIAL_SCALE,
+        GENERIC_SCALE,
+        CAMERA_SHALLOW_DEPTH_OF_FIELD,
+        CAMERA_SIMPLE_DEPTH_OF_FIELD,
+        CAMERA_MOTION_BLUR,
+        LIGHT_DIRECTION,
+        CAMERA_DEPTH_OF_FIELD_NEAR_OUT_OF_FOCUS_PLANE,
+        CAMERA_DEPTH_OF_FIELD_NEAR_IN_FOCUS_PLANE,
+        CAMERA_DEPTH_OF_FIELD_FAR_OUT_OF_FOCUS_PLANE,
+        CAMERA_DEPTH_OF_FIELD_FAR_IN_FOCUS_PLANE,
+        PARTICLE_DATA,
+        VISEMES,
+        CAMERA_COC,
+        CAMERA_FOCUS,
+        CAMERA_NIGHT_COC,
+        CAMERA_LIMIT,
+        FIRST_RESERVED_FOR_PROJECT_USE
     }
 }

@@ -200,14 +200,15 @@ namespace CodeX.Games.RDR1
 
             if (EnableInstancedGrass.GetBool())
             {
+                var dist = GrassDistanceSetting.GetFloat();
                 foreach (var wsg in this.FileManager.DataFileMgr.WsgFiles)
                 {
                     foreach (var item in wsg.Value.GrassField.GrassItems.Items)
                     {
-                        if (Vector3.Distance(item.GetAABB().Center, StreamPosition) > 50.0f) continue;
+                        if (Vector3.Distance(item.GetAABB().Center, StreamPosition) > dist) continue;
                         foreach (var grassPos in item.GrassPositions)
                         {
-                            ents.Add(new RDR1GrassEntity(item.Name.ToString(), GrassDistanceSetting.GetFloat(), grassPos));
+                            ents.Add(new RDR1GrassEntity(item.Name.ToString(), dist, grassPos));
                         }
                     }
                 }

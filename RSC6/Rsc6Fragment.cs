@@ -6,15 +6,15 @@ using System.Collections.Generic;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
 using CodeX.Games.RDR1.Files;
+using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
 
 namespace CodeX.Games.RDR1.RSC6
 {
     public class Rsc6Fragment : Rsc6BlockBaseMap, MetaNode //rage::fragType
     {
         public override ulong BlockLength => 348 + 164; //sagFragtype + rage::fragType
-        public override uint VFT { get; set; } = 0x00DDB8E4;
+        public override uint VFT { get; set; } = 0x00F9B8E4;
         public float SmallestAngInertia { get; set; } //m_SmallestAngInertia
         public float LargestAngInertia { get; set; } //m_LargestAngInertia
         public Vector4 BoundingSphere { get; set; } //m_BoundingSphere
@@ -27,11 +27,11 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawPtrArr<Rsc6FragmentDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
         public Rsc6StrArr ExtraDrawableNames { get; set; } //m_ExtraDrawableNames
         public uint NumExtraDrawables { get; set; } //m_NumExtraDrawables
-        public uint DamagedDrawable { get; set; } = uint.MaxValue; //m_DamagedDrawable, rage::fragTypeChild, when health value reaches zero, the piece can be swapped for a damaged version, which can also take more damage for further mesh deformation and texture adjustment, always 4294967295
+        public int DamagedDrawable { get; set; } = -1; //m_DamagedDrawable, index of damaged drawable from m_ExtraDrawables, -1 if there's no damaged drawable
         public uint RootChild { get; set; } //m_RootChild, used when undamaged, and the bound is used when there are no children, always 0
         public Rsc6StrArr GroupNames { get; set; } //m_GroupNames
         public Rsc6RawPtrArr<Rsc6FragPhysGroup> Groups { get; set; } //m_Groups, rage::fragTypeGroup
-        public Rsc6RawPtrArr<Rsc6FragPhysChild> Childrens { get; set; } //m_Children, rage::fragTypeChild
+        public Rsc6RawPtrArr<Rsc6FragPhysChild> Childrens { get; set; } //m_Children
         public uint UnkArray { get; set; } //m_EnvCloth, rage::fragTypeEnvCloth
         public ushort UnkArrayCount { get; set; } //m_Count
         public ushort UnkArraySize { get; set; } //m_Capacity
@@ -128,7 +128,7 @@ namespace CodeX.Games.RDR1.RSC6
             ExtraDrawables = reader.ReadRawPtrArrPtr<Rsc6FragmentDrawable>();
             ExtraDrawableNames = reader.ReadPtr();
             NumExtraDrawables = reader.ReadUInt32();
-            DamagedDrawable = reader.ReadUInt32();
+            DamagedDrawable = reader.ReadInt32();
             RootChild = reader.ReadUInt32();
             GroupNames = reader.ReadPtr();
             Groups = reader.ReadRawPtrArrPtr<Rsc6FragPhysGroup>();
@@ -223,7 +223,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteRawPtrArr(ExtraDrawables);
             writer.WriteStrArr(ExtraDrawableNames);
             writer.WriteUInt32(NumExtraDrawables);
-            writer.WriteUInt32(DamagedDrawable);
+            writer.WriteInt32(DamagedDrawable);
             writer.WriteUInt32(RootChild);
             writer.WriteStrArr(GroupNames);
             writer.WriteRawPtrArr(Groups);
@@ -299,43 +299,46 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Textures = new(reader.ReadNode<Rsc6TextureDictionary>("Textures"));
-            var drawable = reader.ReadNode<Rsc6FragmentDrawable>("Drawable");
+            Drawable = new(reader.ReadNode<Rsc6FragmentDrawable>("Drawable"));
+            Childrens = new(reader.ReadNodeArray<Rsc6FragPhysChild>("Childrens"));
+            Bounds = new(reader.ReadNode("Bounds", Rsc6Bounds.Create));
             var archetype = reader.ReadNode<Rsc6FragArchetypeDamp>("Archetype1");
-            var childs = reader.ReadNodeArray<Rsc6FragPhysChild>("Childrens");
-            var bounds = reader.ReadNode("Bounds", Rsc6Bounds.Create);
 
-            if (childs != null )
+            void applySkel(Rsc6FragPhysChild[] arr)
             {
-                if (drawable != null)
-                {
-                    for (int i = 0; i < childs.Length; i++) //Use the current skeleton for childs (so we don't rewrite skeleton each time)
-                    {
-                        var c = childs[i];
-                        var ent = c.UndamagedEntity.Item;
-                        if (ent == null || ent.Drawable.Skeleton == null) continue;
+                if (arr == null) return;
+                var skel = Drawable.Item?.Drawable.SkeletonRef.Item;
 
-                        ent.Drawable.UseFragmentPointers = true;
-                        ent.Drawable.SkeletonRef = drawable.Drawable.SkeletonRef;
-                    }
+                foreach (var child in arr)
+                {
+                    if (child == null) continue;
+                    child.UndamagedEntity.Item.Drawable.SkeletonRef = new(skel);
                 }
-                if (archetype != null)
-                {
-                    for (int i = 0; i < childs.Length; i++) //Use the current bounds for childs (so we don't rewrite bounds each time)
-                    {
-                        var c = childs[i];
-                        var ent = c.UndamagedEntity.Item;
-                        if (ent == null || ent.Bound.Item == null) continue;
+            }
+            void applyBounds(Rsc6FragPhysChild[] arr)
+            {
+                if (arr == null) return;
+                var bounds = Bounds.Item as Rsc6BoundComposite;
 
-                        ent.UseBoundsArchetype = true;
-                        ent.Bound = archetype.Bounds;
-                    }
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    var child = arr[i];
+                    var bound = bounds.Childrens[i];
+                    if (child == null) continue;
+                    child.UndamagedEntity.Item.Bound = new(bound);
                 }
             }
 
-            if (bounds != null && archetype != null)
-                Bounds = archetype.Bounds;
-            else
-                Bounds = new(bounds);
+            if (Childrens.Items != null)
+            {
+                applySkel(Childrens.Items);
+                applyBounds(Childrens.Items); //Assuming the XML has all the bounds nodes set up in the right order.
+            }
+
+            if (Bounds.Item != null && archetype != null)
+            {
+                archetype.Bounds = new(Bounds.Item);
+            }
 
             TuneNameHash = reader.ReadJenkHash("TuneNameHash");
             NoSnow = reader.ReadBool("NoSnow");
@@ -351,7 +354,7 @@ namespace CodeX.Games.RDR1.RSC6
             ExtraDrawables = new(reader.ReadNodeArray<Rsc6FragmentDrawable>("ExtraDrawables"));
             ExtraDrawableNames = new(reader.ReadStringArray("ExtraDrawableNames"));
             NumExtraDrawables = reader.ReadUInt32("NumExtraDrawables");
-            DamagedDrawable = reader.ReadUInt32("DamagedDrawable", uint.MaxValue);
+            DamagedDrawable = reader.ReadInt32("DamagedDrawable", -1);
             RootChild = reader.ReadUInt32("RootChild");
             GroupNames = new(reader.ReadStringArray("GroupNames"));
             Groups = new(reader.ReadNodeArray<Rsc6FragPhysGroup>("Groups"));
@@ -377,6 +380,7 @@ namespace CodeX.Games.RDR1.RSC6
             AnimFrame = new(reader.ReadNode<Rsc6Frame>("AnimFrame"));
             SkeletonA = new(reader.ReadNode<Rsc6Skeleton>("SkeletonA"));
             SkeletonB = new(reader.ReadNode<Rsc6Skeleton>("SkeletonB"));
+            SharedMatrixSet = new(reader.ReadNode<Rsc6MatrixSet>("SharedMatrixSet"));
             EstimatedCacheSize = reader.ReadUInt32("EstimatedCacheSize");
             EstimatedArticulatedCacheSize = reader.ReadUInt32("EstimatedArticulatedCacheSize");
             FragTypeGroupCount = reader.ReadByte("FragTypeGroupCount");
@@ -414,15 +418,6 @@ namespace CodeX.Games.RDR1.RSC6
             AlwaysAddToShadow = reader.ReadByte("AlwaysAddToShadow");
             InnerSorting = reader.ReadByte("InnerSorting");
 
-            //Create an Rsc6MatrixSet instance if the fragment uses a skeleton
-            if (SkeletonA.Item != null)
-            {
-                var mSet = new Rsc6MatrixSet(SkeletonA.Item.NumBones);
-                SharedMatrixSet = new(mSet);
-            }
-
-            Drawable = new(drawable);
-            Childrens = new(childs);
             Archetype1 = new(archetype);
             WfdFile.TextureDictionary = Textures;
 
@@ -447,7 +442,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteNode("Drawable", Drawable.Item);
             writer.WriteNodeArray("ExtraDrawables", ExtraDrawables.Items);
             if (ExtraDrawableNames.Items != null) writer.WriteStringArray("ExtraDrawableNames", ExtraDrawableNames.Items.Select(s => s.Value).ToArray());
-            if (DamagedDrawable != uint.MaxValue) writer.WriteUInt32("DamagedDrawable", DamagedDrawable);
+            if (DamagedDrawable != -1) writer.WriteInt32("DamagedDrawable", DamagedDrawable);
             writer.WriteStringArray("GroupNames", GroupNames.Items.Select(s => s.Value).ToArray());
             writer.WriteNodeArray("Groups", Groups.Items);
             writer.WriteNodeArray("Childrens", Childrens.Items);
@@ -467,6 +462,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteNode("AnimFrame", AnimFrame.Item);
             writer.WriteNode("SkeletonA", SkeletonA.Item);
             writer.WriteNode("SkeletonB", SkeletonB.Item);
+            writer.WriteNode("SharedMatrixSet", SharedMatrixSet.Item);
             writer.WriteUInt32("EstimatedCacheSize", EstimatedCacheSize);
             writer.WriteUInt32("EstimatedArticulatedCacheSize", EstimatedArticulatedCacheSize);
             writer.WriteByte("FragTypeGroupCount", FragTypeGroupCount);
@@ -663,8 +659,6 @@ namespace CodeX.Games.RDR1.RSC6
         public uint BoneOffsets { get; set; } //m_BoneOffsets, rage::crBoneOffsets, always NULL
         public Rsc6PtrArr<Rsc6FragAnimation> Animations { get; set; } //m_Animations, rage::fragAnimation, used for clocks & vehicles
 
-        public bool UseBoundsArchetype { get; set; } //To point to the archetype's bounds
-
         public override void Read(Rsc6DataReader reader)
         {
             Drawable = reader.ReadBlock<Rsc6Drawable>();
@@ -692,12 +686,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_78h);
             writer.WriteUInt32(Unknown_7Ch);
             writer.WriteMatrix4x4(BoundMatrix);
-
-            if (UseBoundsArchetype)
-                writer.WritePtrEmbed(Bound, Bound, 0);
-            else
-                writer.WritePtr(Bound);
-
+            writer.WritePtr(Bound);
             writer.WriteArr(ExtraBounds);
             writer.WriteRawArr(ExtraBoundsMatrices);
             writer.WriteUInt16(NumExtraBounds);
@@ -716,7 +705,6 @@ namespace CodeX.Games.RDR1.RSC6
             Drawable = new Rsc6Drawable();
             Drawable.Read(reader);
             BoundMatrix = ToXYZ(reader.ReadMatrix4x4("BoundMatrix"), true);
-            Bound = new(reader.ReadNode<Rsc6Bounds>("Bound"));
             ExtraBounds = new(reader.ReadUInt32Array("ExtraBounds"));
             ExtraBoundsMatrices = new(ToXYZ(reader.ReadMatrix4x4Array("ExtraBoundsMatrices"), true));
             LoadSkeleton = reader.ReadBool("LoadSkeleton");
@@ -732,7 +720,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Drawable.Write(writer);
             writer.WriteMatrix4x4("BoundMatrix", BoundMatrix);
-            if (Bound.Item != null) writer.WriteNode("Bound", Bound.Item);
             if (ExtraBounds.Items != null) writer.WriteUInt32Array("ExtraBounds", ExtraBounds.Items);
             if (ExtraBoundsMatrices.Items != null) writer.WriteMatrix4x4Array("ExtraBoundsMatrices", ExtraBoundsMatrices.Items);
             writer.WriteBool("LoadSkeleton", LoadSkeleton);
@@ -874,6 +861,7 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => base.BlockLength + 100;
+        public override uint VFT { get; set; } = 0x0102AEE8;
         public Vector4[] DampingConstants { get; set; } //m_DampingConstant
 
         public override void Read(Rsc6DataReader reader)
@@ -1046,7 +1034,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Type = reader.ReadEnum<Rsc6ArchetypeType>("@type");
             Name = new(reader.ReadString("Name"));
-            Bounds = new(reader.ReadNode("Bounds", Rsc6Bounds.Create));
             TypeFlags = reader.ReadEnum<Rsc6ObjectTypeFlags>("TypeFlags");
             IncludeFlags = reader.ReadInt32("IncludeFlags");
             PropertyFlags = reader.ReadUInt16("PropertyFlags");
@@ -1061,7 +1048,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteInt32("IncludeFlags", IncludeFlags);
             writer.WriteUInt16("PropertyFlags", PropertyFlags);
             writer.WriteUInt16("RefCount", RefCount);
-            writer.WriteNode("Bounds", Bounds.Item);
         }
 
         public bool MatchFlags(uint includeFlags, uint typeFlags)
@@ -1173,7 +1159,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             while (writer.Position < pos + BlockLength)
             {
-                writer.WriteByte(0xCD); //Padding
+                writer.WriteByte(0x0); //Padding
             }
         }
 
@@ -1266,13 +1252,13 @@ namespace CodeX.Games.RDR1.RSC6
         public Matrix4x4 LinkAttachment { get; set; } = Matrix4x4.Identity; //m_LinkAttachment
         public Rsc6Ptr<Rsc6FragmentDrawable> UndamagedEntity { get; set; } //m_UndamagedEntity
         public Rsc6Ptr<Rsc6FragmentDrawable> DamagedEntity { get; set; } //DamagedEntity
-        public uint ContinuousEventset { get; set; } //m_ContinuousEventset
-        public uint CollisionEventset { get; set; } //m_CollisionEventset
-        public uint BreakEventset { get; set; } //m_BreakEventset
-        public uint BreakFromRootEventset { get; set; } //m_BreakFromRootEventset
-        public uint CollisionEventPlayer { get; set; } //m_CollisionEventPlayer
-        public uint BreakEventPlayer { get; set; } //m_BreakEventPlayer
-        public uint BreakFromRootEventPlayer { get; set; } //m_BreakFromRootEventPlayer
+        public Rsc6Ptr<Rsc6CollisionEventSet> ContinuousEventset { get; set; } //m_ContinuousEventset
+        public Rsc6Ptr<Rsc6CollisionEventSet> CollisionEventset { get; set; } //m_CollisionEventset
+        public Rsc6Ptr<Rsc6CollisionEventSet> BreakEventset { get; set; } //m_BreakEventset
+        public Rsc6Ptr<Rsc6CollisionEventSet> BreakFromRootEventset { get; set; } //m_BreakFromRootEventset
+        public Rsc6Ptr<Rsc6CollisionEventPlayer> CollisionEventPlayer { get; set; } //m_CollisionEventPlayer
+        public Rsc6Ptr<Rsc6CollisionEventPlayer> BreakEventPlayer { get; set; } //m_BreakEventPlayer, rage::fragBreakEventPlayer
+        public Rsc6Ptr<Rsc6CollisionEventPlayer> BreakFromRootEventPlayer { get; set; } //m_BreakFromRootEventPlayer, rage::fragBreakEventPlayer
         public uint Unknown_B4h { get; set; } //Padding
         public uint Unknown_B8h { get; set; } //Padding
         public uint Unknown_BCh { get; set; } //Padding
@@ -1289,13 +1275,13 @@ namespace CodeX.Games.RDR1.RSC6
             LinkAttachment = reader.ReadMatrix4x4();
             UndamagedEntity = reader.ReadPtr<Rsc6FragmentDrawable>();
             DamagedEntity = reader.ReadPtr<Rsc6FragmentDrawable>();
-            ContinuousEventset = reader.ReadUInt32();
-            CollisionEventset = reader.ReadUInt32();
-            BreakEventset = reader.ReadUInt32();
-            BreakFromRootEventset = reader.ReadUInt32();
-            CollisionEventPlayer = reader.ReadUInt32();
-            BreakEventPlayer = reader.ReadUInt32();
-            BreakFromRootEventPlayer = reader.ReadUInt32();
+            ContinuousEventset = reader.ReadPtr<Rsc6CollisionEventSet>();
+            CollisionEventset = reader.ReadPtr<Rsc6CollisionEventSet>();
+            BreakEventset = reader.ReadPtr<Rsc6CollisionEventSet>();
+            BreakFromRootEventset = reader.ReadPtr<Rsc6CollisionEventSet>();
+            CollisionEventPlayer = reader.ReadPtr<Rsc6CollisionEventPlayer>();
+            BreakEventPlayer = reader.ReadPtr<Rsc6CollisionEventPlayer>();
+            BreakFromRootEventPlayer = reader.ReadPtr<Rsc6CollisionEventPlayer>();
             Unknown_B4h = reader.ReadUInt32();
             Unknown_B8h = reader.ReadUInt32();
             Unknown_BCh = reader.ReadUInt32();
@@ -1313,13 +1299,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4(LinkAttachment);
             writer.WritePtr(UndamagedEntity);
             writer.WritePtr(DamagedEntity);
-            writer.WriteUInt32(ContinuousEventset);
-            writer.WriteUInt32(CollisionEventset);
-            writer.WriteUInt32(BreakEventset);
-            writer.WriteUInt32(BreakFromRootEventset);
-            writer.WriteUInt32(CollisionEventPlayer);
-            writer.WriteUInt32(BreakEventPlayer);
-            writer.WriteUInt32(BreakFromRootEventPlayer);
+            writer.WritePtr(ContinuousEventset);
+            writer.WritePtr(CollisionEventset);
+            writer.WritePtr(BreakEventset);
+            writer.WritePtr(BreakFromRootEventset);
+            writer.WritePtr(CollisionEventPlayer);
+            writer.WritePtr(BreakEventPlayer);
+            writer.WritePtr(BreakFromRootEventPlayer);
             writer.WriteUInt32(Unknown_B4h);
             writer.WriteUInt32(Unknown_B8h);
             writer.WriteUInt32(Unknown_BCh);
@@ -1327,8 +1313,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            UndamagedMass = reader.ReadSingle("UndamagedEntity");
-            DamagedMass = reader.ReadSingle("DamagedEntity");
+            UndamagedMass = reader.ReadSingle("UndamagedMass");
+            DamagedMass = reader.ReadSingle("DamagedMass");
             OwnerGroupPointerIndex = reader.ReadByte("OwnerGroupPointerIndex");
             Flags = reader.ReadByte("Flags");
             BoneID = reader.ReadUInt16("BoneID");
@@ -1336,13 +1322,13 @@ namespace CodeX.Games.RDR1.RSC6
             LinkAttachment = ToXYZ(reader.ReadMatrix4x4("LinkAttachment"), true);
             UndamagedEntity = new(reader.ReadNode<Rsc6FragmentDrawable>("UndamagedEntity"));
             DamagedEntity = new(reader.ReadNode<Rsc6FragmentDrawable>("DamagedEntity"));
-            ContinuousEventset = reader.ReadUInt32("ContinuousEventset");
-            CollisionEventset = reader.ReadUInt32("CollisionEventset");
-            BreakEventset = reader.ReadUInt32("BreakEventset");
-            BreakFromRootEventset = reader.ReadUInt32("BreakFromRootEventset");
-            CollisionEventPlayer = reader.ReadUInt32("CollisionEventPlayer");
-            BreakEventPlayer = reader.ReadUInt32("BreakEventPlayer");
-            BreakFromRootEventPlayer = reader.ReadUInt32("BreakFromRootEventPlayer");
+            ContinuousEventset = new(reader.ReadNode<Rsc6CollisionEventSet>("ContinuousEventset"));
+            CollisionEventset = new(reader.ReadNode<Rsc6CollisionEventSet>("CollisionEventset"));
+            BreakEventset = new(reader.ReadNode<Rsc6CollisionEventSet>("BreakEventset"));
+            BreakFromRootEventset = new(reader.ReadNode<Rsc6CollisionEventSet>("BreakFromRootEventset"));
+            CollisionEventPlayer = new(reader.ReadNode<Rsc6CollisionEventPlayer>("CollisionEventPlayer"));
+            BreakEventPlayer = new(reader.ReadNode<Rsc6CollisionEventPlayer>("BreakEventPlayer"));
+            BreakFromRootEventPlayer = new(reader.ReadNode<Rsc6CollisionEventPlayer>("BreakFromRootEventPlayer"));
         }
 
         public void Write(MetaNodeWriter writer)
@@ -1356,13 +1342,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4("LinkAttachment", LinkAttachment);
             writer.WriteNode("UndamagedEntity", UndamagedEntity.Item);
             writer.WriteNode("DamagedEntity", DamagedEntity.Item);
-            writer.WriteUInt32("ContinuousEventset", ContinuousEventset);
-            writer.WriteUInt32("CollisionEventset", CollisionEventset);
-            writer.WriteUInt32("BreakEventset", BreakEventset);
-            writer.WriteUInt32("BreakFromRootEventset", BreakFromRootEventset);
-            writer.WriteUInt32("CollisionEventPlayer", CollisionEventPlayer);
-            writer.WriteUInt32("BreakEventPlayer", BreakEventPlayer);
-            writer.WriteUInt32("BreakFromRootEventPlayer", BreakFromRootEventPlayer);
+            writer.WriteNode("ContinuousEventset", ContinuousEventset.Item);
+            writer.WriteNode("CollisionEventset", CollisionEventset.Item);
+            writer.WriteNode("BreakEventset", BreakEventset.Item);
+            writer.WriteNode("BreakFromRootEventset", BreakFromRootEventset.Item);
+            writer.WriteNode("CollisionEventPlayer", CollisionEventPlayer.Item);
+            writer.WriteNode("BreakEventPlayer", BreakEventPlayer.Item);
+            writer.WriteNode("BreakFromRootEventPlayer", BreakFromRootEventPlayer.Item);
         }
     }
 
@@ -1571,11 +1557,13 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Instances = new(reader.ReadNodeArray<Rsc6EventInstance>("Instances"));
+            NewInstanceType = reader.ReadInt32("NewInstanceType");
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteNodeArray("Instances", Instances.Items);
+            writer.WriteInt32("NewInstanceType", NewInstanceType);
         }
     }
 
@@ -1641,6 +1629,11 @@ namespace CodeX.Games.RDR1.RSC6
 
     public class Rsc6CollisionEventPlayer : Rsc6BlockBase, MetaNode //rage::evtPlayer
     {
+        /*
+         * An evtPlayer can play a collection of event instances that each have start and stop times.
+         * These events in the timeline will be started, updated and stopped based on the player's current position
+         */
+
         public override ulong BlockLength => 44;
         public Rsc6Arr<uint> Params { get; set; } //m_Params, atArray<atAny>, always NULL
         public Rsc6Arr<int> Scheme { get; set; } //m_Scheme, evtParamScheme* -> atArray<int> m_ParamIdToSlotNum, always NULL
@@ -1846,30 +1839,21 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6MatrixSet : Rsc6BlockBase
+    public class Rsc6MatrixSet : Rsc6BlockBase, MetaNode //rage::grmMatrixSet
     {
         public override ulong BlockLength => 48;
         public uint D3DCommon { get; set; } = 0xCDCDCDCD; //D3DCommon, Xbox 360 only
         public uint D3DReferenceCount { get; set; } = 0xCDCDCDCD; //D3DReferenceCount, Xbox 360 only
         public uint D3DFence { get; set; } = 0xCDCDCDCD; //D3DFence, Xbox 360 only
         public uint D3DReadFence { get; set; } = 0xCDCDCDCD; //D3DReadFence, Xbox 360 only
-        public byte MatrixCount { get; set; } //m_MatrixCount
-        public byte MaxMatrixCount { get; set; } //m_MaxMatrixCount
-        public bool IsSkinned { get; set; } //m_IsSkinned
-        public byte Padding { get; set; } //m_Padding, always 0
+        public byte MatrixCount { get; set; } //m_MatrixCount, always greater than 0
+        public byte MaxMatrixCount { get; set; } //m_MaxMatrixCount, always equal to m_MatrixCount
+        public bool IsSkinned { get; set; } //m_IsSkinned, not skinned: 2443 fragments - skinned: 2029 fragments
+        public bool IsInWorldSpace { get; set; } //m_IsInWorldSpace, always FALSE
         public uint D3DBaseFlush { get; set; } = 0xCDCDCDCD; //D3DBaseFlush, Xbox 360 only
         public uint D3DBaseAddress { get; set; } = 0xCDCDCDCD; //D3DBaseAddress, Xbox 360 only
         public uint D3DSize { get; set; } = 0xCDCDCDCD; //D3DSize, Xbox 360 only
-
-        public Rsc6MatrixSet()
-        {
-        }
-
-        public Rsc6MatrixSet(int matrixCount)
-        {
-            MatrixCount = (byte)matrixCount;
-            MaxMatrixCount = (byte)matrixCount;
-        }
+        public Vector4 Offset { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, NaN()); //m_Offset, unused
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1880,10 +1864,11 @@ namespace CodeX.Games.RDR1.RSC6
             MatrixCount = reader.ReadByte();
             MaxMatrixCount = reader.ReadByte();
             IsSkinned = reader.ReadBoolean();
-            Padding = reader.ReadByte();
+            IsInWorldSpace = reader.ReadBoolean();
             D3DBaseFlush = reader.ReadUInt32();
             D3DBaseAddress = reader.ReadUInt32();
             D3DSize = reader.ReadUInt32();
+            Offset = reader.ReadVector4();
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -1895,10 +1880,24 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(MatrixCount);
             writer.WriteByte(MaxMatrixCount);
             writer.WriteBoolean(IsSkinned);
-            writer.WriteByte(Padding);
+            writer.WriteBoolean(IsInWorldSpace);
             writer.WriteUInt32(D3DBaseFlush);
             writer.WriteUInt32(D3DBaseAddress);
             writer.WriteUInt32(D3DSize);
+            writer.WriteVector4(Offset);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            MatrixCount = reader.ReadByte("MatrixCount");
+            IsSkinned = reader.ReadBool("IsSkinned");
+            MaxMatrixCount = MatrixCount;
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteByte("MatrixCount", MatrixCount);
+            if (IsSkinned) writer.WriteBool("IsSkinned", IsSkinned);
         }
     }
 
@@ -3417,6 +3416,82 @@ namespace CodeX.Games.RDR1.RSC6
         ANGULAR_V2
     }
 
+    public enum Rsc6WeaponType : byte
+    {
+        PISTOL,
+        DUAL_PISTOL,
+        RIFLE,
+        REPEATER,
+        SNIPER_RIFLE,
+        SHOTGUN,
+        THROWN,
+        THROWN_EXPLODING,
+        BOW,
+        MELEE,
+        LASSO,
+        TURRET,
+        CANNON
+    }
+
+    public enum Rsc6BaseWeaponType : byte
+    {
+        NO_RETICLE,
+        PISTOL,
+        RIFLE,
+        LASSO,
+        GATLING,
+        CANNON,
+        THROWN,
+        SNIPER,
+        SHOTGUN
+    }
+
+    public enum Rsc6TriggerHoldType : byte
+    {
+        GUN,
+        LONG_ARM,
+        MELEE
+    }
+
+    public enum Rsc6SoftModeType : byte
+    {
+        SINGLE,
+        AUTO,
+        CHARGE
+    }
+
+    public enum Rsc6ReticleType : byte
+    {
+        SOFT_LOCK_TUNING_ZOOMED,
+        MOUNTED_SOFT_LOCK_TUNING_ZOOMED,
+        VEHICLE_SOFT_LOCK_TUNING_ZOOMED
+    }
+
+    public enum Rsc6WeaponArcGroup : byte
+    {
+        ROAM,
+        ZOOM,
+        HORSE,
+        HORSE_ZOOM,
+        WAGON,
+        WAGON_ZOOM,
+        WAGON_PASSENGER,
+        WAGON_PASSENGER_ZOOM,
+        INTERIOR,
+        INTERIOR_ZOOM,
+        COVER,
+        COVER_ZOOM,
+        COVER_LOW,
+        COVER_LOW_ZOOM,
+        INTERIOR_COVER,
+        INTERIOR_COVER_ZOOM,
+        INTERIOR_COVER_LOW,
+        INTERIOR_COVER_LOWZOOM,
+        CAMERA_MELEE_TARGETING,
+        CAMERA_INTERIOR_MELEE_TARGETING,
+        CAMERA_LEDGE
+    }
+
     [Flags] public enum Rsc6EventInstanceFlags : short
     {
         PLAY_FORWARD = 0,
@@ -3432,10 +3507,10 @@ namespace CodeX.Games.RDR1.RSC6
         UNUSED = 1 << 2,
         CLONE_BOUND_PARTS_IN_CACHE = 1 << 3,
         ALLOCATE_TYPE_AND_INCLUDE_FLAGS = 1 << 4,
-        BECOME_ROPE = 1 << 10,  //Some nasty RDR hack
-        IS_USER_MODIFIED = 1 << 11,   //Flag to help the user keep track of fragments they modified
-        DISABLE_ACTIVATION = 1 << 12,   //Disables activation on instances until the user enables
-        DISABLE_BREAKING = 1 << 13  //Disables activation on instances until the user enables
+        BECOME_ROPE = 1 << 10, //Some nasty RDR hack
+        IS_USER_MODIFIED = 1 << 11, //Flag to help the user keep track of fragments they modified
+        DISABLE_ACTIVATION = 1 << 12, //Disables activation on instances until the user enables
+        DISABLE_BREAKING = 1 << 13 //Disables activation on instances until the user enables
     };
 
     [Flags] public enum Rsc6ObjectTypeFlags : uint

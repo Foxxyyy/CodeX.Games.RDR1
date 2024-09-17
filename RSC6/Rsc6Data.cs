@@ -1085,32 +1085,17 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Position = reader.ReadUInt32();
             ElementSize = reader.ReadUInt32();
-            ElementMax = reader.ReadUInt32();
+            ElementMax = reader.ReadUInt32(); //Also number of frames
 
             var p = reader.Position;
             reader.Position = Position;
 
             var numElements = GetElementCount();
-            Items = reader.ReadArray<uint>(ElementMax);
-
-            /*uint addr = 0;
-            Items = new uint[ElementMax];
-
-            for (uint i = 0; i < ElementMax; i++)
-            {
-                var val = elements[i];
-                var word = addr >> 5;
-                var bit = addr & 31;
-
-                Items[word] |= val << (int)bit;
-                Items[word + 1] |= (uint)((ulong)val >> (32 - (int)bit));
-
-                addr += ElementSize;
-            }*/
+            Items = reader.ReadArray<uint>(numElements + 1);
             reader.Position = p;
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public readonly void Write(Rsc6DataWriter writer)
         {
             writer.AddPointerRef(Items);
             writer.WriteUInt32(Position);
@@ -1119,12 +1104,12 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArray(Items);
         }
 
-        public uint GetElementCount()
+        public readonly uint GetElementCount()
         {
             return (ElementSize * ElementMax + 31) >> 5;
         }
 
-        public uint GetElement(uint index)
+        public readonly uint GetElement(uint index)
         {
             var address = index * ElementSize;
             var block = address >> 5;
@@ -1132,21 +1117,9 @@ namespace CodeX.Games.RDR1.RSC6
 
             var word = Items[block] | ((ulong)Items[block + 1] << 32);
             return (uint)((word >> (int)bit) & MaskTable[ElementSize]);
-
-            //var blockValues = new uint[] { Convert.ToUInt32(Items[block]), Convert.ToUInt32(Items[block + 1]) };
-            //var word = BitConverter.ToUInt64(BitConverter.GetBytes(blockValues[0]).Concat(BitConverter.GetBytes(blockValues[1])).ToArray(), 0);
-            //return (uint)((word >> (int)bit) & MaskTable[ElementSize]);
         }
 
-        public uint GetQuantizedValue(uint address, uint[] data, uint elemSize)
-        {
-            var block = address >> 5;
-            var bit = address & 31;
-            var word = data[block] | (ulong)((data[block + 1]) << 32);
-	        return (uint)((word >> (int)bit) & MaskTable[elemSize]);
-        }
-
-        public uint this[int index]
+        public readonly uint this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
@@ -1777,7 +1750,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(Rsc6DataWriter writer)
         {
-            var ptrs = (Items != null) ? new uint[Items.Length] : null;
+            var ptrs = (Items != null) ? new uint[Items.Length + 1] : null;
             writer.AddPointerRef(ptrs);
             writer.WriteUInt32((uint)Position);
 

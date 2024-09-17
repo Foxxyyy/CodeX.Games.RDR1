@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.IO;
 using CodeX.Games.RDR1.RSC6;
+using CodeX.Core.Numerics;
+using System.Numerics;
 
 namespace CodeX.Games.RDR1.Prefabs
 {
@@ -51,15 +53,16 @@ namespace CodeX.Games.RDR1.Prefabs
                 Prefabs[name] = new RDR1AnimalPrefab(this, name);
             }
 
-            var wasEntries = FileManager.DataFileMgr.StreamEntries[Rpf6FileExt.was];
+            var wasEntries = dfm.WasFiles;
             if (wasEntries != null)
             {
                 var wasList = new List<string>() { "" };
-                foreach (var was in wasEntries)
+                foreach (var kv in wasEntries)
                 {
-                    if (was.Value == null) continue;
-                    if (!was.Value.Name.EndsWith(".was")) continue;
-                    wasList.Add(was.Value.ShortName);
+                    var was = kv.Value;
+                    if (was == null) continue;
+                    if (!was.HasAnimalAnim) continue;
+                    wasList.Add(kv.Key.ToString());
                 }
                 wasList.Sort();
                 WasNames = wasList.ToArray();
@@ -180,6 +183,9 @@ namespace CodeX.Games.RDR1.Prefabs
                 Target = this
             };
 
+            //Turn peds to the sun and the camera
+            SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, FloatUtil.HalfPi), false);
+
             if (buildPiece)
             {
                 BuildPiece();
@@ -198,6 +204,8 @@ namespace CodeX.Games.RDR1.Prefabs
 
             var piece = Wft.Piece;
             piece.ImmediateLoad = true;
+            piece.UpdateAllModels();
+            piece.UpdateBounds();
 
             SetPiece(piece);
             UpdateBounds();
@@ -229,6 +237,30 @@ namespace CodeX.Games.RDR1.Prefabs
             }
 
             ClipName = defaultval;
+            list.Sort();
+            return list.ToArray();
+        }
+
+        public string[] GetWasAnimNames(out string defaultval)
+        {
+            defaultval = null;
+
+            var anims = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.Animations;
+            var animTypes = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.AnimTypes;
+            if (anims == null) return null;
+
+            var list = new List<string>();
+            for (int i = 0; i < anims.Length; i++)
+            {
+                var anim = anims[i];
+                if (anim == null) continue;
+
+                var type = animTypes[i];
+                if (type != "animal") continue;
+
+                var name = anim.RefactoredName.ToString();
+                list.Add(name);
+            }
             list.Sort();
             return list.ToArray();
         }
@@ -279,6 +311,21 @@ namespace CodeX.Games.RDR1.Prefabs
             animator.Anim = null;
         }
 
+        public void PlayAnim(string animName)
+        {
+            if (Animator is not RDR1Animator animator) return;
+            var animdict = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.Dict;
+            var anim = (Rsc6Animation)null;
+
+            foreach (var kv in animdict)
+            {
+                if (kv.Value.RefactoredName != animName) continue;
+                anim = kv.Value;
+            }
+            animator.Anim = anim;
+            animator.Clip = null;
+        }
+
         public Prefab GetPrefab()
         {
             return Prefab;
@@ -303,14 +350,14 @@ namespace CodeX.Games.RDR1.Prefabs
                 }
                 else if (slot.Name == "Clip")
                 {
-                    options = GetWasClipNames(out var defaultstr);
-                    defaultOption = Path.GetFileName(defaultstr);
+                    //options = GetWasClipNames(out var defaultstr);
+                    //defaultOption = Path.GetFileName(defaultstr);
                 }
-                /*else if (slot.Name == "Anim")
+                else if (slot.Name == "Anim")
                 {
                     options = GetWasAnimNames(out var defaultstr);
                     defaultOption = defaultstr;
-                }*/
+                }
             }
         }
 
@@ -329,12 +376,12 @@ namespace CodeX.Games.RDR1.Prefabs
                 }
                 else if (slot.Name == "Clip")
                 {
-                    PlayClip(option as string);
+                    //PlayClip(option as string);
                 }
-                /*else if (slot.Name == "Anim")
+                else if (slot.Name == "Anim")
                 {
                     PlayAnim(option as string);
-                }*/
+                }
             }
         }
     }

@@ -10,8 +10,10 @@ namespace CodeX.Games.RDR1.Files
     {
         public Rpf6FileEntry FileEntry;
         public Rsc6AnimationSet AnimSet;
-        public string Name;
         public JenkHash Hash;
+        public string Name;
+        public bool HasHumanAnim;
+        public bool HasAnimalAnim;
 
         public WasFile()
         {
@@ -20,11 +22,9 @@ namespace CodeX.Games.RDR1.Files
         public WasFile(Rpf6FileEntry e)
         {
             FileEntry = e;
-            if (FileEntry != null)
-            {
-                Name = FileEntry.Name;
-                Hash = FileEntry.ShortNameHash;
-            }
+            FileInfo = e;
+            Name = e?.NameLower;
+            Hash = JenkHash.GenHash(e?.NameLower ?? "");
         }
 
         public override void Load(byte[] data)
@@ -37,6 +37,14 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
             };
             AnimSet = r.ReadBlock<Rsc6AnimationSet>();
+
+            foreach (var type in AnimSet?.ClipDictionary.Item?.AnimDict.Item?.AnimTypes)
+            {
+                if (type == "human")
+                    HasHumanAnim = true;
+                else if (type == "animal")
+                    HasAnimalAnim = true;
+            }
         }
 
         public override byte[] Save()

@@ -12,6 +12,7 @@ using CodeX.Games.RDR1.RPF6;
 using ICSharpCode.SharpZipLib.Checksum;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
+using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -1121,30 +1122,30 @@ namespace CodeX.Games.RDR1.RSC6
             var geoms = Geometries.Items;
             if (geoms != null)
             {
-                var shaderMapping = ShaderMapping.Items;
-                var boundsData = BoundsData.Items;
+                var smap = ShaderMapping.Items;
+                var bdat = BoundsData.Items;
                 for (int i = 0; i < geoms.Length; i++)
                 {
                     var geom = geoms[i];
                     if (geom != null)
                     {
-                        geom.ShaderID = ((shaderMapping != null) && (i < shaderMapping.Length)) ? shaderMapping[i] : (ushort)0;
-                        geom.AABB = (boundsData != null) ? ((boundsData.Length > 1) && ((i + 1) < boundsData.Length)) ? boundsData[i + 1] : boundsData[0] : new BoundingBox4();
+                        geom.ShaderID = ((smap != null) && (i < smap.Length)) ? smap[i] : (ushort)0;
+                        geom.AABB = (bdat != null) ? ((bdat.Length > 1) && ((i + 1) < bdat.Length)) ? bdat[i + 1] : bdat[0] : new BoundingBox4();
                         geom.BoundingBox = new BoundingBox(geom.AABB.Min.XYZ(), geom.AABB.Max.XYZ());
                         geom.BoundingSphere = new BoundingSphere(geom.BoundingBox.Center, geom.BoundingBox.Size.Length() * 0.5f);
                     }
                 }
 
-                if ((boundsData != null) && (boundsData.Length > 0))
+                if ((bdat != null) && (bdat.Length > 0))
                 {
-                    ref var bb = ref boundsData[0];
+                    ref var bb = ref bdat[0];
                     BoundingBox = new BoundingBox(bb.Min.XYZ(), bb.Max.XYZ());
                 }
             }
 
             Meshes = Geometries.Items;
             RenderInMainView = true;
-            RenderInShadowView = SkinFlag == 0;
+            RenderInShadowView = true;
             RenderInEnvmapView = true;
         }
 
@@ -1432,10 +1433,8 @@ namespace CodeX.Games.RDR1.RSC6
         public uint DrawBucketMaskLow { get; set; } //m_BucketMask[2]
         public uint DrawBucketMaskVlow { get; set; } //m_BucketMask[3]
         public float BoundingSphereRadius { get; set; } //m_CullRadius
-        public uint PpuOnly { get; set; } = 0; //m_PpuOnly, 0 or 1 if PPU is set as default processor
+        public uint PpuOnly { get; set; } //m_PpuOnly, 0 or 1 if PPU is set as default processor
         public JenkHash NameHash { get; set; }
-
-        public bool UseFragmentPointers { get; set; } //To point to the fragment's skeleton
 
         public virtual void Read(Rsc6DataReader reader)
         {
@@ -1503,17 +1502,8 @@ namespace CodeX.Games.RDR1.RSC6
                 writer.WriteUInt32(VFT);
 
             writer.WritePtr(BlockMap);
-            if (UseFragmentPointers)
-            {
-                writer.WritePtrEmbed(ShaderGroup, ShaderGroup, 0);
-                writer.WritePtrEmbed(SkeletonRef, SkeletonRef, 0);
-            }
-            else
-            {
-                writer.WritePtr(ShaderGroup);
-                writer.WritePtr(SkeletonRef);
-            }
-
+            writer.WritePtr(ShaderGroup);
+            writer.WritePtr(SkeletonRef);
             writer.WriteVector4(BoundingCenter);
             writer.WriteVector4(BoundingBoxMin);
             writer.WriteVector4(BoundingBoxMax);
@@ -1555,6 +1545,7 @@ namespace CodeX.Games.RDR1.RSC6
             LodMed = new(reader.ReadNode<Rsc6DrawableLod>("LodMed"));
             LodLow = new(reader.ReadNode<Rsc6DrawableLod>("LodLow"));
             LodVlow = new(reader.ReadNode<Rsc6DrawableLod>("LodVlow"));
+            PpuOnly = reader.ReadUInt32("PpuOnly");
 
             Skeleton = SkeletonRef.Item;
             Lods = new[]
@@ -1627,7 +1618,7 @@ namespace CodeX.Games.RDR1.RSC6
             var bones = skel?.Bones;
             if (bones == null) return;
 
-            var origbones = (skel != SkeletonRef.Item) ? SkeletonRef.Item?.Bones : null;
+            var origbones = (skel != SkeletonRef.Item) ? SkeletonRef.Item.BoneData.Items : null;
             foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
             {
                 if (model == null) continue;
@@ -1661,7 +1652,7 @@ namespace CodeX.Games.RDR1.RSC6
                             {
                                 if (origbones != null) //Make sure to preseve original bone ordering!
                                 {
-                                    var origbone = (Rsc6BoneData)origbones[boneids[i]];
+                                    var origbone = origbones[boneids[i]];
                                     if ((origbone != null) && skel.BonesMap.TryGetValue(origbone.BoneId, out var newbone))
                                     {
                                         boneinds[i] = newbone.Index;
@@ -1835,8 +1826,8 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawArr<int> ParentIndices { get; set; } //m_ParentIndices, pointer to parent indices table, NULL if none calculated
         public Rsc6RawArr<Matrix4x4> JointScaleOrients { get; set; } //m_CumulativeJointScaleOrients, mostly NULL
         public Rsc6RawArr<Matrix4x4> InverseJointScaleOrients { get; set; } //m_CumulativeInverseJointScaleOrients, inverse cumulative joint scale orient matrices
-        public Rsc6RawArr<Matrix4x4> DefaultTransforms { get; set; } //m_DefaultTransforms, default transform matrices
-        public Rsc6RawArr<Matrix4x4> CumulativeDefaultTransforms { get; set; } //m_CumulativeDefaultTransforms
+        public Rsc6RawArr<Matrix4x4> DefaultTransforms { get; set; } //m_DefaultTransforms, default bone transform
+        public Rsc6RawArr<Matrix4x4> CumulativeDefaultTransforms { get; set; } //m_CumulativeDefaultTransforms, default bone transform * parent bone transform
         public ushort BoneCount { get; set; } // m_NumBones, number of bones in skeleton
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs

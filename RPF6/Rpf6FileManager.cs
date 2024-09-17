@@ -52,6 +52,7 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wsg", "Sector Grass", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wsi", "Sector Info", FileTypeIcon.Process, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wcs", "Cover Set", FileTypeIcon.SystemFile);
+            InitFileType(".wcg", "Cover Grid", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wgd", "Gringo Dictionary", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wsf", "ScaleForm", FileTypeIcon.Image, FileTypeAction.ViewTextures);
             InitFileType(".wsp", "Speed Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
@@ -321,6 +322,7 @@ namespace CodeX.Games.RDR1.RPF6
                 case ".wtd": return ConvertToXml<WtdFile>(file, data, out newfilename, "RDR1TextureDictionary", GetXmlFileFolder(file, folder));
                 case ".was": return ConvertToXml<WasFile>(file, data, out newfilename, "RDR1AnimationSet");
                 case ".wsg": return ConvertToXml<WsgFile>(file, data, out newfilename, "RDR1SectorGrass");
+                case ".wcg": return ConvertToXml<WcgFile>(file, data, out newfilename, "RDR1CoverGrid");
                 case ".wbd": return ConvertToXml<WbdFile>(file, data, out newfilename, "RDR1BoundsDictionary");
                 case ".sst": return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
                 case ".wtb": return ConvertToXml<WtbFile>(file, data, out newfilename, "RDR1TerritoryBounds");
@@ -482,6 +484,12 @@ namespace CodeX.Games.RDR1.RPF6
                 wsp.Load(data);
                 return wsp;
             }
+            else if (enl.EndsWith(".wcg")) //Cover grid
+            {
+                var wcg = new WcgFile(entry);
+                wcg.Load(data);
+                return wcg;
+            }
             else if (enl.EndsWith(".wtb")) //Territory bounds
             {
                 var wtb = new WtbFile(entry);
@@ -635,6 +643,7 @@ namespace CodeX.Games.RDR1.RPF6
                     case ".was": return Rsc6DataReader.Analyze<Rsc6AnimationSet>(rfe, data);
                     case ".wsg": return Rsc6DataReader.Analyze<Rsc6SectorGrass>(rfe, data);
                     case ".wsp": return Rsc6DataReader.Analyze<Rsc6TreeForestGrid>(rfe, data);
+                    case ".wcg": return Rsc6DataReader.Analyze<Rsc6CombatCoverGrid>(rfe, data);
                     case ".wsi": return Rsc6DataReader.Analyze<Rsc6SectorInfo>(rfe, data);
                     case ".wtb": return Rsc6DataReader.Analyze<Rsc6TerrainBound>(rfe, data);
                     case ".wbd": return Rsc6DataReader.Analyze<Rsc6BoundsDictionary>(rfe, data);
@@ -1273,6 +1282,7 @@ namespace CodeX.Games.RDR1.RPF6
         public Rpf6FileManager FileManager;
         public List<Rpf6FileEntry> AllEntries;
         public Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>> StreamEntries;
+        public Dictionary<JenkHash, WasFile> WasFiles;
         public Dictionary<JenkHash, WsiFile> WsiFiles;
         public Dictionary<JenkHash, WspFile> WspFiles;
         public Dictionary<JenkHash, WsgFile> WsgFiles;
@@ -1290,6 +1300,7 @@ namespace CodeX.Games.RDR1.RPF6
 
             this.AllEntries = new List<Rpf6FileEntry>();
             this.StreamEntries = new Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>>();
+            this.WasFiles = new Dictionary<JenkHash, WasFile>();
             this.WsiFiles = new Dictionary<JenkHash, WsiFile>();
             this.WspFiles = new Dictionary<JenkHash, WspFile>();
             this.WsgFiles = new Dictionary<JenkHash, WsgFile>();
@@ -1298,9 +1309,14 @@ namespace CodeX.Games.RDR1.RPF6
 
             this.LoadFiles();
             this.LoadGeneralTextures();
-            this.LoadSectorInfoResources();
-            this.LoadSectorTrees();
-            this.LoadSectorGrass();
+
+            if (RDR1Map.LoadingMap)
+            {
+                this.LoadAnimations();
+                this.LoadSectorInfoData();
+                this.LoadTrees();
+                this.LoadGrass();
+            }
         }
 
         private void LoadFiles()
@@ -1385,7 +1401,26 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        private void LoadSectorInfoResources()
+        private void LoadAnimations()
+        {
+            foreach (var se in this.StreamEntries[Rpf6FileExt.was])
+            {
+                var fe = se.Value;
+                var wasdata = fe.Archive.ExtractFile(fe);
+
+                if (wasdata != null)
+                {
+                    var was = new WasFile(fe);
+                    was.Load(wasdata);
+
+                    var hash = fe.ShortNameHash;
+                    JenkIndex.Ensure(was.Name, "RDR1");
+                    this.WasFiles[hash] = was;
+                }
+            }
+        }
+
+        private void LoadSectorInfoData()
         {
             foreach (var se in this.StreamEntries[Rpf6FileExt.wsi])
             {
@@ -1404,7 +1439,7 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        private void LoadSectorTrees()
+        private void LoadTrees()
         {
             foreach (var se in this.StreamEntries[Rpf6FileExt.wsp])
             {
@@ -1423,7 +1458,7 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        private void LoadSectorGrass()
+        private void LoadGrass()
         {
             foreach (var se in this.StreamEntries[Rpf6FileExt.wsg_wgd])
             {

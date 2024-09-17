@@ -69,5 +69,16 @@ namespace CodeX.Games.RDR1.Files
             byte[] data = writer.Build(133);
             return data;
         }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            VisualDictionary = new();
+            VisualDictionary.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            VisualDictionary?.Write(writer);
+        }
     }
 }

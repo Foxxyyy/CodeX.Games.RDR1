@@ -2,8 +2,6 @@
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System.Diagnostics;
-using System.Text;
 
 namespace CodeX.Games.RDR1.Files
 {

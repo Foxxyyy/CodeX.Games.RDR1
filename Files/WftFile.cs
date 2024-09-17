@@ -60,5 +60,16 @@ namespace CodeX.Games.RDR1.Files
             byte[] data = writer.Build(138);
             return data;
         }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            Fragment = new();
+            Fragment.Read(reader);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            Fragment?.Write(writer);
+        }
     }
 }

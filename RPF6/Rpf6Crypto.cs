@@ -557,8 +557,8 @@ namespace CodeX.Games.RDR1.RPF6
             var min = ((Rsc6Drawable)piece).BoundingBoxMin.XYZ();
             var max = ((Rsc6Drawable)piece).BoundingBoxMax.XYZ();
 
-            min = new Vector3(min.X, min.Y, min.Z - 2.0f);
-            max = new Vector3(max.X, max.Y, max.Z - 2.0f);
+            min = new Vector3(min.X, min.Y, min.Z - 3.0f);
+            max = new Vector3(max.X, max.Y, max.Z - 3.0f);
 
             piece.BoundingBox = new BoundingBox(min, max);
             piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);

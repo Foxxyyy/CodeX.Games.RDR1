@@ -12,7 +12,9 @@ namespace CodeX.Games.RDR1.Prefabs
         public Rsc6Animation Anim; //For use when playing a specific anim. (when Clip==null)
         public Rsc6SkeletonData Skeleton;//Skeleton to animate
         public Dictionary<uint, Vector4> AnimValues = new();
-        public bool EnableRootMotion = true;
+        public bool EnableRootMotion = false;
+        public string ClipName;
+        public string AnimName;
 
         public override void Update(float elapsed)
         {
@@ -21,16 +23,37 @@ namespace CodeX.Games.RDR1.Prefabs
             if (Skeleton == null) return;
 
             if (Clip is Rsc6ClipSingle sclip)
+            {
+                if (ClipName != sclip.Name)
+                {
+                    AnimValues = new Dictionary<uint, Vector4>();
+                    ClipName = sclip.Name;
+                }
                 UpdateClip(sclip);
+            }
             else if (Clip is Rsc6ClipMulti mclip)
+            {
                 UpdateClip(mclip);
+            }
             else if (Anim != null)
+            {
+                if (AnimName != Anim.RefactoredName)
+                {
+                    AnimValues = new Dictionary<uint, Vector4>();
+                    AnimName = Anim.RefactoredName;
+                }
                 UpdateAnim(Anim, (float)CurrentTime);
+            }
 
             UpdateSkeleton();
-
+            Skeleton.AnimateRenderables = true;
             Skeleton.UpdateBoneTransforms();
             Target?.Piece?.UpdateRigs();
+
+            for (int i = 0; i < Skeleton.Bones.Length; i++)
+            {
+                //Skeleton.BoneTransforms[i] = Matrix3x4.Identity;
+            }
         }
 
         private void UpdateClip(Rsc6ClipSingle clip, int uvIndex = -1)
@@ -62,7 +85,7 @@ namespace CodeX.Games.RDR1.Prefabs
                 var v = anim.Evaluate(f, i);
                 v = new Vector4(v.Z, v.X, v.Y, v.W);
 
-                if (boneid.TrackType == Rsc6TrackType.QUATERNION) //Quaternion - needs to be normalized
+                if ((boneid.TypeId & 0x3) == (byte)Rsc6TrackType.QUATERNION) //Quaternion - needs to be normalized
                 {
                     v = Vector4.Normalize(v);
                 }
@@ -78,29 +101,30 @@ namespace CodeX.Games.RDR1.Prefabs
             foreach (var kvp in AnimValues)
             {
                 var boneid = new Rsc6AnimBoneId(kvp.Key);
-                if (boneid.TypeId == 0xFF) continue; //This is a UV channel - will be handled later
-                if (bonemap.TryGetValue(boneid.BoneId, out var bone) == false) continue;
+                if ((boneid.TypeId & 0x3) == 0xFF) continue; //This is a UV channel - will be handled later
+                if (bonemap.TryGetValue(boneid.ID, out var bone) == false) continue;
                 if (bone == null) continue;
 
                 var v = kvp.Value;
                 switch (boneid.TrackId)
                 {
-                    case 0: //Bone translation
-                    case 3: //Mover translation
+                    case Rsc6TrackID.BONE_TRANSLATION:
                         bone.AnimTranslation = v.XYZ();
                         break;
-                    case 1: //Bone rotation
-                    case 4: //Mover rotation
+                    case Rsc6TrackID.BONE_ROTATION:
                         bone.AnimRotation = v.ToQuaternion();
                         break;
-                    case 2: //Bone scale
+                    case Rsc6TrackID.BONE_SCALE:
                         bone.AnimScale = v.XYZ();
                         break;
-                    case 5: //Root motion vector
-                        if (EnableRootMotion) bone.AnimTranslation += v.XYZ(); //Let's really hope a bone position track came first
+                    case Rsc6TrackID.MOVER_TRANSLATION:
+                        if (EnableRootMotion) bone.AnimTranslation += v.XYZ();
                         break;
-                    case 6: //Quaternion... root rotation
-                        if (EnableRootMotion) bone.AnimRotation = v.ToQuaternion() * bone.AnimRotation; //As above
+                    case Rsc6TrackID.MOVER_ROTATION:
+                        if (EnableRootMotion) bone.AnimRotation = v.ToQuaternion() * bone.AnimRotation;
+                        break;
+                    case Rsc6TrackID.MOVER_SCALE:
+                        if (EnableRootMotion) bone.AnimScale += v.XYZ();
                         break;
                     default:
                         break;

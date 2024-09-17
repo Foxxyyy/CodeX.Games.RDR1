@@ -143,11 +143,9 @@ namespace CodeX.Games.RDR1.RPF6
 
             using (var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using (var bw = new BinaryWriter(fstream))
-                {
-                    parent.EnsureAllEntries();
-                    parent.WriteHeader(bw, fstream);
-                }
+                using var bw = new BinaryWriter(fstream);
+                parent.EnsureAllEntries();
+                parent.WriteHeader(bw);
             }
 
             if (entry is Rpf6DirectoryEntry dir)
@@ -155,7 +153,6 @@ namespace CodeX.Games.RDR1.RPF6
                 //A folder was renamed, make sure all its children's paths get updated
                 parent.UpdatePaths(dir);
             }
-
         }
 
         private void UpdatePaths(Rpf6DirectoryEntry dir = null)
@@ -240,14 +237,10 @@ namespace CodeX.Games.RDR1.RPF6
                 }
             }
 
-            using (var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite))
-            {
-                using (var bw = new BinaryWriter(fstream))
-                {
-                    parent.EnsureAllEntries();
-                    parent.WriteHeader(bw, fstream);
-                }
-            }
+            using var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite);
+            using var bw = new BinaryWriter(fstream);
+            parent.EnsureAllEntries();
+            parent.WriteHeader(bw);
         }
 
         private void EnsureAllEntries()
@@ -262,11 +255,8 @@ namespace CodeX.Games.RDR1.RPF6
                     Path = Path.ToLowerInvariant()
                 };
             }
-            if (Children == null)
-            {
-                Children = new List<GameArchive>();
-            }
 
+            Children ??= new List<GameArchive>();
             var newSupers = new List<GameArchiveEntry>();
             var sortSupers = (Action<GameArchiveEntry>)null;
 
@@ -305,7 +295,7 @@ namespace CodeX.Games.RDR1.RPF6
             EntryCount = (uint)AllEntries.Count;
         }
 
-        private void WriteHeader(BinaryWriter bw, Stream stream = null)
+        private void WriteHeader(BinaryWriter bw)
         {
             //Entries may have been updated, so need to do this after ensuring header space
             var tocdata = GetTOCData();
@@ -325,19 +315,20 @@ namespace CodeX.Games.RDR1.RPF6
 
         private byte[] GetTOCData()
         {
-            var msTOC = new MemoryStream();
-            var bwTOC = new BinaryWriter(msTOC);
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
 
-            foreach (Rpf6Entry entry in AllEntries)
+            foreach (Rpf6Entry entry in AllEntries.Cast<Rpf6Entry>())
             {
-                entry.Write(bwTOC);
+                entry.Write(bw);
             }
-            byte[] temp = new byte[RoundUp(msTOC.Position, 16L) - msTOC.Position];
-            bwTOC.Write(temp);
 
-            var buf = new byte[msTOC.Length];
-            msTOC.Position = 0;
-            msTOC.Read(buf, 0, buf.Length);
+            byte[] temp = new byte[RoundUp(ms.Position, 16L) - ms.Position];
+            bw.Write(temp);
+
+            var buf = new byte[ms.Length];
+            ms.Position = 0;
+            ms.Read(buf, 0, buf.Length);
 
             return buf;
         }
@@ -427,9 +418,9 @@ namespace CodeX.Games.RDR1.RPF6
             StartPos = newpos;
             if (Children != null)
             {
-                foreach (Rpf6File child in Children.Cast<Rpf6File>()) //Make sure children also get their StartPos updated !
+                foreach (var child in Children.Cast<Rpf6File>()) //Make sure children also get their StartPos updated !
                 {
-                    if (!(child.ParentFileInfo is Rpf6FileEntry cpfe))
+                    if (child.ParentFileInfo is not Rpf6FileEntry cpfe)
                         continue; //Shouldn't really happen...
 
                     var cpos = StartPos + cpfe.Offset * 8;
@@ -444,11 +435,11 @@ namespace CodeX.Games.RDR1.RPF6
             int lidx = dirpath.LastIndexOf('\\');
             if (lidx > 0)
             {
-                dirpath = dirpath.Substring(0, lidx + 1);
+                dirpath = dirpath[..(lidx + 1)];
             }
             if (!dirpath.EndsWith("\\"))
             {
-                dirpath = dirpath + "\\";
+                dirpath += "\\";
             }
             return dirpath;
         }
@@ -468,13 +459,11 @@ namespace CodeX.Games.RDR1.RPF6
         {
             try
             {
-                using (BinaryReader br = new BinaryReader(File.OpenRead(GetPhysicalFilePath())))
-                {
-                    if (f is Rpf6FileEntry rf)
-                        return ExtractFileResource(rf, br);
-                    else
-                        return null;
-                }
+                using BinaryReader br = new BinaryReader(File.OpenRead(GetPhysicalFilePath()));
+                if (f is Rpf6FileEntry rf)
+                    return ExtractFileResource(rf, br);
+                else
+                    return null;
             }
             catch
             {
@@ -482,7 +471,7 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        public byte[] ExtractFileResource(Rpf6FileEntry entry, BinaryReader br)
+        public static byte[] ExtractFileResource(Rpf6FileEntry entry, BinaryReader br)
         {
             br.BaseStream.Position = entry.GetOffset();
             byte[] data = br.ReadBytes((int)entry.Size);
@@ -545,7 +534,7 @@ namespace CodeX.Games.RDR1.RPF6
             Version = 0x52504636; //'RPF6'
             StartPos = stream.Position;
             EnsureAllEntries();
-            WriteHeader(bw, stream);
+            WriteHeader(bw);
             Size = stream.Position - StartPos;
         }
 
@@ -580,7 +569,6 @@ namespace CodeX.Games.RDR1.RPF6
         public static Rpf6FileEntry CreateFile(Rpf6DirectoryEntry dir, string name, byte[] data, bool overwrite = true)
         {
             string namel = name.ToLowerInvariant();
-
             if (namel.EndsWith(".rpf"))
             {
                 throw new Exception("Cannot import RPF!");
@@ -594,7 +582,6 @@ namespace CodeX.Games.RDR1.RPF6
                     {
                         //File already exists. delete the existing one first!
                         //This should probably be optimised to just replace the existing one...
-                        //TODO: investigate along with ExploreForm.ReplaceSelected()
                         DeleteEntry(exfile);
                         break;
                     }
@@ -677,19 +664,17 @@ namespace CodeX.Games.RDR1.RPF6
 
             using (var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using (var bw = new BinaryWriter(fstream))
-                {
-                    parent.InsertFileSpace(bw, entry);
+                using var bw = new BinaryWriter(fstream);
+                parent.InsertFileSpace(bw, entry);
 
-                    long bbeg = parent.StartPos + entry.GetOffset();
-                    long bend = bbeg + entry.GetFileSize();
+                long bbeg = parent.StartPos + entry.GetOffset();
+                long bend = bbeg + entry.GetFileSize();
 
-                    fstream.Position = bbeg;
-                    fstream.Write(data, 0, data.Length);
+                fstream.Position = bbeg;
+                fstream.Write(data, 0, data.Length);
 
-                    byte[] buffer = new byte[(int)(RoundUp(fstream.Position, 2048L) - fstream.Position)];
-                    fstream.Write(buffer, 0, buffer.Length);
-                }
+                byte[] buffer = new byte[(int)(RoundUp(fstream.Position, 2048L) - fstream.Position)];
+                fstream.Write(buffer, 0, buffer.Length);
             }
             return entry;
         }
@@ -730,11 +715,9 @@ namespace CodeX.Games.RDR1.RPF6
 
             using (var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using (var bw = new BinaryWriter(fstream))
-                {
-                    parent.EnsureAllEntries();
-                    parent.WriteHeader(bw, fstream);
-                }
+                using var bw = new BinaryWriter(fstream);
+                parent.EnsureAllEntries();
+                parent.WriteHeader(bw);
             }
             return entry;
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Text;
 using System.Drawing;
 using System.Numerics;
@@ -105,7 +104,7 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6TextureScaleForm : Rsc6BlockBaseMap //TODO: Continue researching .wsf
     {
         /*
-         * FLASH is the default tool that is used to visually represent the UI.
+         * FLASH is the default tool that is used for the UI.
          * 
          * UIComponent    : base class for all components, must be put top-level container such as UILayer and UIScene.
          * UILayer        : a generic lightweight container, all childrens are managed by this component.
