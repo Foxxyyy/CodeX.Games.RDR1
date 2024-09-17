@@ -45,6 +45,7 @@ namespace CodeX.Games.RDR1.Files
             {
                 var drawables = VisualDictionary.Drawables.Items;
                 var hashes = VisualDictionary.Hashes.Items;
+                Piece = drawables[0];
                 BoundingBox = drawables[0].BoundingBox;
 
                 for (int i = 0; i < drawables.Length; i++)

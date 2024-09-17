@@ -71,6 +71,16 @@ namespace CodeX.Games.RDR1.Files
             return data;
         }
 
+        public override void Read(MetaNodeReader reader)
+        {
+            TextureDictionary = new();
+            TextureDictionary.Read(reader);
+        }
+        public override void Write(MetaNodeWriter writer)
+        {
+            TextureDictionary?.Write(writer);
+        }
+
         public Rsc6Texture Lookup(uint hash)
         {
             Rsc6Texture tex = null;

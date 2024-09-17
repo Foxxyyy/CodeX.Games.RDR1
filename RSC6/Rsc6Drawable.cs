@@ -65,24 +65,29 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var textures = new List<Rsc6Texture>();
-            var hashes = new List<JenkHash>();
-            foreach (var item in Drawables.Items)
+            //When the file contains at least one drawable, this should be true
+            //Some #vd files are only used as textures dictionaries where there's no drawable inside...
+            if (TextureDictionary.Item == null)
             {
-                foreach (var tex in item.ShaderGroup.Item.TextureDictionary.Item.Textures.Items)
+                var textures = new List<Rsc6Texture>();
+                var hashes = new List<JenkHash>();
+                foreach (var item in Drawables.Items)
                 {
-                    textures.Add(tex);
-                    var name = tex.NameRef.Value.Replace(".dds", ""); //Hashes don't store the .dds extension
-                    hashes.Add(JenkHash.GenHash(name));
+                    foreach (var tex in item.ShaderGroup.Item.TextureDictionary.Item.Textures.Items)
+                    {
+                        textures.Add(tex);
+                        var name = tex.NameRef.Value.Replace(".dds", ""); //Hashes don't store the .dds extension
+                        hashes.Add(JenkHash.GenHash(name));
+                    }
                 }
-            }
 
-            var dict = new Rsc6TextureDictionary
-            {
-                Textures = new Rsc6PtrArr<Rsc6Texture>(textures.ToArray()),
-                Hashes = new Rsc6Arr<JenkHash>(hashes.ToArray())
-            };
-            TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
+                var dict = new Rsc6TextureDictionary
+                {
+                    Textures = new Rsc6PtrArr<Rsc6Texture>(textures.ToArray()),
+                    Hashes = new Rsc6Arr<JenkHash>(hashes.ToArray())
+                };
+                TextureDictionary = new Rsc6Ptr<Rsc6TextureDictionary>(dict);
+            }
 
             base.Write(writer);
             writer.WriteUInt32(Unknown_8h);
@@ -102,14 +107,22 @@ namespace CodeX.Games.RDR1.RSC6
         {
             LODLevel = reader.ReadEnum<Rsc6LodLevel>("LODLevel");
             Drawables = new(reader.ReadNodeArray<Rsc6Drawable>("Drawables"));
-            Hashes = new(Drawables.Items.Select(d => new JenkHash(d.Name)).ToArray());
+
+            if (Drawables.Count > 0)
+                Hashes = new(Drawables.Items.Select(d => new JenkHash(d.Name)).ToArray());
+            else
+                TextureDictionary = new(reader.ReadNode<Rsc6TextureDictionary>("TextureDictionary"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteUInt32("@version", 0);
             writer.WriteEnum("LODLevel", LODLevel);
-            writer.WriteNodeArray("Drawables", Drawables.Items);
+
+            if (Drawables.Count > 0)
+                writer.WriteNodeArray("Drawables", Drawables.Items);
+            else
+                writer.WriteNode("TextureDictionary", TextureDictionary.Item);
         }
     }
 
@@ -1682,7 +1695,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         private void CreateTexturePack(GameArchiveFileInfo e)
         {
-            var txd = WfdFile.TextureDictionary.Item; //TODO: only include embedded textures
+            var txd = WfdFile.TextureDictionary.Item;
             if (txd == null) return;
 
             var texs = txd.Textures.Items;

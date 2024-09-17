@@ -574,7 +574,9 @@ namespace CodeX.Games.RDR1.RPF6
                             if (tex == null) continue;
                             if (tex.Name.Contains(texName)) //Assign each shader texture params with the external textures found
                             {
+                                var previousTexture = Rsc6Texture.Create(mesh.Textures[i]); //Create a copy of the original low-res texture
                                 mesh.Textures[i] = tex;
+
                                 foreach (var shader in ((Rsc6Drawable)piece)?.ShaderGroup.Item?.Shaders.Items)
                                 {
                                     foreach (var param in shader?.ParametersList.Item?.Parameters)
@@ -588,6 +590,14 @@ namespace CodeX.Games.RDR1.RPF6
                                             param.Texture.Height = tex.Height;
                                             param.Texture.MipLevels = tex.MipLevels;
                                             param.Texture.Format = tex.Format;
+                                            param.Texture.Pack = tex.Pack;
+
+                                            //Keep the original low-res texture to the TexturePack so the texture editor can preview it.
+                                            if (param.Texture.Data != null)
+                                            {
+                                                piece.TexturePack.Textures.Remove(param.Texture.Name);
+                                                piece.TexturePack.Textures[param.Texture.Name] = previousTexture;
+                                            }
                                             break;
                                         }
                                     }
