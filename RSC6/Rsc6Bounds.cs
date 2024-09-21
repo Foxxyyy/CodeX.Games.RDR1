@@ -778,13 +778,13 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedGeometry : Rsc6BoundGeometry
+    [TC(typeof(EXP))] public class Rsc6BoundCurvedGeometry : Rsc6BoundGeometry //rage::phBoundCurvedGeometry
     {
         //Represents a physics bound with generalized vertex locations and polygons, including curved polygons and curved edges
 
         public override ulong BlockLength => base.BlockLength + 32;
-        public Rsc6Ptr<Rsc6BoundCurvedFace> CurvedFaces { get; set; } //m_CurvedFaces, phCurvedFace
-        public Rsc6Ptr<Rsc6BoundCurvedEdge> CurvedEdges { get; set; } //m_CurvedEdges, phCurvedEdge
+        public Rsc6RawLst<Rsc6BoundCurvedFace> CurvedFaces { get; set; } //m_CurvedFaces, phCurvedFace
+        public Rsc6RawLst<Rsc6BoundCurvedEdge> CurvedEdges { get; set; } //m_CurvedEdges, phCurvedEdge
         public Rsc6RawArr<byte> CurvedFaceMatIndexList { get; set; } //m_CurvedFaceMatIndexLists, list of index numbers into this bound's list of material ids, one for each polygon
         public int NumCurvedFaces { get; set; } //m_NumCurvedFaces
         public int NumCurvedEdges { get; set; } //m_NumCurvedEdges
@@ -799,22 +799,25 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader); //phBoundGeometry
-            CurvedFaces = reader.ReadPtr<Rsc6BoundCurvedFace>();
-            CurvedEdges = reader.ReadPtr<Rsc6BoundCurvedEdge>();
+            CurvedFaces = reader.ReadRawLstPtr<Rsc6BoundCurvedFace>();
+            CurvedEdges = reader.ReadRawLstPtr<Rsc6BoundCurvedEdge>();
             CurvedFaceMatIndexList = reader.ReadRawArrPtr<byte>();
             NumCurvedFaces = reader.ReadInt32();
             NumCurvedEdges = reader.ReadInt32();
             Unknown_14h = reader.ReadUInt32();
             Unknown_18h = reader.ReadUInt32();
             Unknown_1Ch = reader.ReadUInt32();
+
+            CurvedFaces = reader.ReadRawLstItems(CurvedFaces, (uint)NumCurvedFaces);
+            CurvedEdges = reader.ReadRawLstItems(CurvedEdges, (uint)NumCurvedEdges);
             CurvedFaceMatIndexList = reader.ReadRawArrItems(CurvedFaceMatIndexList, 6);
         }
         
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer); //phBoundGeometry
-            writer.WritePtr(CurvedFaces);
-            writer.WritePtr(CurvedEdges);
+            writer.WriteRawLst(CurvedFaces);
+            writer.WriteRawLst(CurvedEdges);
             writer.WriteRawArr(CurvedFaceMatIndexList);
             writer.WriteInt32(NumCurvedFaces);
             writer.WriteInt32(NumCurvedEdges);
@@ -826,32 +829,29 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            CurvedFaces = new(reader.ReadNode<Rsc6BoundCurvedFace>("CurvedFaces"));
-            CurvedEdges = new(reader.ReadNode<Rsc6BoundCurvedEdge>("CurvedEdges"));
+            CurvedFaces = new(reader.ReadNodeArray<Rsc6BoundCurvedFace>("CurvedFaces"));
+            CurvedEdges = new(reader.ReadNodeArray<Rsc6BoundCurvedEdge>("CurvedEdges"));
             CurvedFaceMatIndexList = new(reader.ReadByteArray("CurvedFaceMatIndexList"));
-            NumCurvedFaces = reader.ReadInt32("NumCurvedFaces");
-            NumCurvedEdges = reader.ReadInt32("NumCurvedEdges");
+            NumCurvedFaces = CurvedFaces.Items?.Length ?? 0;
+            NumCurvedEdges = CurvedEdges.Items?.Length ?? 0;
         }
 
         public override void Write(MetaNodeWriter writer)
         {
             base.Write(writer);
-            writer.WriteNode("CurvedFaces", CurvedFaces.Item);
-            writer.WriteNode("CurvedEdges", CurvedEdges.Item);
+            writer.WriteNodeArray("CurvedFaces", CurvedFaces.Items);
+            writer.WriteNodeArray("CurvedEdges", CurvedEdges.Items);
             writer.WriteByteArray("CurvedFaceMatIndexList", CurvedFaceMatIndexList.Items);
-            writer.WriteInt32("NumCurvedFaces", NumCurvedFaces);
-            writer.WriteInt32("NumCurvedEdges", NumCurvedEdges);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedFace : IRsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6BoundCurvedFace : IRsc6Block, MetaNode //phCurvedFace
     {
         //Curved face for a curved geometry bound
 
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 96;
         public bool IsPhysical => false;
-
         public Rsc6BoundPolyTriangle Polygons { get; set; }
         public Vector4 CurvatureCenter { get; set; } //m_CurvatureCenter, the center of curvature of the face
         public Vector4 UnitNormal { get; set; } //m_UnitNormal, the unit-length normal vector
@@ -876,8 +876,8 @@ namespace CodeX.Games.RDR1.RSC6
             OuterRadius = reader.ReadSingle();
             InnerRadius = reader.ReadSingle();
             MinCosine = reader.ReadSingle();
-            CurvedEdgeIndices = reader.ReadArray<ushort>(4);
-            CurvedEdgePolyIndices = reader.ReadArray<ushort>(4);
+            CurvedEdgeIndices = reader.ReadUInt16Arr(4);
+            CurvedEdgePolyIndices = reader.ReadUInt16Arr(4);
             NumCurvedEdges = reader.ReadInt32();
             FourthVertex = reader.ReadUInt16();
             IsCircularFace = reader.ReadBoolean();
@@ -895,8 +895,8 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle(OuterRadius);
             writer.WriteSingle(InnerRadius);
             writer.WriteSingle(MinCosine);
-            writer.WriteArray(CurvedEdgeIndices);
-            writer.WriteArray(CurvedEdgePolyIndices);
+            writer.WriteUInt16Array(CurvedEdgeIndices);
+            writer.WriteUInt16Array(CurvedEdgePolyIndices);
             writer.WriteInt32(NumCurvedEdges);
             writer.WriteUInt16(FourthVertex);
             writer.WriteBoolean(IsCircularFace);
@@ -916,6 +916,7 @@ namespace CodeX.Games.RDR1.RSC6
             MinCosine = reader.ReadSingle("MinCosine");
             CurvedEdgeIndices = reader.ReadUInt16Array("CurvedEdgeIndices");
             CurvedEdgePolyIndices = reader.ReadUInt16Array("CurvedEdgePolyIndices");
+            NumCurvedEdges = reader.ReadInt32("NumCurvedEdges");
             FourthVertex = reader.ReadUInt16("FourthVertex");
             IsCircularFace = reader.ReadBool("IsCircularFace");
         }
@@ -936,7 +937,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedEdge : IRsc6Block, MetaNode
+    [TC(typeof(EXP))] public class Rsc6BoundCurvedEdge : IRsc6Block, MetaNode //phCurvedEdge
     {
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 48;
@@ -953,7 +954,7 @@ namespace CodeX.Games.RDR1.RSC6
             CurvatureCenter = reader.ReadVector4();
             PlaneNormal = reader.ReadVector4();
             Radius = reader.ReadSingle();
-            VertexIndices = reader.ReadArray<int>(2);
+            VertexIndices = reader.ReadInt32Arr(2);
             Unknown_2Ch = reader.ReadUInt32();
         }
 

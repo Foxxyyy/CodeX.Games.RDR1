@@ -235,6 +235,17 @@ namespace CodeX.Games.RDR1.RSC6
             return array;
         }
 
+        public int[] ReadInt32Arr(int count)
+        {
+            var array = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                array[i] = BufferUtil.ReadInt(Data, GetDataOffset());
+                Position += 4;
+            }
+            return array;
+        }
+
         public uint[] ReadUInt32Arr(int count)
         {
             var array = new uint[count];
@@ -278,19 +289,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             var ptr = new Rsc6Ptr<T>();
             ptr.Read(this, createFunc);
-            return ptr;
-        }
-
-        public Rsc6PtrUnmanaged<T> ReadPtr<T>() where T : unmanaged
-        {
-            var ptr = new Rsc6PtrUnmanaged<T>();
-            ptr.ReadPtr(this);
-            return ptr;
-        }
-
-        public Rsc6PtrUnmanaged<T> ReadItem<T>(Rsc6PtrUnmanaged<T> ptr) where T : unmanaged
-        {
-            ptr.ReadItem(this);
             return ptr;
         }
 
@@ -729,6 +727,14 @@ namespace CodeX.Games.RDR1.RSC6
             byte[] buffer = new byte[16];
             BufferUtil.WriteVector4(buffer, 0, ref value);
             this.WriteBytes(buffer);
+        }
+
+        public void WriteUInt16Array(ushort[] arr)
+        {
+            for (int i = 0; i < arr.Length; i++)
+            {
+                this.WriteUInt16(arr[i]);
+            }
         }
 
         public void WriteInt32Array(int[] arr)
