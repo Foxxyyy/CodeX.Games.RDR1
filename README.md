@@ -1,6 +1,6 @@
-# CodeX (025)
+# CodeX (026)
 
-Implementation of Red Dead Redemption into CodeX for Nintendo Switch (and potentially PS4/PS5)
+CodeX implementation for Red Dead Redemption on Nintendo Switch (and potentially PS4/PS5)
 
 --------------------
 
@@ -9,22 +9,12 @@ More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker dis
 
 --------------------             
 
-After that, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and copy/paste them to the CodeX and CodeX Explorer folders, next to the executable.           
-Be sure this project is still WIP, including the separated engine. If you want to mod RDR1, consider using this [tool](https://github.com/Foxxyyy/Magic-RDR) instead.
+After that, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them to the CodeX/Explorer folders, next to the executable.           
 
 # Udpates
 
-I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.    
-
-Here are some of the features :
-* Import, replace, edit and create files or folders, without the need to rebuild the entire .RPF files (instant-save, unlike MagicRDR)
-* View & edit multiple .RPF files at the same time (unlike MagicRDR)
-* Search for files, as well as search for words, text, or hex within all the files.
-* A significant number of files have been researched and can be viewed.
-* Some files can be exported to XML (sometimes re-imported) : `.wvd, .wfd, .wsg, .wtd, .wbd, .wedt, .sst, .strtbl, .fonttex, etc.`      
-
-I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), it can import `WFD & WVD` files (no exports yet).                       
-Fragments can technically be imported if you rename the XML extension from `.wft.wml` to `.wfd.xml` and manually edit the file to only keep the `<Drawable>` node part.
+I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.              
+I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), for now you can import `WFD & WVD` files.                       
 
 # CodeX Contributors
 * dexyfex     
@@ -37,6 +27,7 @@ Fragments can technically be imported if you rename the XML extension from `.wft
 * Ktoś      
 * Mars (Im Foxxyyy)      
 * Neos
+* Western
 
 # Credits for this project
 * Mars (Im Foxxyyy)                              
