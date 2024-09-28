@@ -426,12 +426,6 @@ namespace CodeX.Games.RDR1.RPF6
             return vector;
         }
 
-        public static Vector4 GetXmlVector4(XmlNode node, string name)
-        {
-            var vector = Xml.GetChildVector4Attributes(node, name);
-            return new Vector4(vector.Y, vector.Z, vector.X, vector.W);
-        }
-
         ///<summary>
         ///Swaps the axis and writes a <see cref="System.Numerics.Vector3" /> at the given offset in a buffer
         ///</summary>

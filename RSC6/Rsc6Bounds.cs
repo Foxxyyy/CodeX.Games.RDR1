@@ -1914,7 +1914,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(MetaNodeWriter writer)
         {
             base.Write(writer);
-            writer.WriteNodeArray("Childrens", Childrens.Items);
+            if (Childrens.Items != null && Childrens.Items[0] != null) writer.WriteNodeArray("Childrens", Childrens.Items);
             writer.WriteMatrix4x4Array("Matrices", CurrentMatrices.Items);
             writer.WriteNodeArray("OwnedTypeAndIncludeFlags", TypeFlags.Items);
             writer.WriteBool("ContainsBVH", ContainsBVH);

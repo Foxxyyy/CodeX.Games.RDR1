@@ -14,6 +14,8 @@ using CodeX.Games.RDR1.RSC6;
 using CodeX.Games.RDR1.Files;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -701,31 +703,24 @@ namespace CodeX.Games.RDR1.RPF6
                         {
                             foreach (var texture in mesh.Textures)
                             {
-                                if (texture == null)
-                                    continue;
-                                if (texture.Height != 0 || string.IsNullOrEmpty(texture.Name))
-                                    continue;
-                                if (Textures.Find(item => item.Name == texture.Name) != null)
-                                    continue;
+                                if (texture == null) continue;
+                                if (texture.Height != 0 || string.IsNullOrEmpty(texture.Name)) continue;
+                                if (Textures.Find(item => item.Name == texture.Name) != null) continue;
 
                                 string desiredWtd = texture.Name.Remove(texture.Name.LastIndexOf(".")).ToLower();
                                 var wtdFiles = dfm.StreamEntries[Rpf6FileExt.wtd_wtx];
 
                                 foreach (var wtd in wtdFiles)
                                 {
-                                    if (wtd.Value.NameLower.Contains("_med") || wtd.Value.NameLower.Contains("_low"))
-                                        continue;
-                                    if (!wtd.Value.NameLower.StartsWith(desiredWtd))
-                                        continue;
+                                    if (wtd.Value.NameLower.Contains("_med") || wtd.Value.NameLower.Contains("_low")) continue;
+                                    if (!wtd.Value.NameLower.StartsWith(desiredWtd)) continue;
 
                                     var r = LoadTexturePack(wtd.Value);
-                                    if (r == null)
-                                        continue;
+                                    if (r == null) continue;
 
                                     foreach (var tex in r.Textures.Values)
                                     {
-                                        if (tex == null)
-                                            continue;
+                                        if (tex == null) continue;
                                         Textures.Add((Rsc6Texture)tex);
                                     }
                                 }
@@ -1541,9 +1536,9 @@ namespace CodeX.Games.RDR1.RPF6
     public class Rpf6Store
     {
         public Rpf6FileManager FileMan;
-        public Dictionary<string, Rpf6StoreItem> BoundsDict;
-        public Dictionary<string, Rpf6StoreItem> TerritoryBoundsDict;
-        public Dictionary<string, Rpf6StoreItem> TilesDict;
+        public ConcurrentDictionary<string, Rpf6StoreItem> BoundsDict;
+        public ConcurrentDictionary<string, Rpf6StoreItem> TerritoryBoundsDict;
+        public ConcurrentDictionary<string, Rpf6StoreItem> TilesDict;
 
         public Rpf6Store(Rpf6FileManager fileman)
         {
@@ -1552,18 +1547,18 @@ namespace CodeX.Games.RDR1.RPF6
 
         public void SaveStartupCache(BinaryWriter bw)
         {
-            var bounds = new List<Rpf6StoreItem>();
-            var territoryBounds = new List<Rpf6StoreItem>();
-            var tiles = new List<Rpf6StoreItem>();
+            var bounds = new ConcurrentBag<Rpf6StoreItem>();
+            var territoryBounds = new ConcurrentBag<Rpf6StoreItem>();
+            var tiles = new ConcurrentBag<Rpf6StoreItem>();
             var wbds = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wbd_wcdt];
             var wtbs = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wtb];
             var wvds = FileMan.DataFileMgr.StreamEntries[Rpf6FileExt.wvd];
 
             Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Bounds dictionary");
-            foreach (var kv in wbds)
+            Parallel.ForEach(wbds, kv =>
             {
                 var value = kv.Value;
-                if (value == null || !value.Name.EndsWith(".wbd") || value.NameLower.Contains("props")) continue;
+                if (value == null || !value.Name.EndsWith(".wbd") || value.NameLower.Contains("props")) return;
                 var pack = FileMan.LoadPiecePack(value);
 
                 if (pack != null)
@@ -1577,13 +1572,13 @@ namespace CodeX.Games.RDR1.RPF6
                     };
                     bounds.Add(item);
                 }
-            }
+            });
 
             Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Territory bounds");
-            foreach (var kv in wtbs)
+            Parallel.ForEach(wtbs, kv =>
             {
                 var value = kv.Value;
-                if (value == null) continue;
+                if (value == null) return;
                 var pack = FileMan.LoadPiecePack(value);
 
                 if (pack != null)
@@ -1597,13 +1592,13 @@ namespace CodeX.Games.RDR1.RPF6
                     };
                     territoryBounds.Add(item);
                 }
-            }
+            });
 
             Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache - Visual dictionary");
-            foreach (var kv in wvds)
+            Parallel.ForEach(wvds, kv =>
             {
                 var value = kv.Value;
-                if (value == null || !value.NameLower.StartsWith("tile_") && !RDR1Map.ShouldSkipVisualDict(value)) continue;
+                if (value == null || (!value.NameLower.StartsWith("tile_") && RDR1Map.ShouldSkipVisualDict(value))) return;
                 var pack = FileMan.LoadPiecePack(value);
 
                 if (pack != null)
@@ -1618,36 +1613,24 @@ namespace CodeX.Games.RDR1.RPF6
                     };
                     tiles.Add(item);
                 }
-            }
+            });
 
-            SerializeItems(bw, bounds);
-            SerializeItems(bw, territoryBounds);
-            SerializeItems(bw, tiles);
+            // Serialize the items
+            SerializeItems(bw, bounds.ToList());
+            SerializeItems(bw, territoryBounds.ToList());
+            SerializeItems(bw, tiles.ToList());
 
-            BoundsDict = new Dictionary<string, Rpf6StoreItem>();
-            foreach (var item in bounds)
-            {
-                BoundsDict[item.Path] = item;
-            }
-
-            TerritoryBoundsDict = new Dictionary<string, Rpf6StoreItem>();
-            foreach (var item in territoryBounds)
-            {
-                TerritoryBoundsDict[item.Path] = item;
-            }
-
-            TilesDict = new Dictionary<string, Rpf6StoreItem>();
-            foreach (var item in tiles)
-            {
-                TilesDict[item.Path] = item;
-            }
+            // Populate dictionaries (using ConcurrentDictionary to ensure thread-safety)
+            BoundsDict = new ConcurrentDictionary<string, Rpf6StoreItem>(bounds.Select(item => new KeyValuePair<string, Rpf6StoreItem>(item.Path, item)));
+            TerritoryBoundsDict = new ConcurrentDictionary<string, Rpf6StoreItem>(territoryBounds.Select(item => new KeyValuePair<string, Rpf6StoreItem>(item.Path, item)));
+            TilesDict = new ConcurrentDictionary<string, Rpf6StoreItem>(tiles.Select(item => new KeyValuePair<string, Rpf6StoreItem>(item.Path, item)));
         }
 
         public void LoadStartupCache(BinaryReader br)
         {
-            BoundsDict = new Dictionary<string, Rpf6StoreItem>();
-            TerritoryBoundsDict = new Dictionary<string, Rpf6StoreItem>();
-            TilesDict = new Dictionary<string, Rpf6StoreItem>();
+            BoundsDict = new ConcurrentDictionary<string, Rpf6StoreItem>();
+            TerritoryBoundsDict = new ConcurrentDictionary<string, Rpf6StoreItem>();
+            TilesDict = new ConcurrentDictionary<string, Rpf6StoreItem>();
 
             DeserializeItems(br, BoundsDict);
             DeserializeItems(br, TerritoryBoundsDict);
@@ -1670,7 +1653,7 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        public static void DeserializeItems(BinaryReader br, Dictionary<string, Rpf6StoreItem> dict)
+        public static void DeserializeItems(BinaryReader br, ConcurrentDictionary<string, Rpf6StoreItem> dict)
         {
             var itemCount = br.ReadInt32();
             for (int i = 0; i < itemCount; i++)

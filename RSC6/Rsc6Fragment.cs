@@ -304,7 +304,22 @@ namespace CodeX.Games.RDR1.RSC6
             Bounds = new(reader.ReadNode("Bounds", Rsc6Bounds.Create));
             var archetype = reader.ReadNode<Rsc6FragArchetypeDamp>("Archetype1");
 
-            void applySkel(Rsc6FragPhysChild[] arr)
+            void applySkel(Rsc6Skeleton skel)
+            {
+                if (skel == null) return;
+                var skelBones = skel.Bones.Items;
+
+                if (skelBones != null)
+                {
+                    for (int i = 0; i < skelBones.Length; i++)
+                    {
+                        var bone = skelBones[i];
+                        bone.Index = i;
+                        bone.SkeletonRef = skel;
+                    }
+                }
+            }
+            void applySkelData(Rsc6FragPhysChild[] arr)
             {
                 if (arr == null) return;
                 var skel = Drawable.Item?.Drawable.SkeletonRef.Item;
@@ -320,18 +335,21 @@ namespace CodeX.Games.RDR1.RSC6
                 if (arr == null) return;
                 var bounds = Bounds.Item as Rsc6BoundComposite;
 
-                for (int i = 0; i < arr.Length; i++)
+                if (bounds.Childrens.Items != null) //For clouds I guess
                 {
-                    var child = arr[i];
-                    var bound = bounds.Childrens[i];
-                    if (child == null) continue;
-                    child.UndamagedEntity.Item.Bound = new(bound);
+                    for (int i = 0; i < arr.Length; i++)
+                    {
+                        var child = arr[i];
+                        var bound = bounds.Childrens[i];
+                        if (child == null) continue;
+                        child.UndamagedEntity.Item.Bound = new(bound);
+                    }
                 }
             }
 
             if (Childrens.Items != null)
             {
-                applySkel(Childrens.Items);
+                applySkelData(Childrens.Items);
                 applyBounds(Childrens.Items); //Assuming the XML has all the bounds nodes set up in the right order.
             }
 
@@ -419,6 +437,8 @@ namespace CodeX.Games.RDR1.RSC6
             InnerSorting = reader.ReadByte("InnerSorting");
 
             Archetype1 = new(archetype);
+            applySkel(SkeletonA.Item);
+            applySkel(SkeletonB.Item);
             WfdFile.TextureDictionary = Textures;
 
             VariableMeshCount = (byte)(VariableMeshArray.UsedIndices?.Length ?? 0); //Unsure
@@ -652,7 +672,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NumExtraBounds { get; set; } //m_NumExtraBounds
         public bool LoadSkeleton { get; set; } = true; //m_LoadSkeleton
         public byte Pad { get; set; } //m_Pad0
-        public Rsc6Ptr<Rsc6FragDrawableLocator> Locators { get; set; } //m_Locators, rage::fragDrawable::LocatorData
+        public Rsc6Ptr<Rsc6FragDrawableLocatorDict> Locators { get; set; } //m_Locators, rage::fragDrawable::LocatorData
         public int NumLocatorNodes { get; set; } //m_NumNodes
         public uint NodePool { get; set; } //m_NodePool
         public Rsc6Str SkeletonTypeName { get; set; } //m_SkeletonTypeName, always NULL
@@ -671,7 +691,7 @@ namespace CodeX.Games.RDR1.RSC6
             NumExtraBounds = reader.ReadUInt16();
             LoadSkeleton = reader.ReadBoolean();
             Pad = reader.ReadByte();
-            Locators = reader.ReadPtr<Rsc6FragDrawableLocator>();
+            Locators = reader.ReadPtr<Rsc6FragDrawableLocatorDict>();
             NumLocatorNodes = reader.ReadInt32();
             NodePool = reader.ReadUInt32();
             SkeletonTypeName = reader.ReadStr();
@@ -708,12 +728,28 @@ namespace CodeX.Games.RDR1.RSC6
             ExtraBounds = new(reader.ReadUInt32Array("ExtraBounds"));
             ExtraBoundsMatrices = new(ToXYZ(reader.ReadMatrix4x4Array("ExtraBoundsMatrices"), true));
             LoadSkeleton = reader.ReadBool("LoadSkeleton");
-            Locators = new(reader.ReadNode<Rsc6FragDrawableLocator>("Locators"));
-            NumLocatorNodes = reader.ReadInt32("NumLocatorNodes");
+            Locators = new(reader.ReadNode<Rsc6FragDrawableLocatorDict>("Locators"));
             NodePool = reader.ReadUInt32("NodePool");
             SkeletonTypeName = new(reader.ReadString("SkeletonTypeName"));
             Animations = new(reader.ReadNodeArray<Rsc6FragAnimation>("Animations"));
             NumExtraBounds = (ushort)(ExtraBoundsMatrices.Items?.Length ?? 0);
+
+            if (Locators.Item != null)
+            {
+                var kv = GetAllLocators();
+                var locators = kv.Values.ToArray();
+
+                for (int i = 0; i < locators.Length; i++)
+                {
+                    var locator = locators[i];
+                    if (locator == null) continue;
+                    if (string.IsNullOrEmpty(locator.ParentName)) continue;
+
+                    var parent = kv[locator.ParentName];
+                    locator.ParentSet = parent;
+                }
+                NumLocatorNodes = kv.Count;
+            }
         }
 
         public void Write(MetaNodeWriter writer)
@@ -724,10 +760,32 @@ namespace CodeX.Games.RDR1.RSC6
             if (ExtraBoundsMatrices.Items != null) writer.WriteMatrix4x4Array("ExtraBoundsMatrices", ExtraBoundsMatrices.Items);
             writer.WriteBool("LoadSkeleton", LoadSkeleton);
             if (Locators.Item != null) writer.WriteNode("Locators", Locators.Item);
-            writer.WriteInt32("NumLocatorNodes", NumLocatorNodes);
             writer.WriteUInt32("NodePool", NodePool);
             if (SkeletonTypeName.Value != null) writer.WriteString("SkeletonTypeName", SkeletonTypeName.Value);
             if (Animations.Items != null) writer.WriteNodeArray("Animations", Animations.Items);
+        }
+
+        public Dictionary<string, Rsc6FragDrawableLocatorDict> GetAllLocators() //Recursively traverse the tree and adds locators to a dictionary
+        {
+            var childDict = new Dictionary<string, Rsc6FragDrawableLocatorDict>();
+            void TraverseTree(Rsc6FragDrawableLocatorDict currentNode)
+            {
+                if (currentNode == null) return;
+                childDict[currentNode.Key.ToString()] = currentNode;
+
+                if (currentNode.ChildLeft.Item != null)
+                    TraverseTree(currentNode.ChildLeft.Item);
+                if (currentNode.ChildRight.Item != null)
+                    TraverseTree(currentNode.ChildRight.Item);
+            }
+            TraverseTree(Locators.Item);
+            return childDict;
+        }
+
+        public Rsc6FragDrawableLocatorDict GetLocatorByKey(string key) //fragDrawable::GetLocator
+        {
+            var locators = GetAllLocators();
+            return locators[key];
         }
     }
 
@@ -797,6 +855,54 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle("PhaseLastFrame", PhaseLastFrame);
             writer.WriteBool("AutoPlay", AutoPlay);
             writer.WriteBool("AffectsOnlyRootNodes", AffectsOnlyRootNodes);
+        }
+    }
+
+    public class Rsc6FragDrawableLocatorDict : Rsc6FragDrawableLocator, MetaNode //rage::atBinTreeBase<rage::ConstString,rage::fragDrawable::Locator>
+    {
+        public override ulong BlockLength => base.BlockLength + 16;
+        public Rsc6Str Key { get; set; } //m_Key
+        public Rsc6Ptr<Rsc6FragDrawableLocatorDict> Parent { get; set; } //m_Parent
+        public Rsc6Ptr<Rsc6FragDrawableLocatorDict> ChildLeft { get; set; } //m_ChildLeft
+        public Rsc6Ptr<Rsc6FragDrawableLocatorDict> ChildRight { get; set; } //m_ChildRight
+
+        public string ParentName { get; set; } //For editing purpose
+        public Rsc6FragDrawableLocatorDict ParentSet { get; set; } //For editing purpose
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Key = reader.ReadStr();
+            Parent = reader.ReadPtr<Rsc6FragDrawableLocatorDict>();
+            ChildLeft = reader.ReadPtr<Rsc6FragDrawableLocatorDict>();
+            ChildRight = reader.ReadPtr<Rsc6FragDrawableLocatorDict>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteStr(Key);
+            writer.WritePtrEmbed(ParentSet, ParentSet, 0);
+            writer.WritePtr(ChildLeft);
+            writer.WritePtr(ChildRight);
+        }
+
+        public new void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            Key = new(reader.ReadString("Key"));
+            ParentName = reader.ReadString("Parent");
+            ChildLeft = new(reader.ReadNode<Rsc6FragDrawableLocatorDict>("ChildLeft"));
+            ChildRight = new(reader.ReadNode<Rsc6FragDrawableLocatorDict>("ChildRight"));
+        }
+
+        public new void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteString("Key", Key.ToString());
+            if (Parent.Item != null) writer.WriteString("Parent", Parent.Item.Key.ToString());
+            writer.WriteNode("ChildLeft", ChildLeft.Item);
+            writer.WriteNode("ChildRight", ChildRight.Item);
         }
     }
 
@@ -2283,7 +2389,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBytes(padding);
             writer.WriteInt32(MaterialIndex);
             writer.WritePtrArr(Targets);
-            writer.WritePtrEmbed(BlendShape, 0, 0);
+            writer.WritePtrEmbed(BlendShape, BlendShape, 0);
             writer.WritePtrArr(Offsets);
             writer.WritePtr(Fvf);
             writer.WriteInt32(VertexCount);

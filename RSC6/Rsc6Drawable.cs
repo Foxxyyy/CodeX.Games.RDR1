@@ -1620,7 +1620,6 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                 }
             }
-
         }
 
         public void SetSkeleton(Rsc6SkeletonData skel)
@@ -1761,10 +1760,10 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
 
-        public uint Unknown_0h { get; set; } //Always 0
+        public uint Flags { get; set; } //m_Flags, always 0
         public Rsc6Ptr<Rsc6SkeletonData> Skeleton { get; set; } //m_SkeletonData, same as Fragment.Drawable.SkeletonRef
         public Rsc6RawArr<Matrix4x4> ParentMtx { get; set; } //m_ParentMtx, always NULL
-        public Rsc6RawArr<Matrix4x4> Locals { get; set; } //m_Locals, local matrices array
+        public Rsc6RawLst<Rsc6Bone> Bones { get; set; } //m_Bones
         public int NumBones { get; set; } //m_NumBones
         public ushort UpdateBufferIdx { get; set; } //m_UpdateBufferIdx
         public ushort RenderBufferIdx { get; set; } //m_RenderBufferIdx
@@ -1774,10 +1773,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(Rsc6DataReader reader)
         {
-            Unknown_0h = reader.ReadUInt32();
+            Flags = reader.ReadUInt32();
             Skeleton = reader.ReadPtr<Rsc6SkeletonData>();
             ParentMtx = reader.ReadRawArrPtr<Matrix4x4>();
-            Locals = reader.ReadRawArrPtr<Matrix4x4>();
+            Bones = reader.ReadRawLstPtr<Rsc6Bone>();
             NumBones = reader.ReadInt32();
             UpdateBufferIdx = reader.ReadUInt16();
             RenderBufferIdx = reader.ReadUInt16();
@@ -1786,16 +1785,18 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_24h = reader.ReadUInt32();
 
             ParentMtx = reader.ReadRawArrItems(ParentMtx, (uint)NumBones);
-            Locals = reader.ReadRawArrItems(Locals, (uint)NumBones);
+            Bones = reader.ReadRawLstItems(Bones, (uint)NumBones);
         }
 
         public void Write(Rsc6DataWriter writer)
         {
             var skel = writer.BlockList.OfType<Rsc6SkeletonData>().FirstOrDefault();
-            writer.WriteUInt32(Unknown_0h);
+            NumBones = skel?.BoneCount ?? 0;
+
+            writer.WriteUInt32(Flags);
             writer.WritePtrEmbed(skel, skel, 0);
             writer.WriteRawArr(ParentMtx);
-            writer.WriteRawArr(Locals);
+            writer.WriteRawLst(Bones);
             writer.WriteInt32(NumBones);
             writer.WriteUInt16(UpdateBufferIdx);
             writer.WriteUInt16(RenderBufferIdx);
@@ -1806,21 +1807,65 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            ParentMtx = new(reader.ReadMatrix4x4Array("ParentMtx"));
-            Locals = new(reader.ReadMatrix4x4Array("Locals"));
+            ParentMtx = new(Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4Array("ParentMtx")));
+            Bones = new(reader.ReadNodeArray<Rsc6Bone>("Bones"));
             UpdateBufferIdx = reader.ReadUInt16("UpdateBufferIdx");
             RenderBufferIdx = reader.ReadUInt16("RenderBufferIdx");
             GlobalMtxBuffers = new(reader.ReadNodeArray<Rsc6MatrixBuffer>("GlobalMtxBuffers"));
-            NumBones = ParentMtx.Items?.Length ?? 0;
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteMatrix4x4Array("ParentMtx", ParentMtx.Items);
-            writer.WriteMatrix4x4Array("Locals", Locals.Items);
             writer.WriteUInt16("UpdateBufferIdx", UpdateBufferIdx);
             writer.WriteUInt16("RenderBufferIdx", RenderBufferIdx);
+            writer.WriteMatrix4x4Array("ParentMtx", ParentMtx.Items);
+            writer.WriteNodeArray("Bones", Bones.Items);
             writer.WriteNodeArray("GlobalMtxBuffers", GlobalMtxBuffers.Items);
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6Bone : IRsc6Block, MetaNode //rage::crBone
+    {
+        public ulong BlockLength => 80;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+
+        public Matrix4x4 LocalMtx { get; set; } //m_LocalMtx
+        public Rsc6Ptr<Rsc6Skeleton> Skeleton { get; set; } //m_Skeleton
+        public int Index { get; set; } //m_Index
+        public uint Dofs { get; set; } //m_Dofs, bone degree-of-freedom flags
+        public uint Padding { get; set; } //m_Padding
+
+        public Rsc6Skeleton SkeletonRef { get; set; } //For writing purposes
+
+        public void Read(Rsc6DataReader reader)
+        {
+            LocalMtx = reader.ReadMatrix4x4();
+            Skeleton = reader.ReadPtr<Rsc6Skeleton>();
+            Index = reader.ReadInt32();
+            Dofs = reader.ReadUInt32();
+            Padding = reader.ReadUInt32();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteMatrix4x4(LocalMtx);
+            writer.WritePtrEmbed(SkeletonRef, SkeletonRef, 0);
+            writer.WriteInt32(Index);
+            writer.WriteUInt32(Dofs);
+            writer.WriteUInt32(Padding);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            LocalMtx = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("LocalMtx"));
+            Dofs = reader.ReadUInt32("Dofs");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteMatrix4x4("LocalMtx", LocalMtx);
+            writer.WriteUInt32("Dofs", Dofs);
         }
     }
 
@@ -2612,7 +2657,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            MtxBuffers = new(reader.ReadMatrix4x4Array("MtxBuffers"));
+            MtxBuffers = new(Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4Array("MtxBuffers")));
         }
 
         public void Write(MetaNodeWriter writer)
