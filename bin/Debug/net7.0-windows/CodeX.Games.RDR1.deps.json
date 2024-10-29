@@ -823,7 +823,10 @@
           "SharpDX.XInput": "4.2.0"
         },
         "runtime": {
-          "CodeX.Core.dll": {}
+          "CodeX.Core.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }

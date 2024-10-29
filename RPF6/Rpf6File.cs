@@ -7,6 +7,9 @@ using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
 using System.Linq;
+using ICSharpCode.SharpZipLib.Core;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -18,7 +21,7 @@ namespace CodeX.Games.RDR1.RPF6
         public uint Version { get; set; } //RPF Version - 0x52504636 (910577746)
         public uint EntryCount { get; set; } //Number of entries
         public uint TOCSize { get; set; } //Size of table of content (EntryCount * 20)
-        public uint StringTableOffset { get; set; } //For the Nintendo Switch it is actually used but is not necessary
+        public uint StringTableOffset { get; set; } //Used with the Nintendo Switch/PS4/PC versions but not necessary
         public int EncFlag { get; set; } //Encryption flag
         public bool Encrypted
         {

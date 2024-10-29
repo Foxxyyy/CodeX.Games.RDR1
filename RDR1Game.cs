@@ -20,12 +20,12 @@ namespace CodeX.Games.RDR1
         public override FileTypeIcon Icon => FileTypeIcon.Cowboy;
         public override string HashAlgorithm => "Jenkins";
 
-        public static Setting GameFolderSetting = Settings.Register("RDR1.GameFolder", SettingType.String, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "yuzu", "yuzu-windows-msvc"));
+        public static Setting GameFolderSetting = Settings.Register("RDR1.GameFolder", SettingType.String, "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Red Dead Redemption");
         public static Setting GameEnabledSetting = Settings.Register("RDR1.Enabled", SettingType.Bool, true);
 
         public override bool CheckGameFolder(string folder)
         {
-            return Directory.Exists(folder);
+            return Directory.Exists(folder) && File.Exists(folder + "\\rdr.exe");
         }
 
         public override bool AutoDetectGameFolder(out string source)

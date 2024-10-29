@@ -11,6 +11,7 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using System.Runtime.Intrinsics.X86;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -36,7 +37,7 @@ namespace CodeX.Games.RDR1.RSC6
             MinElevation = reader.ReadSingle();
             ElevationRange = reader.ReadSingle();
             ScanData = reader.ReadArr<Rsc6ScanData>();
-        } //14802140_bnd
+        }
 
         public override void Write(Rsc6DataWriter writer)
         {
@@ -473,7 +474,7 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6BoundsType.Surface => new Rsc6BoundSurface(),
                 Rsc6BoundsType.Composite => new Rsc6BoundComposite(),
                 Rsc6BoundsType.CurvedGeometry => new Rsc6BoundCurvedGeometry(),
-                _ => throw new Exception("Unknown bounds type"),
+                _ => throw new Exception("Unknown bounds type")
             };
         }
 
@@ -712,7 +713,11 @@ namespace CodeX.Games.RDR1.RSC6
         public new byte Unknown_2Ch { get; set; } //pad[3]
         public byte Unknown_2Dh { get; set; } //pad[3]
 
-        public Rsc6BoundGeometry(Rsc6BoundsType type = Rsc6BoundsType.Geometry) : base(type)
+        public Rsc6BoundGeometry() : base(Rsc6BoundsType.Geometry)
+        {
+        }
+
+        public Rsc6BoundGeometry(Rsc6BoundsType type) : base(type)
         {
         }
 
@@ -1012,7 +1017,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6BoundMaterial[] Materials { get; set; }
         public byte[] PolygonMaterialIndices { get; set; }
 
-        public Rsc6BoundPolyhedron(Rsc6BoundsType type)
+        public Rsc6BoundPolyhedron(Rsc6BoundsType type) : base(type)
         {
         }
 
@@ -1131,7 +1136,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             PartSize = BoxMax - BoxMin;
             ComputeMass(ColliderType.Box, PartSize, 1.0f);
-            ComputeBodyInertia();
+            ComputeBasicBodyInertia(ColliderType.Box, PartSize);
         }
 
         public void EnsurePolygons()
@@ -2019,16 +2024,15 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public static List<Rsc6BoundsMaterialData> Materials;
 
-        public static void Init(Rpf6FileManager fman)
+        public static Rsc6BoundsMaterialData[] GetMaterials(Rpf6FileManager fman)
         {
-            if (fman.AllArchives.Count == 0)
+            if (Materials != null)
             {
-                return;
+                return Materials.ToArray();
             }
 
-            Core.Engine.Console.Write("Rsc6BoundsMaterialTypes", "Initialising bounds materials...");
             var list = new List<Rsc6BoundsMaterialData>();
-            var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "tune_switch.rpf");
+            var rpf = fman.AllArchives.FirstOrDefault(e => e.Name.Contains("tune"));
             var rootMatList = rpf.AllEntries.FirstOrDefault(e => e.Name == "materials.list" && e.Parent.Parent.Name == "tune"); //There's two materials.list with same parents...
 
             if (rootMatList != null)
@@ -2043,10 +2047,12 @@ namespace CodeX.Games.RDR1.RSC6
                     AddMaterialsDat(txt, file.Name, list);
                 }
             }
+
             Materials = list;
+            return list.ToArray();
         }
 
-        private static List<string> ParseMaterialList(string txt, Rpf6FileManager fman, GameArchive rpf)
+        public static List<string> ParseMaterialList(string txt, Rpf6FileManager fman, GameArchive rpf)
         {
             var list = new List<string>();
             var lines = txt.Split('\n');
@@ -2068,7 +2074,7 @@ namespace CodeX.Games.RDR1.RSC6
             return list.Distinct().ToList(); //Remove duplicated materials
         }
 
-        private static List<Rpf6FileEntry> GetMaterialFilesFromList(List<string> list, GameArchive rpf)
+        public static List<Rpf6FileEntry> GetMaterialFilesFromList(List<string> list, GameArchive rpf)
         {
             var files = new List<Rpf6FileEntry>();
             foreach (var item in list)
@@ -2082,7 +2088,7 @@ namespace CodeX.Games.RDR1.RSC6
             return files;
         }
 
-        private static void AddMaterialsDat(string txt, string filename, List<Rsc6BoundsMaterialData> list)
+        public static void AddMaterialsDat(string txt, string filename, List<Rsc6BoundsMaterialData> list)
         {
             if (txt == null) return;
             string[] lines = txt.Split('\n');

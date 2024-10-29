@@ -39,6 +39,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="CodeX.Games.RDR1.mapstates.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Codex.Games.RDR1.strings.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

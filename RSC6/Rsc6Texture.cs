@@ -101,166 +101,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureScaleForm : Rsc6BlockBaseMap //TODO: Continue researching .wsf
-    {
-        /*
-         * FLASH is the default tool that is used for the UI.
-         * 
-         * UIComponent    : base class for all components, must be put top-level container such as UILayer and UIScene.
-         * UILayer        : a generic lightweight container, all childrens are managed by this component.
-         * UIScene        : a container that groups any number of components except other UIScenes.
-         * UIPanel        : a generic lightweight container that groups any number of components.
-         * UIScrollBar    : a scrollbar to determine the contents of the viewing area.
-         * UILabel        : a display area for a short text string.
-         * UIButton       : implementation of a push button.
-         * UITab          : implementation of a push button.
-         * UIIcon         : represents single images.
-         * UIList         : a component that allows the user to select one or more objects from a list, supports scrolling.
-         * UIProgressBar  : a component that communicates the progress of some work by displaying its percentage of completion.
-         * UISpinner      : a single line input field that lets the user select a number or an object value from an ordered sequence.
-         * UIContext      : an interface to an external tool that artists use to represent/decorate these UI components. Each component has its own context interface.
-         * UIFactory      : a class to map inputs to the ones that the UI uses.
-         * UIInput        : a class to manages the creation of UI elements.
-         * UINavigator    : a class to manages the navigation/transitions between various UI components.
-         * UIManager      : a class used for various subsystem that manages a UI system.
-         * 
-         * Visibility dictates if a state is shown or hidden.
-         * Ideally the textures/meshes associated with the state should not be rendered at all.
-         * 
-         * Enabled/Disabled describes how input, events, and transitions are processed on a state.
-         * Input and events are processed if this flag is true, otherwise input and events are not processed.
-         * A disabled state should never be transitioned to.
-         * 
-         * Focused describes if a component is selected or not.
-         * All states for a focused component that are on a path from that focused component to its root component should also be focused.
-         * The only way for a component to receive input is if it is focused.
-         * 
-         * Active describes if a component is running.
-         * Siblings and children of this active component may or may not be active.
-         */
-
-        public override ulong BlockLength => 32;
-        public override uint VFT { get; set; }
-        public uint Stage { get; set; } //m_Stage
-        public bool Updating { get; set; } //m_Updating
-        public bool IsFileOwner { get; set; } //m_IsFileOwner
-        public ushort Unknown_C2h { get; set; } //Always 0?
-        public uint[] Unknown_C4h { get; set; } //rage::swfACTIONFUNC, array of 40 uint's
-        public int NumFunctions { get; set; } //m_numFunctions
-        public Rsc6Str Name { get; set; } //m_Name
-        public ushort NameLength1 { get; set; } //m_Length
-        public ushort NameLength2 { get; set; } //m_Length + 1
-
-        public Rsc6Ptr<Rsc6BlockMap> SwfObjectPointer { get; set; }
-        public Rsc6Ptr<Rsc6BlockMap> ItemArrayPointer { get; set; }
-        public ushort ItemCount { get; set; }
-        public List<Rsc6Ptr<Rsc6ScaleformType>> TexturesType = new List<Rsc6Ptr<Rsc6ScaleformType>>();
-        public List<Rsc6Texture> Textures = new List<Rsc6Texture>();
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
-
-            reader.Position = Rpf6Crypto.VIRTUAL_BASE + 0x2C;
-            SwfObjectPointer = reader.ReadPtr<Rsc6BlockMap>();
-
-            reader.Position = SwfObjectPointer.Position + 0x18;
-            ItemArrayPointer = reader.ReadPtr<Rsc6BlockMap>();
-
-            reader.Position = SwfObjectPointer.Position + 0x32;
-            ItemCount = reader.ReadUInt16();
-
-            reader.Position = ItemArrayPointer.Position;
-            for (int i = 0; i < ItemCount; i++)
-            {
-                var t = reader.ReadPtr<Rsc6ScaleformType>();
-                if (t.Item != null && t.Item.TexturesPointers.Count > 0)
-                    TexturesType.Add(t);
-            }
-
-            for (int i = 0; i < TexturesType.Count; i++)
-            {
-                if (TexturesType[i].Item.TexturesPointers.Count <= 0)
-                    continue;
-
-                for (int c = 0; c < TexturesType[i].Item.TexturesPointers.Count; c++)
-                {
-                    reader.Position = TexturesType[i].Item.TexturesPointers[c].Position;
-
-                    var tex = new Rsc6Texture();
-                    tex.Read(reader);
-                    Textures.Add(tex);
-                }
-            }
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class Rsc6ScaleformType : Rsc6BlockBase
-    {
-        public override ulong BlockLength => 32;
-        public uint VFT { get; set; }
-        public uint Unknown_4h { get; set; }
-        public TextureType Type { get; set; }
-        public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers { get; set; } = new();
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            VFT = reader.ReadUInt32();
-            Unknown_4h = reader.ReadUInt32();
-            Type = (TextureType)reader.ReadByte();
-
-            if (Type == TextureType.FONT)
-            {
-                ulong offset = reader.Position + 0x9B;
-                for (int i = 0; i < 3; i++)
-                {
-                    reader.Position = offset + (ulong)(i * 8);
-                    var dwObjectOffset = reader.ReadPtr<Rsc6BlockMap>();
-
-                    if (dwObjectOffset.Position <= 0)
-                        continue;
-
-                    reader.Position = dwObjectOffset.Position;
-                    var grcTextureStructureOffset = reader.ReadPtr<Rsc6BlockMap>();
-
-                    if (grcTextureStructureOffset.Position <= 0)
-                        continue;
-
-                    reader.Position = dwObjectOffset.Position + 0x14;
-                    ushort fontCount = reader.ReadUInt16();
-
-                    for (int c = 0; c < fontCount; c++)
-                    {
-                        reader.Position = grcTextureStructureOffset.Position + (ulong)(c * 4);
-                        TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
-                    }
-                }
-            }
-            else if (Type == TextureType.BITMAP)
-            {
-                reader.Position += 0x3; //Those 3 bytes are 'pad'
-                TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
-            }
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            throw new NotImplementedException();
-        }
-
-        public enum TextureType
-        {
-            BITMAP = 4,
-            FONT = 5
-        }
-    }
-
     public class Rsc6Texture : Rsc6TextureBase
     {
         public override ulong BlockLength => base.BlockLength + 52;
@@ -521,6 +361,310 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
+    public class Rsc6TextureBase : Texture, IRsc6Block
+    {
+        public virtual ulong BlockLength => 32;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public uint VFT { get; set; }
+        public uint BlockMap { get; set; }
+        public uint RefCount { get; set; } = 1; //m_RefCount
+        public ResourceTextureType ResourceType { get; set; } //m_ResourceType, 0 for embedded textures or 2 for seperated
+        public ushort LayerCount { get; set; } //m_LayerCount, 0 for standard/volume/depth textures or 5 for cubemaps
+        public uint Unknown_10h { get; set; }
+        public int TextureSize { get; set; } //m_PhysicalSize, 0 for seperated textures
+        public Rsc6Str NameRef { get; set; }
+        public Rsc6Ptr<Rsc6BlockMap> D3DBaseTexture { get; set; }
+
+        public virtual void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            BlockMap = reader.ReadUInt32();
+            RefCount = reader.ReadUInt32();
+            ResourceType = (ResourceTextureType)reader.ReadUInt16();
+            LayerCount = reader.ReadUInt16();
+            Unknown_10h = reader.ReadUInt32();
+            TextureSize = reader.ReadInt32();
+            NameRef = reader.ReadStr();
+            D3DBaseTexture = reader.ReadPtr<Rsc6BlockMap>();
+            Name = NameRef.Value;
+        }
+
+        public virtual void Write(Rsc6DataWriter writer)
+        {
+            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary;
+            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
+
+            if (!Name.EndsWith(".dds"))
+            {
+                Name += ".dds";
+            }
+            NameRef = new Rsc6Str(Name);
+
+            if (TextureSize == 0)
+                writer.WriteUInt32(0x018489E8); //External texture (for WVD)
+            else if(wvd) 
+                writer.WriteUInt32(0x01848890); //WVD texture
+            else if (wfd)
+                writer.WriteUInt32(0x00D253E4); //WFD texture
+            else
+                writer.WriteUInt32(0x00AB3704);
+
+            writer.WriteUInt32(BlockMap);
+            writer.WriteUInt32(RefCount);
+            writer.WriteUInt16((ushort)(TextureSize == 0 ? ResourceTextureType.SEPARATED : ResourceType));
+            writer.WriteUInt16(LayerCount);
+            writer.WriteUInt32(Unknown_10h);
+            writer.WriteInt32(TextureSize);
+            writer.WriteStr(NameRef);
+            writer.WritePtr(D3DBaseTexture);
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            ResourceType = reader.ReadEnum<ResourceTextureType>("ResourceType");
+
+            var dds = reader.ReadExternal(Name + ".dds");
+            if (dds != null)
+            {
+                TextureSize = dds.Length - 128;
+            }
+
+            if (!Name.EndsWith(".dds"))
+            {
+                Name += ".dds";
+            }
+            NameRef = new Rsc6Str(Name);
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            string[] separators = { ":", "/" };
+            foreach (var separator in separators)
+            {
+                int lastIndex = Name.LastIndexOf(separator);
+                if (lastIndex != -1)
+                {
+                    Name = Name[(lastIndex + 1)..];
+                }
+            }
+
+            if (Name.EndsWith(".dds"))
+            {
+                Name = Name.Replace(".dds", "");
+            }
+
+            writer.WriteEnum("ResourceType", ResourceType);
+            base.Write(writer);
+        }
+
+        public override string ToString()
+        {
+            return "TextureBase: " + Name;
+        }
+
+        public enum ResourceTextureType : ushort
+        {
+            EMBEDDED = 0,
+            SEPARATED = 2
+        }
+    }
+
+    public class Rsc6TextureData : IRsc6Block
+    {
+        public ulong BlockLength { get; set; }
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public byte[] Data { get; set; }
+
+        public Rsc6TextureData()
+        {
+
+        }
+
+        public Rsc6TextureData(ulong length)
+        {
+            BlockLength = length;
+        }
+
+        public Rsc6TextureData(byte[] data)
+        {
+            BlockLength = (uint)(data?.Length ?? 0);
+            Data = data;
+        }
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Data = reader.ReadBytes((int)BlockLength);
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteBytes(Data);
+        }
+    }
+
+    public class Rsc6TextureScaleForm : Rsc6BlockBaseMap //TODO: Continue researching .wsf
+    {
+        /*
+         * FLASH is the default tool that is used for the UI.
+         * 
+         * UIComponent    : base class for all components, must be put top-level container such as UILayer and UIScene.
+         * UILayer        : a generic lightweight container, all childrens are managed by this component.
+         * UIScene        : a container that groups any number of components except other UIScenes.
+         * UIPanel        : a generic lightweight container that groups any number of components.
+         * UIScrollBar    : a scrollbar to determine the contents of the viewing area.
+         * UILabel        : a display area for a short text string.
+         * UIButton       : implementation of a push button.
+         * UITab          : implementation of a push button.
+         * UIIcon         : represents single images.
+         * UIList         : a component that allows the user to select one or more objects from a list, supports scrolling.
+         * UIProgressBar  : a component that communicates the progress of some work by displaying its percentage of completion.
+         * UISpinner      : a single line input field that lets the user select a number or an object value from an ordered sequence.
+         * UIContext      : an interface to an external tool that artists use to represent/decorate these UI components. Each component has its own context interface.
+         * UIFactory      : a class to map inputs to the ones that the UI uses.
+         * UIInput        : a class to manages the creation of UI elements.
+         * UINavigator    : a class to manages the navigation/transitions between various UI components.
+         * UIManager      : a class used for various subsystem that manages a UI system.
+         * 
+         * Visibility dictates if a state is shown or hidden.
+         * Ideally the textures/meshes associated with the state should not be rendered at all.
+         * 
+         * Enabled/Disabled describes how input, events, and transitions are processed on a state.
+         * Input and events are processed if this flag is true, otherwise input and events are not processed.
+         * A disabled state should never be transitioned to.
+         * 
+         * Focused describes if a component is selected or not.
+         * All states for a focused component that are on a path from that focused component to its root component should also be focused.
+         * The only way for a component to receive input is if it is focused.
+         * 
+         * Active describes if a component is running.
+         * Siblings and children of this active component may or may not be active.
+         */
+
+        public override ulong BlockLength => 32;
+        public override uint VFT { get; set; }
+        public uint Stage { get; set; } //m_Stage
+        public bool Updating { get; set; } //m_Updating
+        public bool IsFileOwner { get; set; } //m_IsFileOwner
+        public ushort Unknown_C2h { get; set; } //Always 0?
+        public uint[] Unknown_C4h { get; set; } //rage::swfACTIONFUNC, array of 40 uint's
+        public int NumFunctions { get; set; } //m_numFunctions
+        public Rsc6Str Name { get; set; } //m_Name
+        public ushort NameLength1 { get; set; } //m_Length
+        public ushort NameLength2 { get; set; } //m_Length + 1
+
+        public Rsc6Ptr<Rsc6BlockMap> SwfObjectPointer { get; set; }
+        public Rsc6Ptr<Rsc6BlockMap> ItemArrayPointer { get; set; }
+        public ushort ItemCount { get; set; }
+        public List<Rsc6Ptr<Rsc6ScaleformType>> TexturesType = new List<Rsc6Ptr<Rsc6ScaleformType>>();
+        public List<Rsc6Texture> Textures = new List<Rsc6Texture>();
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+
+            reader.Position = Rpf6Crypto.VIRTUAL_BASE + 0x2C;
+            SwfObjectPointer = reader.ReadPtr<Rsc6BlockMap>();
+
+            reader.Position = SwfObjectPointer.Position + 0x18;
+            ItemArrayPointer = reader.ReadPtr<Rsc6BlockMap>();
+
+            reader.Position = SwfObjectPointer.Position + 0x32;
+            ItemCount = reader.ReadUInt16();
+
+            reader.Position = ItemArrayPointer.Position;
+            for (int i = 0; i < ItemCount; i++)
+            {
+                var t = reader.ReadPtr<Rsc6ScaleformType>();
+                if (t.Item != null && t.Item.TexturesPointers.Count > 0)
+                    TexturesType.Add(t);
+            }
+
+            for (int i = 0; i < TexturesType.Count; i++)
+            {
+                if (TexturesType[i].Item.TexturesPointers.Count <= 0)
+                    continue;
+
+                for (int c = 0; c < TexturesType[i].Item.TexturesPointers.Count; c++)
+                {
+                    reader.Position = TexturesType[i].Item.TexturesPointers[c].Position;
+
+                    var tex = new Rsc6Texture();
+                    tex.Read(reader);
+                    Textures.Add(tex);
+                }
+            }
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class Rsc6ScaleformType : Rsc6BlockBase
+    {
+        public override ulong BlockLength => 32;
+        public uint VFT { get; set; }
+        public uint Unknown_4h { get; set; }
+        public TextureType Type { get; set; }
+        public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers { get; set; } = new();
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            VFT = reader.ReadUInt32();
+            Unknown_4h = reader.ReadUInt32();
+            Type = (TextureType)reader.ReadByte();
+
+            if (Type == TextureType.FONT)
+            {
+                ulong offset = reader.Position + 0x9B;
+                for (int i = 0; i < 3; i++)
+                {
+                    reader.Position = offset + (ulong)(i * 8);
+                    var dwObjectOffset = reader.ReadPtr<Rsc6BlockMap>();
+
+                    if (dwObjectOffset.Position <= 0)
+                        continue;
+
+                    reader.Position = dwObjectOffset.Position;
+                    var grcTextureStructureOffset = reader.ReadPtr<Rsc6BlockMap>();
+
+                    if (grcTextureStructureOffset.Position <= 0)
+                        continue;
+
+                    reader.Position = dwObjectOffset.Position + 0x14;
+                    ushort fontCount = reader.ReadUInt16();
+
+                    for (int c = 0; c < fontCount; c++)
+                    {
+                        reader.Position = grcTextureStructureOffset.Position + (ulong)(c * 4);
+                        TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
+                    }
+                }
+            }
+            else if (Type == TextureType.BITMAP)
+            {
+                reader.Position += 0x3; //Those 3 bytes are 'pad'
+                TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
+            }
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public enum TextureType
+        {
+            BITMAP = 4,
+            FONT = 5
+        }
+    }
+
     public class Rsc6TextureCRN : Rsc6BlockBase
     {
         public override ulong BlockLength => 74;
@@ -568,143 +712,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            
-        }
-    }
 
-    public class Rsc6TextureBase : Texture, IRsc6Block
-    {
-        public virtual ulong BlockLength => 32;
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-        public uint VFT { get; set; }
-        public uint BlockMap { get; set; }
-        public uint RefCount { get; set; } = 1; //m_RefCount
-        public ushort ResourceType { get; set; } //m_ResourceType, 0 for embedded textures or 2 for seperated
-        public ushort LayerCount { get; set; } //m_LayerCount, 0 for standard/volume/depth textures or 5 for cubemaps
-        public uint Unknown_10h { get; set; }
-        public int TextureSize { get; set; } //m_PhysicalSize, 0 for seperated textures
-        public Rsc6Str NameRef { get; set; }
-        public Rsc6Ptr<Rsc6BlockMap> D3DBaseTexture { get; set; }
-
-        public virtual void Read(Rsc6DataReader reader)
-        {
-            VFT = reader.ReadUInt32();
-            BlockMap = reader.ReadUInt32();
-            RefCount = reader.ReadUInt32();
-            ResourceType = reader.ReadUInt16();
-            LayerCount = reader.ReadUInt16();
-            Unknown_10h = reader.ReadUInt32();
-            TextureSize = reader.ReadInt32();
-            NameRef = reader.ReadStr();
-            D3DBaseTexture = reader.ReadPtr<Rsc6BlockMap>();
-            Name = NameRef.Value;
-        }
-
-        public virtual void Write(Rsc6DataWriter writer)
-        {
-            bool wvd = writer.BlockList[0] is Rsc6VisualDictionary;
-            bool wfd = writer.BlockList[0] is Rsc6FragDrawable;
-
-            if (!Name.EndsWith(".dds"))
-            {
-                Name += ".dds";
-            }
-            NameRef = new Rsc6Str(Name);
-
-            if (TextureSize == 0)
-                writer.WriteUInt32(0x018489E8); //External texture (for WVD)
-            else if(wvd) 
-                writer.WriteUInt32(0x01848890); //WVD texture
-            else if (wfd)
-                writer.WriteUInt32(0x00D253E4); //WFD texture
-            else
-                writer.WriteUInt32(0x00AB3704);
-
-            writer.WriteUInt32(BlockMap);
-            writer.WriteUInt32(RefCount);
-            writer.WriteUInt16((ushort)(TextureSize == 0 ? 2 : ResourceType));
-            writer.WriteUInt16(LayerCount);
-            writer.WriteUInt32(Unknown_10h);
-            writer.WriteInt32(TextureSize);
-            writer.WriteStr(NameRef);
-            writer.WritePtr(D3DBaseTexture);
-        }
-
-        public override void Read(MetaNodeReader reader)
-        {
-            base.Read(reader);
-            ResourceType = reader.ReadUInt16("ResourceType");
-            LayerCount = reader.ReadUInt16("LayerCount");
-            TextureSize = reader.ReadInt32("TextureSize");
-
-            if (!Name.EndsWith(".dds"))
-            {
-                Name += ".dds";
-            }
-            NameRef = new Rsc6Str(Name);
-        }
-
-        public override void Write(MetaNodeWriter writer)
-        {
-            string[] separators = { ":", "/" };
-            foreach (var separator in separators)
-            {
-                int lastIndex = Name.LastIndexOf(separator);
-                if (lastIndex != -1)
-                {
-                    Name = Name[(lastIndex + 1)..];
-                }
-            }
-
-            if (Name.EndsWith(".dds"))
-            {
-                Name = Name.Replace(".dds", "");
-            }
-
-            writer.WriteUInt16("ResourceType", ResourceType);
-            writer.WriteUInt16("LayerCount", LayerCount);
-            writer.WriteInt32("TextureSize", TextureSize);
-            base.Write(writer);
-        }
-
-        public override string ToString()
-        {
-            return "TextureBase: " + Name;
-        }
-    }
-
-    public class Rsc6TextureData : IRsc6Block
-    {
-        public ulong BlockLength { get; set; }
-        public ulong FilePosition { get; set; }
-        public bool IsPhysical => false;
-        public byte[] Data { get; set; }
-
-        public Rsc6TextureData()
-        {
-
-        }
-
-        public Rsc6TextureData(ulong length)
-        {
-            BlockLength = length;
-        }
-
-        public Rsc6TextureData(byte[] data)
-        {
-            BlockLength = (uint)(data?.Length ?? 0);
-            Data = data;
-        }
-
-        public void Read(Rsc6DataReader reader)
-        {
-            Data = reader.ReadBytes((int)BlockLength);
-        }
-
-        public void Write(Rsc6DataWriter writer)
-        {
-            writer.WriteBytes(Data);
         }
     }
 

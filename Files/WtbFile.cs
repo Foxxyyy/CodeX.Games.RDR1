@@ -3,6 +3,7 @@ using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
+using System;
 using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
@@ -51,9 +52,7 @@ namespace CodeX.Games.RDR1.Files
                     if (bounds != null)
                     {
                         var center = bounds.BoundingBox.Center;
-                        if (center.X >= -10f && center.X <= 10f &&
-                            center.Y >= -10f && center.Y <= 10f &&
-                            center.Z >= -10f && center.Z <= 10f)
+                        if (Math.Abs(center.X) <= 10f && Math.Abs(center.Y) <= 10f && Math.Abs(center.Z) <= 10f)
                         {
                             continue;
                         }

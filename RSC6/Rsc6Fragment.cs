@@ -1513,61 +1513,6 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
-    {
-        public override ulong BlockLength => 80;
-        public override uint VFT { get; set; } = 0x01909C20;
-        public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_archetype, always NULL
-        public Rsc6Ptr<Rsc6FragArchetype> PhysInstance { get; set; } //m_physInstance, always NULL
-        public uint Data { get; set; } //m_data, sagInstDataMember
-        public Vector4 BoundMin { get; set; }
-        public Vector4 BoundMax { get; set; }
-        public uint Code { get; set; } //Code, always 0
-        public uint Unknown_34h { get; set; } = 0xCDCDCDCD; //Padding
-        public uint Unknown_38h { get; set; } = 0xCDCDCDCD; //Padding
-        public uint Unknown_3Ch { get; set; } = 0xCDCDCDCD; //Padding
-        public Rsc6ManagedArr<Rsc6Room> DrawableRoot { get; set; } //m_DrawableRoot
-        public uint Unknown_48h { get; set; } = 0xCDCDCDCD; //Padding
-        public uint Unknown_4Ch { get; set; } = 0xCDCDCDCD; //Padding
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            base.Read(reader);
-            Archetype = reader.ReadPtr<Rsc6FragArchetype>();
-            PhysInstance = reader.ReadPtr<Rsc6FragArchetype>();
-            Data = reader.ReadUInt32();
-            BoundMin = reader.ReadVector4();
-            BoundMax = reader.ReadVector4();
-            Code = reader.ReadUInt32();
-            Unknown_34h = reader.ReadUInt32();
-            Unknown_38h = reader.ReadUInt32();
-            Unknown_3Ch = reader.ReadUInt32();
-            DrawableRoot = reader.ReadArr<Rsc6Room>();
-            Unknown_48h = reader.ReadUInt32();
-            Unknown_4Ch = reader.ReadUInt32();
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            base.Write(writer);
-        }
-
-        public void Read(MetaNodeReader reader)
-        {
-            Archetype = new(reader.ReadNode<Rsc6FragArchetype>("Archetype"));
-            PhysInstance = new(reader.ReadNode<Rsc6FragArchetype>("PhysInstance"));
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteNode("Archetype", Archetype.Item);
-            writer.WriteNode("PhysInstance", PhysInstance.Item);
-            writer.WriteVector4("BoundMin", BoundMin);
-            writer.WriteVector4("BoundMax", BoundMax);
-            writer.WriteStringArray("DrawableRoot", DrawableRoot.Items.Select(s => s.Name.Value).ToArray());
-        }
-    }
-
     public class Rsc6AssociationInfo : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 20;

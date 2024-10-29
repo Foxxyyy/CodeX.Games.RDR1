@@ -76,6 +76,7 @@ namespace CodeX.Games.RDR1.Files
             TextureDictionary = new();
             TextureDictionary.Read(reader);
         }
+
         public override void Write(MetaNodeWriter writer)
         {
             TextureDictionary?.Write(writer);

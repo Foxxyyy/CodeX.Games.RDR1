@@ -500,34 +500,22 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>
-        ///Reads UShort2N values and rescales them depending of the LOD level
+        ///Reads & rescales UShort2N values
         ///</summary>
         ///<param name="buffer">The buffer containing the UShort2N values.</param>
         ///<param name="offset">The offset in the buffer where the UShort2N values start.</param>
-        ///<param name="highLOD">Indicates if high LOD (Level of Detail) scaling should be applied.</param>
-        ///<returns>An array of rescaled float values.</returns>
-        public static float[] ReadRescaleUShort2N(byte[] buffer, int offset, bool highLOD)
+        public static void ReadRescaleUShort2N(byte[] buffer, int offset)
         {
             var xBuf = BufferUtil.ReadArray<byte>(buffer, offset, 2);
             var yBuf = BufferUtil.ReadArray<byte>(buffer, offset + 2, 2);
             var xVal = BitConverter.ToUInt16(xBuf, 0) * 3.05185094e-005f;
             var yVal = BitConverter.ToUInt16(yBuf, 0) * 3.05185094e-005f;
 
-            float[] values;
-            if (!highLOD)
-            {
-                xVal *= 2.0f;
-                yVal *= 2.0f;
-                values = new float[2] { float.NaN, float.NaN };
-            }
-            else
-            {
-                values = new float[2] { xVal, yVal };
-            }
+            xVal *= 2.0f;
+            yVal *= 2.0f;
 
             BufferUtil.WriteArray(buffer, offset, BitConverter.GetBytes((ushort)(xVal / 3.05185094e-005f)));
             BufferUtil.WriteArray(buffer, offset + 2, BitConverter.GetBytes((ushort)(yVal / 3.05185094e-005f)));
-            return values;
         }
 
         ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>

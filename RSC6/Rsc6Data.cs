@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using SharpDX.DirectWrite;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -586,28 +587,49 @@ namespace CodeX.Games.RDR1.RSC6
                             }
                         }
                     }
-                    else if (pref.Object is Rsc6Polygon)
+                    else if (pref.Object is Rsc6DrawableInstanceBase instBase)
                     {
                         var found = false;
-                        var kvs = blocks.Where(e => e.Key is Rsc6Polygon[]).ToArray();
+                        var kvs = blocks.Where(e => e.Key is Rsc6DrawableInstanceBase[]).ToArray();
 
                         for (int i = 0; i < kvs.Length; i++)
                         {
                             if (found) break;
                             var kv = kvs[i];
 
-                            if (kv.Key != null)
+                            if (kv.Key is Rsc6DrawableInstanceBase[] array)
                             {
-                                if (kv.Key is Rsc6Polygon[] instances)
+                                foreach (var inst in array)
                                 {
-                                    foreach (var inst in instances)
+                                    if (inst.Node == instBase.Node)
                                     {
-                                        if (inst == pref.Object)
-                                        {
-                                            bblock = kv.Value;
-                                            found = true;
-                                            break;
-                                        }
+                                        bblock = kv.Value;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (pref.Object is Rsc6PolygonBlock pBlock)
+                    {
+                        var found = false;
+                        var kvs = blocks.Where(e => e.Key is Rsc6PolygonBlock[]).ToArray();
+
+                        for (int i = 0; i < kvs.Length; i++)
+                        {
+                            if (found) break;
+                            var kv = kvs[i];
+
+                            if (kv.Key != null && kv.Key is Rsc6PolygonBlock[] instances)
+                            {
+                                foreach (var inst in instances)
+                                {
+                                    if (inst == pBlock.Block.Target)
+                                    {
+                                        bblock = kv.Value;
+                                        found = true;
+                                        break;
                                     }
                                 }
                             }

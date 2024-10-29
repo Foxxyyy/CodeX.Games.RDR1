@@ -44,10 +44,11 @@ namespace CodeX.Games.RDR1.Files
                 Piece = d.Drawable;
                 Piece.Name = e.Name;
                 Piece.FilePack = this;
+                Piece.Collider = b;
 
-                if (!RDR1Map.LoadingMap)
+                if (Piece.Name.StartsWith("st_")) //If we have a tree, let's not switch between lods, low lods have no trunks...
                 {
-                    Piece.Collider = b;
+                    Piece.Lods[0].LodDist = 9999.0f;
                 }
                 Pieces[e.ShortNameHash] = d.Drawable;
             }

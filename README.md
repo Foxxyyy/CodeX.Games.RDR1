@@ -1,6 +1,6 @@
 # CodeX (026)
 
-CodeX implementation for Red Dead Redemption on Nintendo Switch (and potentially PS4/PS5)
+CodeX implementation for Red Dead Redemption on PC, Nintendo Switch & PS4.
 
 --------------------
 
@@ -9,12 +9,7 @@ More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker dis
 
 --------------------             
 
-After that, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them to the CodeX/Explorer folders, next to the executable.           
-
-# Udpates
-
-I make regular updates to this project when I have some spare time, so it will or will not work with older versions of CodeX.              
-I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), for now you can import `WFD & WVD` files.                       
+When granted access, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them to the CodeX/Explorer folders, next to the executable.                                 
 
 # CodeX Contributors
 * dexyfex     
@@ -39,8 +34,9 @@ I also work on an [RDR1 Sollumz fork](https://github.com/Foxxyyy/SollumzRDR), fo
 
 # Random Pictures
 ![Screenshot](Files/Properties/codex_scene_preview.png)
+![Screenshot](Files/Properties/map_viewer1.png)
+![Screenshot](Files/Properties/map_viewer2.png)
 ![Screenshot](Files/Properties/codex_browser_explorer.png)
 ![Screenshot](Files/Properties/codex_explorer.png)
-![Screenshot](Files/Properties/map_viewer.png)
 ![Screenshot](Files/Properties/model_viewer_1.png)
 ![Screenshot](Files/Properties/model_viewer_2.png)

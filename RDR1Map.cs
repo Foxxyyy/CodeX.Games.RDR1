@@ -8,6 +8,7 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using CodeX.Games.RDR1.Files;
+using System.Threading.Tasks;
 
 namespace CodeX.Games.RDR1
 {
@@ -15,14 +16,15 @@ namespace CodeX.Games.RDR1
     {
         public WsiFile MainStreamingEntry; //The global #si that lists all the sectors/areas
         public WsiFile TerrainStreamingEntry; //The global terrain #si that lists all the wilderness stuff & some random props
+        public RDR1MapStatesFile MapStatesFile;
         public List<WsiFile> StreamingEntries; //All the child sectors grouped together
-        public List<Rpf6StoreItem> WvdTilesStore; //Basic data of tiles to render
-        public List<Rpf6StoreItem> WbdBoundsStore; //Basic data of bounds dictionary to render
-        public List<Rpf6StoreItem> WtbBoundsStore; //Basic data of tiles collisions to render
+        public List<Rpf6StoreItem> WvdTilesStore; //Terrain to render
+        public List<Rpf6StoreItem> WbdBoundsStore; //Bound dictionaries to render
+        public List<Rpf6StoreItem> WtbBoundsStore; //Terrain collisions to render
         public List<TreeItem> Trees; //Basic data of trees, debris, rocks & placed grass
 
-        public Dictionary<JenkHash, RDR1MapNode> MapNodeDict;
-        public StreamingSet<RDR1MapNode> StreamNodes;
+        public Dictionary<JenkHash, RDR1ChildNode> MapNodeDict;
+        public StreamingSet<RDR1ChildNode> StreamNodes;
 
         public static bool LoadingMap = false; //Used to detect if we're using the explorer...
         public static readonly Setting StartPositionSetting = Settings.Register("RDR1Map.Area", SettingType.String, "Blackwater", "Change position", false, false, GetAreas());
@@ -39,11 +41,22 @@ namespace CodeX.Games.RDR1
         public Statistic NodeCountStat = Statistics.Register("RDR1Map.NodeCount", StatisticType.Counter);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
 
+        public override BaseField[] GetFields()
+        {
+            return BaseFields;
+        }
+
+        private static readonly BaseField[] BaseFields = new[]
+        {
+            new MapStatesField()
+        };
+
         public RDR1Map(RDR1Game game) : base(game, "RDR1 Map Level")
         {
             var position = StartPositionSetting.GetString() switch
             {
                 "Armadillo" => new Vector3(2617.4f, -2180.6f, 20.2f),
+                "Beecher's Hope" => new Vector3(1375.9f, -117.5f, 121.1f),
                 "Chuparosa" => new Vector3(4243.8f, -2690.5f, 42.8f),
                 "Cochinay" => new Vector3(998.1f, -888.7f, 205.3f),
                 "El Presidio" => new Vector3(3304.5f, -690.9f, 68.2f),
@@ -74,6 +87,9 @@ namespace CodeX.Games.RDR1
             this.DefaultSpawnPoint = position;
             this.BoundingBox = new BoundingBox(new Vector3(-100000.0f), new Vector3(100000.0f));
             this.InitPhysicsSim();
+
+            Commands.Register("ReloadMapStates", "Reload mapstates.txt file", ReloadMapStatesCmd, game);
+            Commands.Register("EnableWSI", "Enable or disable the specified WSI", EnableWsiCmd, game);
         }
 
         protected override bool StreamingInit()
@@ -96,10 +112,10 @@ namespace CodeX.Games.RDR1
             var dfm = this.FileManager.DataFileMgr;
 
             this.Cache = new RDR1MapFileCache(this.FileManager);
-            this.StreamNodes = new StreamingSet<RDR1MapNode>();
+            this.StreamNodes = new StreamingSet<RDR1ChildNode>();
             this.StreamPosition = this.DefaultSpawnPoint;
             this.StreamingEntries = new List<WsiFile>();
-            this.MapNodeDict = new Dictionary<JenkHash, RDR1MapNode>();
+            this.MapNodeDict = new Dictionary<JenkHash, RDR1ChildNode>();
 
             this.MainStreamingEntry = dfm.WsiFiles[new JenkHash("swall")]; //swAll
             this.TerrainStreamingEntry = dfm.WsiFiles[new JenkHash("swterrain")]; //swTerrain
@@ -116,11 +132,6 @@ namespace CodeX.Games.RDR1
                 this.StreamingEntries.Add(entry);
             }
 
-            if (colMode != "Only collisions")
-            {
-                this.LoadWvdTiles(dfm);
-            }
-
             if (colMode != "No collisions")
             {
                 this.LoadWbdBounds(dfm);
@@ -128,33 +139,40 @@ namespace CodeX.Games.RDR1
 
                 if (colMode == "Only collisions")
                 {
-                    StreamCollisionsRange = 1000.0f;
+                    this.StreamCollisionsRange = 1000.0f;
                 }
             }
 
             if (colMode != "Only collisions")
             {
+                this.LoadWvdTiles(dfm);
                 if (EnableTreesSetting.GetBool())
                 {
                     foreach (var wsp in dfm.WspFiles)
                     {
-                        var node = new RDR1MapNode(wsp.Value, this);
+                        var node = new RDR1ChildNode(wsp.Value, this);
                         this.MapNodeDict[node.NameHash] = node;
                     }
                 }
 
                 foreach (var child in this.StreamingEntries)
                 {
-                    if (child.Name.StartsWith("cs") || child.Name.StartsWith("sw") || child.Name.StartsWith("dlc")) continue;
-                    var node = new RDR1MapNode(child);
-                    this.MapNodeDict[node.NameHash] = node;
+                    if (child.Name.StartsWith("cs") || child.Name.StartsWith("sw")) continue;
+                    var nodes = new RDR1MapNode(child);
+
+                    foreach (var node in nodes.ChildNodes)
+                    {
+                        this.MapNodeDict[node.NameHash] = node;
+                    }
                 }
 
                 foreach (var tile in this.WvdTilesStore)
                 {
-                    var node = new RDR1MapNode(tile);
+                    var node = new RDR1ChildNode(tile);
                     this.MapNodeDict[node.NameHash] = node;
                 }
+
+                this.LoadMapStates();
             }
 
             this.StreamBVH = new StreamingBVH();
@@ -173,11 +191,9 @@ namespace CodeX.Games.RDR1
 
         protected override bool StreamingUpdate()
         {
-            if (this.StreamNodes == null) return false;
-            if (EnabledSetting.GetBool() == false) return false;
+            if (this.StreamNodes == null || !EnabledSetting.GetBool()) return false;
 
             this.StreamNodes.BeginIteration();
-
             var nodes = this.StreamNodes.CurrentSet;
             var ents = this.StreamEntities.CurrentSet;
             var spos = this.StreamPosition;
@@ -185,16 +201,12 @@ namespace CodeX.Games.RDR1
             this.StreamBVH.BeginIteration();
             this.StreamBVH.AddStreamPosition(spos);
 
-
-            foreach (var node in this.StreamBVH.StreamItems.Cast<RDR1MapNode>())
+            foreach (var node in this.StreamBVH.StreamItems.Cast<RDR1ChildNode>())
             {
-                var n = node;
-                if (n.NameHash == 0) continue;
-                if (n.Enabled == false) continue;
-
-                while (!nodes.Contains(n))
+                if (node.NameHash == 0 || !node.Enabled) continue;
+                if (!nodes.Contains(node))
                 {
-                    nodes.Add(n);
+                    nodes.Add(node);
                 }
             }
 
@@ -229,27 +241,14 @@ namespace CodeX.Games.RDR1
             var needsAnotherUpdate = AddExtraStreamEntities();
             foreach (var ent in ents.ToList()) //Make sure all current entities assets are loaded
             {
-                JenkHash hash = 0u;
-                if (ent is RDR1GridForestEntity treeEnt)
+                JenkHash hash = ent switch
                 {
-                    hash = treeEnt.TreeName;
-                }
-                else if (ent is RDR1GrassEntity grassEnt)
-                {
-                    hash = new JenkHash("p_" + grassEnt.Name + "x");
-                }
-                else if (ent is RDR1LightEntity lightEnt)
-                {
-                    hash = lightEnt.ModelName;
-                }
-                else if (ent is WsiEntity wsiEnt)
-                {
-                    var modelName = wsiEnt.ModelName;
-                    if (ent.Name != null)
-                        hash = new JenkHash(ent.Name);
-                    else
-                        hash = modelName;
-                }
+                    RDR1GridForestEntity treeEnt => treeEnt.TreeName,
+                    RDR1GrassEntity grassEnt => new JenkHash("p_" + grassEnt.Name + "x"),
+                    RDR1LightEntity lightEnt => lightEnt.ModelName,
+                    WsiEntity wsiEnt => string.IsNullOrEmpty(ent.Name) ? wsiEnt.ModelName : new JenkHash(ent.Name),
+                    _ => 0u,
+                };
 
                 var pieces = this.Cache.GetPieces(hash, hash);
                 if (pieces != null)
@@ -287,13 +286,9 @@ namespace CodeX.Games.RDR1
                 }
                 else if (ent is WsiEntity || ent is RDR1LightEntity)
                 {
-                    string parent = null;
-                    if (ent is WsiEntity wsiEnt)
-                        parent = wsiEnt.ParentName;
-                    else if (ent is RDR1LightEntity lightEnt)
-                        parent = lightEnt.ParentName;
-
+                    var parent = (ent is WsiEntity wsiEnt) ? wsiEnt.ParentName : ((RDR1LightEntity)ent).ParentName;
                     if (string.IsNullOrEmpty(parent)) continue;
+
                     pieces = this.Cache.GetPieces(new(parent), hash);
                     if (pieces != null)
                     {
@@ -317,45 +312,9 @@ namespace CodeX.Games.RDR1
                 }
             }
 
-            if (this.WbdBoundsStore != null)
-            {
-                var collsRng = new Vector3(this.StreamCollisionsRange);
-                var collsBox = new BoundingBox(spos - collsRng, spos + collsRng);
-                foreach (var bnd in this.WbdBoundsStore)
-                {
-                    if (bnd.Box.Contains(ref collsBox) == ContainmentType.Intersects)
-                    {
-                        var bounds = this.Cache.GetStaticBounds(bnd.Hash, true);
-                        if (bounds != null)
-                        {
-                            foreach (var b in bounds)
-                            {
-                                if (b != null) this.StreamCollisions.Add(b);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (this.WtbBoundsStore != null)
-            {
-                var collsRng = new Vector3(this.StreamCollisionsRange);
-                var collsBox = new BoundingBox(spos - collsRng, spos + collsRng);
-                foreach (var bnd in this.WtbBoundsStore)
-                {
-                    if (bnd.Box.Contains(ref collsBox) == ContainmentType.Intersects)
-                    {
-                        var bounds = this.Cache.GetStaticBounds(bnd.Hash, false);
-                        if (bounds != null)
-                        {
-                            foreach (var b in bounds)
-                            {
-                                if (b != null) this.StreamCollisions.Add(b);
-                            }
-                        }
-                    }
-                }
-            }
+            //Collision bounds checks
+            ProcessCollisionBounds(this.WbdBoundsStore, spos, true);
+            ProcessCollisionBounds(this.WtbBoundsStore, spos, false);
 
             this.NodeCountStat.SetCounter(nodes.Count);
             this.EntityCountStat.SetCounter(ents.Count);
@@ -382,7 +341,7 @@ namespace CodeX.Games.RDR1
 
         public static string[] GetAreas()
         {
-            return new[] { "Armadillo", "Blackwater", "Chuparosa", "Cochinay", "El Presidio", "El Matadero", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Manzanita Post", "Nosalida", "Pacific Union RR Camp", "Plainview", "Rathskeller Fork", "Ridgewood Farm", "Tesoro Azul", "Thieve's Landing", "Torquemada", "Tumbleweed", "Twin Rocks" };
+            return new[] { "Armadillo", "Blackwater", "Beecher's Hope", "Chuparosa", "Cochinay", "El Presidio", "El Matadero", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Manzanita Post", "Nosalida", "Pacific Union RR Camp", "Plainview", "Rathskeller Fork", "Ridgewood Farm", "Tesoro Azul", "Thieve's Landing", "Torquemada", "Tumbleweed", "Twin Rocks" };
         }
 
         public static bool ShouldSkipVisualDict(Rpf6FileEntry entry) //Avoid loading useless #vd's for map viewer
@@ -404,6 +363,29 @@ namespace CodeX.Games.RDR1
                 || entry.Parent.Parent.Name.Contains("cs_")
                 || entry.Parent.Parent.Name.Contains("sw_")
                 || entry.Name.Contains("flags");
+        }
+
+        private void ProcessCollisionBounds(List<Rpf6StoreItem> boundsStore, Vector3 spos, bool wbd)
+        {
+            if (boundsStore != null)
+            {
+                var collsRng = new Vector3(this.StreamCollisionsRange);
+                var collsBox = new BoundingBox(spos - collsRng, spos + collsRng);
+                foreach (var bnd in boundsStore)
+                {
+                    if (bnd.Box.Contains(ref collsBox) == ContainmentType.Intersects)
+                    {
+                        var bounds = this.Cache.GetStaticBounds(bnd.Hash, wbd);
+                        if (bounds != null)
+                        {
+                            foreach (var b in bounds)
+                            {
+                                if (b != null) this.StreamCollisions.Add(b);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public void LoadWvdTiles(Rpf6DataFileMgr dfm)
@@ -454,7 +436,7 @@ namespace CodeX.Games.RDR1
             var isScreen = proj.View.Type == SceneViewType.Screen;
             var isShadow = proj.View.Type == SceneViewType.ShadowMap;
 
-            var ents = proj.View.ViewEntities ?? StreamEntities.ActiveSet;
+            var ents = proj.View.ViewEntities ?? this.StreamEntities.ActiveSet;
             if (ents != null)
             {
                 foreach (var ent in ents)
@@ -501,7 +483,7 @@ namespace CodeX.Games.RDR1
 
         public override void GetAssets(uint typeHash, List<Asset> assets)
         {
-            var fragments = FileManager?.DataFileMgr?.StreamEntries[Rpf6FileExt.wft];
+            var fragments = this.FileManager?.DataFileMgr?.StreamEntries[Rpf6FileExt.wft];
             if (fragments == null) return;
 
             foreach (var kv in fragments)
@@ -509,9 +491,439 @@ namespace CodeX.Games.RDR1
                 assets.Add(new RDR1MapAsset(this, kv.Key));
             }
         }
+
+        public void EnableWSI(JenkHash nameHash, bool enable) //Try to replicate the game's ENABLE_WORLD_SECTOR/DISABLE_WORLD_SECTOR
+        {
+            bool subsector = false;
+            var name = nameHash.ToString();
+
+            if (name.Contains('/')) //Sub-sector detected, instead try to replicate ENABLE_CHILD_SECTOR/DISABLE_CHILD_SECTOR
+            {
+                nameHash = new(name[(name.LastIndexOf('/') + 1)..]);
+                subsector = true;
+            }
+
+            this.MapNodeDict.TryGetValue(nameHash, out var mapnode);
+            if (mapnode == null && enable)
+            {
+                FileManager.DataFileMgr.WsiFiles.TryGetValue(nameHash, out var entry);
+                if (entry == null) return;
+                var nodes = new RDR1MapNode(entry);
+
+                foreach (var node in nodes.ChildNodes)
+                {
+                    this.MapNodeDict[node.NameHash] = node;
+                    this.StreamBVH?.Add(node);
+                }
+            }
+
+            if (mapnode != null)
+            {
+                mapnode.Enabled = enable;
+                if (!subsector)
+                {
+                    foreach (var node in mapnode.ParentNode?.ChildNodes)
+                    {
+                        node.Enabled = enable;
+                    }
+                }
+            }
+        }
+
+        private string EnableWsiCmd(string[] args)
+        {
+            var wsi = ((args != null) && (args.Length > 0)) ? args[0].ToLowerInvariant() : "";
+            var arg = ((args != null) && (args.Length > 1)) ? args[1].ToLowerInvariant() : "";
+            var enable = (arg != "false") && (arg != "disable") && (arg != "0");
+
+            if (string.IsNullOrEmpty(wsi))
+            {
+                return "No WSI specified! Command usage: EnableWSI <wsiname> <false/disable/0>";
+            }
+
+            this.StreamInvoke(() =>
+            {
+                this.EnableWSI(wsi, enable);
+            });
+            return $"{wsi} {(enable ? "Enabled" : "Disabled")}";
+        }
+
+        public void EnableMapStateGroup(RDR1MapStateGroup group, bool enable)
+        {
+            group.Enabled = enable;
+            foreach (var wsi in group.WSIs)
+            {
+                if (string.IsNullOrEmpty(wsi.Item1)) continue;
+                var wsiName = wsi.Item1.ToLowerInvariant();
+                bool wsiEnable;
+                if (!enable)
+                {
+                    if (wsi.Item2 == "disabled")
+                        wsiEnable = group.IsStateActive(wsi.Item2, wsi.Item3);
+                    else
+                        wsiEnable = false;
+                }
+                else
+                {
+                    wsiEnable = (group.Undead && wsi.Item2 != "disabled") || group.IsStateActive(wsi.Item2, wsi.Item3);
+                }
+                this.EnableWSI(wsiName, wsiEnable);
+            }
+        }
+
+        private void LoadMapStates()
+        {
+            this.MapStatesFile = new RDR1MapStatesFile(this);
+            if (this.MapStatesFile.CurrentGroups != null)
+            {
+                foreach (var group in this.MapStatesFile.CurrentGroups)
+                {
+                    this.EnableMapStateGroup(group, group.Enabled);
+                }
+            }
+        }
+
+        private string ReloadMapStatesCmd()
+        {
+            this.StreamInvoke(() =>
+            {
+                this.LoadMapStates();
+                Commands.TryExecute("EditorUI.ReloadWorldSettings");
+            });
+            return "Reloading Map States...";
+        }
+
+        private class MapStatesField : BaseField
+        {
+            public MapStatesField() : base(BaseFieldType.ObjectArray, "Map States")
+            {
+
+            }
+
+            public override void GetValue(BaseObject obj, out object value)
+            {
+                var map = obj as RDR1Map;
+                value = map?.MapStatesFile?.CurrentGroups;
+            }
+
+            public override void SetValue(BaseObject obj, object value)
+            {
+
+            }
+
+            public override void SetChildEnabled(BaseObject obj, BaseObject child, bool enabled)
+            {
+                if (obj is not RDR1Map map) return;
+                if (child is not RDR1MapStateGroup group) return;
+
+                map.StreamInvoke(() =>
+                {
+                    map.EnableMapStateGroup(group, enabled);
+                });
+            }
+        }
     }
 
-    public class RDR1MapNode : StreamingBVHItem
+    public class RDR1MapStateGroup : BaseObject
+    {
+        public RDR1Map Map;
+        public bool MP;
+        public bool Undead;
+        public Dictionary<string, string> States;
+        public List<(string, string, string)> WSIs = new(); //name,statename,stateval
+        private Dictionary<string, string[]> StateOptions;
+        private BaseField[] Fields;
+
+        public RDR1MapStateGroup(RDR1Map map)
+        {
+            this.Map = map;
+        }
+
+        public bool IsStateActive(string name, string val)
+        {
+            if (!this.Enabled || string.IsNullOrEmpty(name)) return true;
+            if (this.Undead) return false;
+            if (!this.States.TryGetValue(name, out var cstate)) return true;
+            return cstate == val;
+        }
+
+        public void BuildStateOptions()
+        {
+            if (this.States == null)
+            {
+                this.StateOptions = null;
+                return;
+            }
+
+            var opts = new Dictionary<string, List<string>>();
+            var inputs = new List<(string, string)>();
+
+            if (this.States != null)
+            {
+                foreach (var kvp in this.States)
+                {
+                    inputs.Add((kvp.Key, kvp.Value));
+                }
+            }
+
+            foreach (var ipl in this.WSIs)
+            {
+                inputs.Add((ipl.Item2, ipl.Item3));
+            }
+
+            foreach (var i in inputs)
+            {
+                var state = i.Item1;
+                var val = i.Item2;
+                if (string.IsNullOrEmpty(state) || string.IsNullOrEmpty(val)) continue;
+
+                if (opts.TryGetValue(state, out var list) == false)
+                {
+                    list = new List<string>() { "" }; //Start with an empty entry, just so that's an option
+                    opts[state] = list;
+                }
+
+                if (list.Contains(val) == false)
+                {
+                    list.Add(val);
+                }
+            }
+
+            if (opts.Count == 0)
+            {
+                this.StateOptions = null;
+                return;
+            }
+
+            this.StateOptions = new Dictionary<string, string[]>();
+            foreach (var kvp in opts)
+            {
+                this.StateOptions[kvp.Key] = kvp.Value.ToArray();
+            }
+        }
+
+        public override BaseField[] GetFields()
+        {
+            if ((this.Fields == null) && (this.StateOptions != null))
+            {
+                var fields = new BaseField[this.StateOptions.Count];
+                var i = 0;
+                foreach (var kvp in this.StateOptions)
+                {
+                    fields[i] = new StateField(kvp.Key, kvp.Value);
+                    i++;
+                }
+                this.Fields = fields;
+            }
+            return this.Fields;
+        }
+
+        private class StateField : BaseField
+        {
+            private readonly string[] Options;
+
+            public StateField(string name, string[] options) : base(BaseFieldType.String, name)
+            {
+                this.Options = options;
+            }
+
+            public override void GetOptions(BaseObject obj, out object[] options)
+            {
+                options = this.Options;
+            }
+
+            public override void GetValue(BaseObject obj, out object value)
+            {
+                value = null;
+                if (obj is not RDR1MapStateGroup group) return;
+                if (group.States == null) return;
+                group.States.TryGetValue(Name, out var str);
+                value = str;
+            }
+
+            public override void SetValue(BaseObject obj, object value)
+            {
+                if (obj is not RDR1MapStateGroup group) return;
+                group.Map.StreamInvoke(() =>
+                {
+                    group.States ??= new Dictionary<string, string>();
+                    group.States[Name] = value as string;
+                    group.Map.EnableMapStateGroup(group, group.Enabled); //Need to refresh this group
+                });
+            }
+        }
+    }
+
+    public class RDR1MapStatesFile
+    {
+        public List<RDR1MapStateGroup> AllGroups = new();
+        public RDR1MapStateGroup[] CurrentGroups;
+
+        public RDR1MapStatesFile(RDR1Map map)
+        {
+            var file = StartupUtil.GetFilePath("CodeX.Games.RDR1.mapstates.txt");
+            if (System.IO.File.Exists(file) == false) return;
+
+            var lines = System.IO.File.ReadAllLines(file);
+            if (lines == null) return;
+
+            var delims = new[] { ' ', '\t' };
+            var splitopt = StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
+            var section = Section.None;
+            var group = (RDR1MapStateGroup)null;
+
+            foreach (var line in lines)
+            {
+                var comment = line.IndexOf("//");
+                var tline = (comment >= 0) ? line[..comment] : line;
+                var parts = tline.Split(delims, splitopt);
+
+                if (parts == null || parts.Length == 0) continue;
+                if (parts[0].StartsWith("group:"))
+                {
+                    section = Section.None;
+                    group = new RDR1MapStateGroup(map)
+                    {
+                        Name = parts[0][6..],
+                        Enabled = true
+                    };
+
+                    AllGroups.Add(group);
+                    for (int i = 1; i < parts.Length; i++)
+                    {
+                        var subparts = parts[i].Split(':', splitopt);
+                        if (subparts == null) continue;
+                        if (subparts.Length < 2) continue;
+
+                        var fname = subparts[0];
+                        var fval = subparts[1];
+                        var fval2 = (subparts.Length > 2) ? subparts[2] : null;
+
+                        switch (fname)
+                        {
+                            case "mp": group.MP = fval == "true"; break;
+                            case "enabled": group.Enabled = fval == "true"; break;
+                        }
+                    }
+                }
+                else if (parts[0] == "wsis:")
+                {
+                    section = Section.WSIs;
+                }
+                else if (parts[0] == "states:")
+                {
+                    section = Section.States;
+                }
+                else if (group != null)
+                {
+                    var name = parts[0]?.ToLowerInvariant();
+                    if (section == Section.WSIs)
+                    {
+                        var stateparts = (parts.Length > 1) ? parts[1].Split(':') : null;
+                        var stateplen = (stateparts != null) ? stateparts.Length : 0;
+                        var statename = (stateplen > 0) ? stateparts[0] : null;
+                        var stateval = (stateplen > 1) ? stateparts[1] : null;
+
+                        group.WSIs.Add((name, statename, stateval));
+                        if (parts.Length > 1 && stateplen == 1)
+                        {
+                            group.Undead = true;
+                        }
+
+                        JenkIndex.Ensure(name, "RDR1");
+                    }
+                    else if (section == Section.States)
+                    {
+                        group.States ??= new();
+                        var val = (parts.Length > 1) ? parts[1] : "";
+                        group.States[name] = val;
+                    }
+                }
+            }
+
+            var currGroups = new List<RDR1MapStateGroup>();
+            foreach (var g in AllGroups)
+            {
+                g.BuildStateOptions();
+                currGroups.Add(g);
+            }
+            CurrentGroups = currGroups.ToArray();
+        }
+
+        private enum Section
+        {
+            None,
+            WSIs,
+            States
+        }
+    }
+
+    public class RDR1MapNode
+    {
+        public BoundingBox StreamingBox { get; set; }
+        public BoundingBox BoundingBox { get; set; }
+
+        public RDR1MapData[] MapData;
+        public RDR1ChildNode[] ChildNodes;
+        public WsiFile Scope;
+        public bool Enabled;
+        public JenkHash NameHash;
+
+        public RDR1MapNode(WsiFile wsi) //Buildings, props, etc...
+        {
+            this.Scope = wsi;
+            var childs = this.GetChilds();
+
+            if (childs != null)
+            {
+                this.MapData = new RDR1MapData[childs.Length];
+                for (int i = 0; i < this.MapData.Length; i++)
+                {
+                    var child = childs[i];
+                    var parent = Rsc6SectorInfo.GetSectorParent(childs, child);
+                    this.MapData[i] = new RDR1MapData(this.Scope, child, parent);
+                }
+            }
+
+            if (this.MapData != null)
+            {
+                this.ChildNodes = new RDR1ChildNode[this.MapData.Length];
+                for (int i = 0; i < this.ChildNodes.Length; i++)
+                {
+                    var child = this.MapData[i];
+                    this.ChildNodes[i] = new RDR1ChildNode()
+                    {
+                        MapData = child,
+                        NameHash = child.ToString(),
+                        ParentNode = this,
+                        BoundingBox = child.BoundingBox,
+                        StreamingBox = child.StreamingBox
+                    };
+                }
+            }
+
+            this.NameHash = this.Scope.FileEntry.ShortNameHash;
+            this.Enabled = true;
+        }
+
+        public Rsc6SectorInfo[] GetChilds() //sagScopedSectors.Sectors + Rsc6SectorInfo[]
+        {
+            var scopedChilds = this.Scope?.StreamingItems?.ItemChilds.Item?.Sectors.Items?.Where(s => s != null);
+            var childs = this.Scope?.StreamingItems?.ChildPtrs.Items?.Where(c => c != null);
+
+            if (scopedChilds == null && childs == null) return null;
+            return (scopedChilds ?? Enumerable.Empty<Rsc6SectorInfo>())
+                .Concat(childs ?? Enumerable.Empty<Rsc6SectorInfo>())
+                .ToArray();
+        }
+
+        public static bool IsTerrainSector(WsiFile wsi) //If the map node is running from swTerrain
+        {
+            return wsi?.FileEntry?.Archive?.Name == "swterrain.rpf" == true;
+        }
+    }
+
+    public class RDR1ChildNode : StreamingBVHItem
     {
         public BoundingBox StreamingBox { get; set; }
         public BoundingBox BoundingBox { get; set; }
@@ -523,17 +935,12 @@ namespace CodeX.Games.RDR1
         public bool IsPinned;
         public bool IsProjectNode;
 
-        public RDR1MapNode(WsiFile wsi) //Buildings, props, etc...
+        public RDR1ChildNode() //Buildings, props, etc...
         {
-            var swTerrain = wsi.FileEntry.Archive.Name == "swterrain.rpf";
-            MapData = new RDR1MapData(wsi, swTerrain);
-            NameHash = wsi.FileEntry.ShortNameHash;
-            BoundingBox = MapData.BoundingBox;
-            StreamingBox = MapData.StreamingBox;
             Enabled = true;
         }
 
-        public RDR1MapNode(WspFile wsp, RDR1Map map) //Trees
+        public RDR1ChildNode(WspFile wsp, RDR1Map map) //Trees
         {
             MapData = new RDR1TreeMapData(wsp, map);
             NameHash = wsp.FileEntry.ShortNameHash;
@@ -542,49 +949,13 @@ namespace CodeX.Games.RDR1
             Enabled = true;
         }
 
-        public RDR1MapNode(Rpf6StoreItem item) //Tiles
+        public RDR1ChildNode(Rpf6StoreItem item) //Tiles
         {
             MapData = new RDR1TerrainMapData(item);
             NameHash = item.Hash;
             BoundingBox = MapData.BoundingBox;
             StreamingBox = MapData.StreamingBox;
             Enabled = true;
-        }
-
-        public void LoadMapData(WsiFile mapChild)
-        {
-            if (MapData != null)
-            {
-                UnloadMapData();
-            }
-            MapData ??= new RDR1MapData(mapChild);
-        }
-
-        public void UnloadMapData()
-        {
-            if (MapData != null)
-            {
-                foreach (var e in MapData.RootEntities)
-                {
-                    e.LodParent?.RemoveLodChild(e);
-                }
-                MapData.LodParent = null;
-            }
-
-            if (IsPinned == false)
-            {
-                MapData = null;
-            }
-            ParentNode = null;
-        }
-
-        public void SetParentNode(RDR1MapNode node)
-        {
-            if (ParentNode != node)
-            {
-                ParentNode = node;
-                MapData?.SetParent(node?.MapData);
-            }
         }
 
         public override string ToString()
@@ -595,140 +966,150 @@ namespace CodeX.Games.RDR1
 
     public class RDR1MapData : RDR1BaseMapData
     {
-        private readonly Rsc6SectorInfo[] Childs; //The sub-sectors containing the props and buildings
+        public Rsc6SectorInfo ParentSector;
+        public Rsc6SectorInfo Sector;
+        public WsiFile Wsi;
 
-        public RDR1MapData(WsiFile wsi, bool swTerrain = false)
+        public RDR1MapData(WsiFile wsi, Rsc6SectorInfo currentSector, Rsc6SectorInfo parentSector)
         {
-            var dist = new Vector3(700.0f);
-            FilePack = wsi;
-            FilePack.EditorObject = this; //Allow the editor access to this
-            Name = wsi.Name;
-            BoundingBox = wsi.StreamingItems.Bounds;
-            StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
+            this.Wsi = wsi;
+            this.FilePack = wsi;
+            this.FilePack.EditorObject = this; //Allow the editor access to this
+            this.Name = currentSector.SectorNameLower.ToString();
+            this.Sector = currentSector;
+            this.ParentSector = parentSector;
+            this.BoundingBox = wsi.StreamingItems.Bounds;
 
-            var scopedChilds = wsi?.StreamingItems?.ItemChilds.Item?.Sectors.Items?.Where(i => i != null);
-            var childs = wsi?.StreamingItems?.ChildPtrs.Items?.Where(i => i != null);
-            if (scopedChilds == null && childs == null)
+            var width = this.BoundingBox.Width;
+            var dist = new Vector3((width > 700.0f) ? width : 700.0f);
+            this.StreamingBox = new BoundingBox(this.BoundingBox.Center - dist, this.BoundingBox.Center + dist);
+
+            this.GetEntities();
+        }
+
+        public void GetEntities()
+        {
+            var name = this.Sector.Name.ToString().ToLower();
+            if (name == this.Wsi.StreamingItems.Scope.ToString() ||
+                name.Contains("_ffa01x") ||
+                name.Contains("_base01x")) return; //Deathmatch props
+
+            if (RDR1MapNode.IsTerrainSector(this.Wsi))
             {
-                return;
+                name += "_non-terrain";
             }
 
-            var allChilds = new List<Rsc6SectorInfo>();
-            if (scopedChilds != null)
+            //Add the sector as a entity
+            this.AddSectorEntity(name);
+
+            //Add the sector's entities
+            if (RDR1Map.EnablePropsSetting.GetBool())
             {
-                allChilds.AddRange(scopedChilds);
+                this.AddEntitiesFromSector(name);
             }
-            if (childs != null)
+
+            //Add the sector's lights
+            if (RDR1Map.EnableLightsSetting.GetBool())
             {
-                allChilds.AddRange(childs);
+                this.AddLightsFromSector();
             }
-            Childs = allChilds.ToArray();
 
-            foreach (var sector in Childs)
-            {
-                var name = sector.Name.ToString().ToLower();
-                if (name == wsi.StreamingItems.Scope.ToString()) continue;
-                if (name.Contains("_ffa01x") || name.Contains("_base01x") || name.Contains("_flags01x")) continue; //Deathmatch props
-
-                if (swTerrain)
-                {
-                    name += "_non-terrain";
-                }
-
-                //Add the sector as a entity
-                var sectorEnt = new WsiEntity()
-                {
-                    LodDistMax = 750.0f,
-                    ModelName = new(name),
-                    Position = sector.Bounds.Center,
-                    Index = Entities.Count,
-                    ResetPos = true,
-                    Level = this
-                };
-                this.Add(sectorEnt);
-
-                if (RDR1Map.EnablePropsSetting.GetBool())
-                {
-                    var entities = sector.Entities.Items;
-                    if (entities != null && entities.Length > 0)
-                    {
-                        foreach (var instance in entities)
-                        {
-                            var e = new WsiEntity(instance)
-                            {
-                                Index = Entities.Count,
-                                ParentName = name,
-                                Level = this
-                            };
-                            this.Add(e);
-                        }
-                    }
-
-                    var drawableInstances = sector.DrawableInstances.Items;
-                    if (drawableInstances != null && drawableInstances.Length > 0)
-                    {
-                        var ident = Matrix4x4.Identity;
-                        ident.M44 = 0.0f;
-
-                        foreach (var instance in drawableInstances)
-                        {
-                            if (instance.Name.ToString().ToLower() == name)
-                            {
-                                continue;
-                            }
-
-                            var e = new WsiEntity(instance)
-                            {
-                                Index = Entities.Count,
-                                ParentName = name,
-                                Level = this,
-                            };
-
-                            var isIdent = instance.Matrix.Equals(ident);
-                            if (isIdent)
-                            {
-                                var bb = new BoundingBox(instance.BoundingBoxMin.XYZ(), instance.BoundingBoxMax.XYZ());
-                                e.Position = bb.Center;
-                                e.ResetPos = true;
-                            }
-                            this.Add(e);
-                        }
-                    }
-                }
-
-                if (RDR1Map.EnableLightsSetting.GetBool())
-                {
-                    var lights = sector.PlacedLightsGroup.Item;
-                    if (lights != null)
-                    {
-                        foreach (var light in lights.Lights.Items)
-                        {
-                            var e = new RDR1LightEntity(light, lights.Name.ToString())
-                            {
-                                Index = Entities.Count,
-                                Level = this
-                            };
-                            this.Add(e);
-                        }
-                    }
-                }
-
-                //Link each entity to its parent sector
-                for (int i = 1; i < Entities.Count; i++)
-                {
-                    var entity = Entities[i];
-                    var parent = Entities[0];
-
-                    entity.LodParent = parent;
-                    entity.LodParent?.AddLodChild(entity);
-                }
-            }
+            //Link each entity to its parent sector
+            this.LinkEntitiesToParent();
         }
 
         public override void PreSaveUpdate()
         {
             base.PreSaveUpdate();
-            UpdateEntitiesArray();
+            this.UpdateEntitiesArray();
+        }
+
+        private void LinkEntitiesToParent()
+        {
+            for (int i = 1; i < this.Entities.Count; i++)
+            {
+                var entity = this.Entities[i];
+                var parent = this.Entities[0]; //Assuming the first entity is the parent
+
+                entity.LodParent = parent;
+                entity.LodParent?.AddLodChild(entity);
+            }
+        }
+
+        private void AddSectorEntity(string name)
+        {
+            var sectorEnt = new WsiEntity
+            {
+                LodDistMax = 750.0f,
+                ModelName = new(name),
+                Position = this.Sector.Bounds.Center,
+                Index = Entities.Count,
+                ResetPos = true,
+                Level = this
+            };
+            this.Add(sectorEnt);
+        }
+
+        private void AddLightsFromSector()
+        {
+            var lights = this.Sector.PlacedLightsGroup.Item;
+            if (lights != null)
+            {
+                foreach (var light in lights.Lights.Items)
+                {
+                    var e = new RDR1LightEntity(light, lights.Name.ToString())
+                    {
+                        Index = Entities.Count,
+                        Level = this
+                    };
+                    this.Add(e);
+                }
+            }
+        }
+
+        private void AddEntitiesFromSector(string parentName)
+        {
+            var entities = this.Sector.Entities.Items;
+            if (entities != null && entities.Length > 0)
+            {
+                foreach (var instance in entities)
+                {
+                    var e = new WsiEntity(instance)
+                    {
+                        Index = Entities.Count,
+                        ParentName = parentName,
+                        Level = this
+                    };
+                    this.Add(e);
+                }
+            }
+
+            var drawableInstances = this.Sector.DrawableInstances.Items;
+            if (drawableInstances != null && drawableInstances.Length > 0)
+            {
+                var ident = Matrix4x4.Identity;
+                ident.M44 = 0.0f;
+
+                foreach (var instance in drawableInstances)
+                {
+                    if (instance.Name.ToString().ToLower() == parentName) continue;
+
+                    var e = new WsiEntity(instance)
+                    {
+                        Index = Entities.Count,
+                        ParentName = parentName,
+                        Level = this,
+                    };
+
+                    if (instance.Matrix.Equals(ident))
+                    {
+                        var bb = new BoundingBox(instance.BoundingBoxMin.XYZ(), instance.BoundingBoxMax.XYZ());
+                        e.Position = bb.Center;
+                        //e.ResetPos = true;
+                    }
+                    this.Add(e);
+                }
+            }
         }
 
         private void UpdateEntitiesArray()
@@ -769,13 +1150,10 @@ namespace CodeX.Games.RDR1
             //Update each parent's entities
             foreach (var kvp in parentEntitiesDict)
             {
-                var parentName = kvp.Key;
                 var newEntities = kvp.Value.ToArray();
-                var parent = Childs.FirstOrDefault(e => e.Name.ToString() == parentName);
-
-                if (parent != null)
+                if (this.ParentSector != null)
                 {
-                    parent.Entities = new(newEntities);
+                    this.ParentSector.Entities = new(newEntities);
                 }
             }
         }
@@ -813,7 +1191,12 @@ namespace CodeX.Games.RDR1
                 {
                     var inst = pos.Items[i];
                     var name = grid.TreeNames.Items[inst.TreeIndex].ToString();
+
                     if (name == null) continue;
+                    if (name.EndsWith(".s"))
+                    {
+                        name = name.Replace(".s", ".spt"); //There's an issue from R* with a tree that has a name that's too long...
+                    }
 
                     name = name.Replace(".spt", "x"); //SpeedTree to fragment name
                     var hash = new JenkHash(name);
@@ -1300,7 +1683,7 @@ namespace CodeX.Games.RDR1
                 return null;
             }
 
-            var pack = TryGetPiecePack(packHash, out bool isFragment);
+            var pack = TryGetPiecePack(packHash);
             if (pack == null)
             {
                 return null;
@@ -1308,35 +1691,26 @@ namespace CodeX.Games.RDR1
             return ExtractPieces(pack, pieceHash);
         }
 
-        private PiecePack TryGetPiecePack(JenkHash packHash, out bool isFragment)
+        private PiecePack TryGetPiecePack(JenkHash packHash)
         {
             var pack = GetPiecePack(packHash, Rpf6FileExt.wft);
-            isFragment = true;
-
-            if (pack == null)
-            {
-                pack = GetPiecePack(packHash, Rpf6FileExt.wvd);
-                isFragment = false;
-            }
+            pack ??= GetPiecePack(packHash, Rpf6FileExt.wvd);
             return pack;
         }
 
-        private List<Piece> ExtractPieces(PiecePack pack, JenkHash pieceHash)
+        private static List<Piece> ExtractPieces(PiecePack pack, JenkHash pieceHash)
         {
             var pieces = new List<Piece>();
             if (pack?.Pieces != null)
             {
                 pack.Pieces.TryGetValue(pieceHash, out var piece);
-                if (piece == null)
-                {
-                    if (pack.Pieces.Count == 4) //High terrain contains 4 pieces
-                        pieces.AddRange(pack.Pieces.Values);
-                    else
-                        return null;
-                }
-                else
+                if (piece != null)
                 {
                     pieces.Add(piece);
+                }
+                else if (pack.Pieces.Count == 4) //High terrain contains 4 pieces
+                {
+                    pieces.AddRange(pack.Pieces.Values);
                 }
             }
             return pieces.Count > 0 ? pieces : null;
