@@ -1,12 +1,16 @@
-﻿using System;
-using System.Text;
-using System.Drawing;
-using System.Numerics;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+﻿using BepuPhysics.Trees;
 using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text;
+using static BepuPhysics.CollisionDetection.DepthRefiner<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -153,7 +157,7 @@ namespace CodeX.Games.RDR1.RSC6
                     Format = tex.Format;
                     Stride = tex.Stride;
                     MipLevels = tex.MipLevels;
-                    Data =  tex.Data;
+                    Data = tex.Data;
                 }
             }
             else Data = DataRef.Item?.Data;
@@ -403,7 +407,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             if (TextureSize == 0)
                 writer.WriteUInt32(0x018489E8); //External texture (for WVD)
-            else if(wvd) 
+            else if (wvd)
                 writer.WriteUInt32(0x01848890); //WVD texture
             else if (wfd)
                 writer.WriteUInt32(0x00D253E4); //WFD texture
@@ -560,6 +564,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort ItemCount { get; set; }
         public List<Rsc6Ptr<Rsc6ScaleformType>> TexturesType = new List<Rsc6Ptr<Rsc6ScaleformType>>();
         public List<Rsc6Texture> Textures = new List<Rsc6Texture>();
+        public Dictionary<string, List<MappingFont>> Mappings = new Dictionary<string, List<MappingFont>>();
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -581,22 +586,25 @@ namespace CodeX.Games.RDR1.RSC6
                 var t = reader.ReadPtr<Rsc6ScaleformType>();
                 if (t.Item != null && t.Item.TexturesPointers.Count > 0)
                     TexturesType.Add(t);
+                if (t.Item != null && t.Item.FontMap.Count > 0)
+                    Mappings.Add(t.Item.FontName, t.Item.FontMap);
             }
 
-            for (int i = 0; i < TexturesType.Count; i++)
-            {
-                if (TexturesType[i].Item.TexturesPointers.Count <= 0)
-                    continue;
 
-                for (int c = 0; c < TexturesType[i].Item.TexturesPointers.Count; c++)
-                {
-                    reader.Position = TexturesType[i].Item.TexturesPointers[c].Position;
+            //for (int i = 0; i < TexturesType.Count; i++)
+            //{
+            //    if (TexturesType[i].Item.TexturesPointers.Count <= 0)
+            //        continue;
 
-                    var tex = new Rsc6Texture();
-                    tex.Read(reader);
-                    Textures.Add(tex);
-                }
-            }
+            //    for (int c = 0; c < TexturesType[i].Item.TexturesPointers.Count; c++)
+            //    {
+            //        reader.Position = TexturesType[i].Item.TexturesPointers[c].Position;
+
+            //        var tex = new Rsc6Texture();
+            //        tex.Read(reader);
+            //        Textures.Add(tex);
+            //    }
+            //}
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -605,13 +613,33 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
+    public class MappingFont
+    {
+        public int TextureIndex;
+        public string TextureName;
+        public char charid;
+        public float x;
+        public float y;
+        public float width;
+        public float height;
+        public float unk1;
+        public float unk2;
+        public float unk3;
+        public float unk4;
+    }
+
     public class Rsc6ScaleformType : Rsc6BlockBase
     {
         public override ulong BlockLength => 32;
         public uint VFT { get; set; }
         public uint Unknown_4h { get; set; }
+        public string FontName { get; set; }
+        public ushort CharCount { get; set; }
+        public ushort Unknown_c { get; set; }
         public TextureType Type { get; set; }
         public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers { get; set; } = new();
+        public List<MappingFont> FontMap { get; set; } = new();
+
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -622,6 +650,15 @@ namespace CodeX.Games.RDR1.RSC6
             if (Type == TextureType.FONT)
             {
                 ulong offset = reader.Position + 0x9B;
+
+                reader.Position = offset - 4;
+                CharCount = reader.ReadUInt16();
+                Unknown_c = reader.ReadUInt16();
+
+
+                reader.Position = offset + 96;
+                FontName = reader.ReadString();
+
                 for (int i = 0; i < 3; i++)
                 {
                     reader.Position = offset + (ulong)(i * 8);
@@ -632,19 +669,64 @@ namespace CodeX.Games.RDR1.RSC6
 
                     reader.Position = dwObjectOffset.Position;
                     var grcTextureStructureOffset = reader.ReadPtr<Rsc6BlockMap>();
+                    var FontMappingOffset = reader.ReadPtr<Rsc6BlockMap>();
+                    var unknown = reader.ReadUInt16();
+                    var CharCount2 = reader.ReadUInt16();
+                    var CharTextureIndexOffset = reader.ReadPtr<Rsc6BlockMap>();
+                    var TextureNamesOffset = reader.ReadPtr<Rsc6BlockMap>();
+                    ushort textureCount = reader.ReadUInt16();
 
-                    if (grcTextureStructureOffset.Position <= 0)
+                    if (FontMappingOffset.Position <= 0)
                         continue;
 
-                    reader.Position = dwObjectOffset.Position + 0x14;
-                    ushort fontCount = reader.ReadUInt16();
+                    if (TextureNamesOffset.Position <= 0)
+                        continue;
 
-                    for (int c = 0; c < fontCount; c++)
+                    if (CharTextureIndexOffset.Position <= 0)
+                        continue;
+
+                    List<string> textureNames = new List<string>();
+                    for (int c = 0; c < textureCount; c++)
                     {
+
+                        reader.Position = TextureNamesOffset.Position + (ulong)(c * 4);
+                        var NameOffset = reader.ReadPtr<Rsc6BlockMap>();
+
+                        reader.Position = NameOffset.Position;
+                        textureNames.Add(reader.ReadString());
+
                         reader.Position = grcTextureStructureOffset.Position + (ulong)(c * 4);
                         TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
                     }
+
+
+                    for (int _ch = 0; _ch < CharCount; _ch++)
+                    {
+                        reader.Position = CharTextureIndexOffset.Position + (ulong)(_ch * 2);
+                        ushort TextureIndex = reader.ReadUInt16();
+
+                        reader.Position = FontMappingOffset.Position + (ulong)(_ch * 32);
+                        FontMap.Add(new MappingFont
+                        {
+                            TextureIndex = TextureIndex,
+                            TextureName = textureNames[TextureIndex],
+                            charid = (char)(32 + _ch), //Its wrong i know -_-
+                            x = reader.ReadSingle(),
+                            y = reader.ReadSingle(),
+                            width = reader.ReadSingle(),
+                            height = reader.ReadSingle(),
+                            unk1 = reader.ReadSingle(),
+                            unk2 = reader.ReadSingle(),
+                            unk3 = reader.ReadSingle(),
+                            unk4 = reader.ReadSingle()
+                        });
+
+                        continue;
+
+                    }
+
                 }
+
             }
             else if (Type == TextureType.BITMAP)
             {
