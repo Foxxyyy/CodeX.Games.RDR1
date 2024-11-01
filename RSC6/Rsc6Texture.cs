@@ -587,7 +587,7 @@ namespace CodeX.Games.RDR1.RSC6
                 if (t.Item != null && t.Item.TexturesPointers.Count > 0)
                     TexturesType.Add(t);
                 if (t.Item != null && t.Item.FontMap.Count > 0)
-                    Mappings.Add(t.Item.FontName, t.Item.FontMap);
+                    if (!Mappings.ContainsKey(t.Item.FontName)) Mappings.Add(t.Item.FontName, t.Item.FontMap);
             }
 
 
@@ -649,19 +649,26 @@ namespace CodeX.Games.RDR1.RSC6
 
             if (Type == TextureType.FONT)
             {
-                ulong offset = reader.Position + 0x9B;
 
-                reader.Position = offset - 4;
-                CharCount = reader.ReadUInt16();
-                Unknown_c = reader.ReadUInt16();
+                reader.Position += 7;
+                var CharactersListOffset = reader.ReadPtr<Rsc6BlockMap>();
+                var UnknownIntTableOffset = reader.ReadPtr<Rsc6BlockMap>(); //TODO: Wtf is this? (int * charCount)
 
+                reader.Position += 128; //FontNameCharacterRange
+
+                ushort FontsCount = reader.ReadUInt16();
+                reader.Position += 6; //Probably font config
+
+                var offset = reader.Position;
 
                 reader.Position = offset + 96;
                 FontName = reader.ReadString();
 
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < FontsCount; i++)
                 {
                     reader.Position = offset + (ulong)(i * 8);
+                    CharCount = reader.ReadUInt16();
+                    Unknown_c = reader.ReadUInt16();
                     var dwObjectOffset = reader.ReadPtr<Rsc6BlockMap>();
 
                     if (dwObjectOffset.Position <= 0)
@@ -671,19 +678,20 @@ namespace CodeX.Games.RDR1.RSC6
                     var grcTextureStructureOffset = reader.ReadPtr<Rsc6BlockMap>();
                     var FontMappingOffset = reader.ReadPtr<Rsc6BlockMap>();
                     var unknown = reader.ReadUInt16();
+
+                    //All charCounts must be equal
                     var CharCount2 = reader.ReadUInt16();
+                    if (CharCount != CharCount2) throw new Exception("Bug? character counts are not equal: " + CharCount2 + CharCount);
+
                     var CharTextureIndexOffset = reader.ReadPtr<Rsc6BlockMap>();
                     var TextureNamesOffset = reader.ReadPtr<Rsc6BlockMap>();
+
+                    //All texture counts must be equal
                     ushort textureCount = reader.ReadUInt16();
+                    ushort textureCount2 = reader.ReadUInt16();
+                    int textureCount3 = reader.ReadInt32();
 
-                    if (FontMappingOffset.Position <= 0)
-                        continue;
-
-                    if (TextureNamesOffset.Position <= 0)
-                        continue;
-
-                    if (CharTextureIndexOffset.Position <= 0)
-                        continue;
+                    if (textureCount != textureCount2 && textureCount2 != textureCount3) throw new Exception("Bug? texture counts are not equal: " + textureCount + textureCount2 + textureCount3);
 
                     List<string> textureNames = new List<string>();
                     for (int c = 0; c < textureCount; c++)
@@ -695,22 +703,30 @@ namespace CodeX.Games.RDR1.RSC6
                         reader.Position = NameOffset.Position;
                         textureNames.Add(reader.ReadString());
 
-                        reader.Position = grcTextureStructureOffset.Position + (ulong)(c * 4);
-                        TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
                     }
 
+                    List<char> FontChars = new List<char>();
+                    for (int _ch = 0; _ch < CharCount; _ch++)
+                    {
+                        reader.Position = CharactersListOffset.Position + (ulong)(_ch * 2);
+                        FontChars.Add((char)reader.ReadUInt16());
+                    }
 
                     for (int _ch = 0; _ch < CharCount; _ch++)
                     {
-                        reader.Position = CharTextureIndexOffset.Position + (ulong)(_ch * 2);
-                        ushort TextureIndex = reader.ReadUInt16();
+                        ushort TextureIndex = 0;
+                        if (CharTextureIndexOffset.Position > 0)
+                        {
+                            reader.Position = CharTextureIndexOffset.Position + (ulong)(_ch * 2);
+                            TextureIndex = reader.ReadUInt16();
+                        }
 
                         reader.Position = FontMappingOffset.Position + (ulong)(_ch * 32);
                         FontMap.Add(new MappingFont
                         {
                             TextureIndex = TextureIndex,
                             TextureName = textureNames[TextureIndex],
-                            charid = (char)(32 + _ch), //Its wrong i know -_-
+                            charid = FontChars[_ch],
                             x = reader.ReadSingle(),
                             y = reader.ReadSingle(),
                             width = reader.ReadSingle(),
