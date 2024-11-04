@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Text;
-using System.Drawing;
-using System.Numerics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using CodeX.Core.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -153,7 +151,7 @@ namespace CodeX.Games.RDR1.RSC6
                     Format = tex.Format;
                     Stride = tex.Stride;
                     MipLevels = tex.MipLevels;
-                    Data =  tex.Data;
+                    Data = tex.Data;
                 }
             }
             else Data = DataRef.Item?.Data;
@@ -192,9 +190,9 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
         }
 
-        public int[] BitsPerPixel = { 4, 8, 8, 8, 8, 8, 8, 8, 8, 4, 4, 4, 8, 4, 8 }; //crn stuff
+        public int[] BitsPerPixel = [4, 8, 8, 8, 8, 8, 8, 8, 8, 4, 4, 4, 8, 4, 8]; //crn stuff
 
-        public bool IsFormatBlockCompressed(TextureFormat fmt) //crn stuff
+        public static bool IsFormatBlockCompressed(TextureFormat fmt) //crn stuff
         {
             return ((uint)(0xC0000003F007FFFuL >> ((byte)fmt - 70)) & ((uint)(fmt - 70))) < 60;
         }
@@ -214,28 +212,31 @@ namespace CodeX.Games.RDR1.RSC6
 
         public static TextureFormat GetTextureFormat(byte[] value)
         {
-            return Encoding.ASCII.GetString(value) switch
+            var iFormat = BitConverter.ToInt32(value, 0);
+            return iFormat switch
             {
-                "DXT1" => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT1),
-                "DXT3" => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT3),
-                "DXT5" => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT5),
-                "CRND" => ConvertToEngineFormat(Rsc6TextureFormat.CRND),
-                "2\0\0\0" => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_L8),
-                _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8) //Likely
+                0x31545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT1), //827611204
+                0x33545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT3), //861165636
+                0x35545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT5), //894720068
+                0x444E5243 => ConvertToEngineFormat(Rsc6TextureFormat.CRND),        //1145983555
+                0x32 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_L8),         //50
+                0x20 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8),   //32
+                _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8) //throw new NotImplementedException("Unknown pixel format!")
             };
         }
 
         public static byte[] ConvertTextureFormatToBytes(TextureFormat value)
         {
-            string format = value switch
+            int format = value switch
             {
-                TextureFormat.BC1 => "DXT1",
-                TextureFormat.BC2 => "DXT3",
-                TextureFormat.L8 => "2\0\0\0",
-                TextureFormat.BC3 => "DXT5",
-                _ => "DXT5", //Mmh
+                TextureFormat.BC1 => 0x31545844, //DXT1
+                TextureFormat.BC2 => 0x33545844, //DXT3
+                TextureFormat.BC3 => 0x35545844, //DXT5
+                TextureFormat.L8 => 0x32,        //L8
+                TextureFormat.A8R8G8B8 => 0x20,  //A8R8G8B8
+                _ => throw new NotImplementedException("Unknown pixel format!")
             };
-            return Encoding.ASCII.GetBytes(format);
+            return BitConverter.GetBytes(format);
         }
 
         public static TextureFormat ConvertToEngineFormat(Rsc6TextureFormat format)
@@ -261,79 +262,6 @@ namespace CodeX.Games.RDR1.RSC6
                 TextureFormat.L8 => Rsc6TextureFormat.D3DFMT_L8,
                 TextureFormat.Unknown => Rsc6TextureFormat.CRND,
                 _ => Rsc6TextureFormat.D3DFMT_DXT1,
-            };
-        }
-
-        public static Vector4 BilinearFilterRead(Texture image, float u, float v)
-        {
-            float px = image.Width * u;
-            float py = image.Height * v;
-
-            int x = (int)px;
-            int y = (int)py;
-            int x2 = x + 1;
-            int y2 = y + 1;
-
-            if (x2 > image.Width - 1) x2 = x;
-            if (y2 > image.Height - 1) y2 = y;
-
-            //Calculate the coordinates of the top-left pixel
-            float fx = px - x;
-            float fy = py - y;
-
-            var weights = new Vector4((1.0f - fx) * (1.0f - fy), fx * (1.0f - fy), (1.0f - fx) * fy, fx * fy);
-
-            //Now get four values
-            var v1 = ColorToVector4(GetPixel(image, x, y));
-            var v2 = ColorToVector4(GetPixel(image, x2, y));
-            var v3 = ColorToVector4(GetPixel(image, x, y2));
-            var v4 = ColorToVector4(GetPixel(image, x2, y2));
-
-            return v1 * weights.X + v2 * weights.Y + v3 * weights.Z + v4 * weights.W;
-        }
-
-        public static Vector4 ColorToVector4(Color val)
-        {
-            return new Vector4(val.R, val.G, val.G, val.A);
-        }
-
-        public static Color GetColorFromByteArray(byte[] data, int offset)
-        {
-            if (data == null || offset < 0 || offset + 3 >= data.Length)
-            {
-                return Color.Black;
-            }
-
-            byte red = data[offset];
-            byte green = data[offset + 1];
-            byte blue = data[offset + 2];
-            byte alpha = data[offset + 3];
-
-            return Color.FromArgb(alpha, red, green, blue);
-        }
-
-        public static Color GetPixel(Texture tex, int x, int y)
-        {
-            if (tex.Data == null || x < 0 || x >= tex.Width || y < 0 || y >= tex.Height)
-            {
-                return Color.Black;
-            }
-
-            int pixelSize = GetPixelSize(tex.Format);
-            int rowPitch = tex.Stride;
-            int offset = y * rowPitch + x * pixelSize;
-
-            return GetColorFromByteArray(tex.Data, offset);
-        }
-
-        public static int GetPixelSize(TextureFormat format)
-        {
-            return format switch
-            {
-                TextureFormat.R32G32B32A32F => 4,
-                TextureFormat.BC1 => 8,
-                TextureFormat.BC3 => 16,
-                _ => throw new ArgumentException("GetPixelSize: Unsupported texture format"),
             };
         }
 
@@ -505,7 +433,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureScaleForm : Rsc6BlockBaseMap //TODO: Continue researching .wsf
+    public class Rsc6ScaleFormFile : Rsc6ScaleFormSprite //rage::swfFILE
     {
         /*
          * FLASH is the default tool that is used for the UI.
@@ -543,8 +471,19 @@ namespace CodeX.Games.RDR1.RSC6
          * Siblings and children of this active component may or may not be active.
          */
 
-        public override ulong BlockLength => 32;
-        public override uint VFT { get; set; }
+        public override ulong BlockLength => 64;
+        public uint Unknown_14h { get; set; }
+        public Rsc6RawPtrArr<Rsc6ScaleFormObjectBase> Directory { get; set; } //m_Directory, rage::swfOBJECT
+        public byte Version { get; set; } //m_Version
+        public bool UsesInput { get; set; } //m_UsesInput
+        public byte Padding1 { get; set; } //pad1
+        public byte Padding2 { get; set; } //pad2
+        public Rsc6ScaleFormRect FrameSize { get; set; } //m_FrameSize
+        public ushort FrameRate { get; set; } //m_FrameRate
+        public ushort DirCount { get; set; } //m_DirCount
+        public int ShapeCount { get; set; } //m_ShapeCount
+        public ulong ObjectMap { get; set; } //m_ObjectMap, rage::atMap<rage::ConstString,rage::datPadded<unsigned short>>
+
         public uint Stage { get; set; } //m_Stage
         public bool Updating { get; set; } //m_Updating
         public bool IsFileOwner { get; set; } //m_IsFileOwner
@@ -564,7 +503,19 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            BlockMap = reader.ReadPtr<Rsc6BlockMap>();
+            Unknown_14h = reader.ReadUInt32();
+            Directory = reader.ReadRawPtrArrPtr<Rsc6ScaleFormObjectBase>();
+            Version = reader.ReadByte();
+            UsesInput = reader.ReadBoolean();
+            Padding1 = reader.ReadByte();
+            Padding2 = reader.ReadByte();
+            FrameSize = reader.ReadBlock<Rsc6ScaleFormRect>();
+            FrameRate = reader.ReadUInt16();
+            DirCount = reader.ReadUInt16();
+            ShapeCount = reader.ReadInt32();
+            ObjectMap = reader.ReadUInt64();
+
+            Directory = reader.ReadRawPtrArrItem(Directory, DirCount, Rsc6ScaleFormObjectBase.Create);
 
             reader.Position = Rpf6Crypto.VIRTUAL_BASE + 0x2C;
             SwfObjectPointer = reader.ReadPtr<Rsc6BlockMap>();
@@ -592,9 +543,16 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     reader.Position = TexturesType[i].Item.TexturesPointers[c].Position;
 
-                    var tex = new Rsc6Texture();
-                    tex.Read(reader);
-                    Textures.Add(tex);
+                    try
+                    {
+                        var tex = new Rsc6Texture();
+                        tex.Read(reader);
+                        Textures.Add(tex);
+                    }
+                    catch
+                    {
+
+                    }
                 }
             }
         }
@@ -605,21 +563,261 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
+    public class Rsc6ScaleFormSprite : Rsc6ScaleFormObject //rage::swfSPRITE
+    {
+        public override ulong BlockLength => base.BlockLength + 12;
+        public Rsc6ScaleFormFrame Frames { get; set; } //m_Frames
+        public ushort FrameCount { get; set; } //m_FrameCount
+        public ushort Padding { get; set; } = 0xCD; //pad
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Frames = reader.ReadBlock<Rsc6ScaleFormFrame>();
+            FrameCount = reader.ReadUInt16();
+            Padding = reader.ReadUInt16();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteBlock(Frames);
+            writer.WriteUInt16(FrameCount);
+            writer.WriteUInt16(Padding);
+        }
+    }
+
+    public class Rsc6ScaleFormFrame : Rsc6BlockBase //rage::swfFRAME
+    {
+        public override ulong BlockLength => 8;
+        public Colour BackgroundColor { get; set; } //m_BackgroundColor
+        public uint First { get; set; } //m_First, TODO: Add rage::swfCMD
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            BackgroundColor = reader.ReadColour();
+            First = reader.ReadUInt32();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteColour(BackgroundColor);
+            writer.WriteUInt32(First);
+        }
+    }
+
+    public class Rsc6ScaleFormRect : Rsc6BlockBase //rage::swfRECT
+    {
+        public override ulong BlockLength => 16;
+        public float MinX { get; set; } //Xmin
+        public float MaxX { get; set; } //Xmax
+        public float MinY { get; set; } //Ymin
+        public float MaxY { get; set; } //Ymax
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            MinX = reader.ReadSingle();
+            MaxX = reader.ReadSingle();
+            MinY = reader.ReadSingle();
+            MaxY = reader.ReadSingle();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteSingle(MinX);
+            writer.WriteSingle(MaxX);
+            writer.WriteSingle(MinY);
+            writer.WriteSingle(MaxY);
+        }
+    }
+
+    public class Rsc6ScaleFormObject : Rsc6FileBase //rage::swfOBJECT
+    {
+        public override ulong BlockLength => 8;
+        public override uint VFT { get; set; } = 0x00CF9108;
+        public byte Type { get; set; } //m_Type, object type
+        public byte Pad0 { get; set; } //pad0
+        public byte Pad1 { get; set; } //pad1
+        public byte Pad2 { get; set; } //pad2
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Type = reader.ReadByte();
+            Pad0 = reader.ReadByte();
+            Pad1 = reader.ReadByte();
+            Pad2 = reader.ReadByte();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteByte(Type);
+            writer.WriteByte(Pad0);
+            writer.WriteByte(Pad1);
+            writer.WriteByte(Pad2);
+        }
+    }
+
+    public class Rsc6ScaleFormObjectBase : Rsc6FileBase
+    {
+        public override ulong BlockLength => 12; //16?
+        public override uint VFT { get; set; } = 0x00CF99D0;
+        public uint Unknown_4h { get; set; }
+        public Rsc6ScaleformObjectType Type { get; set; } //m_Type, object type
+        public byte Pad0 { get; set; } //pad0
+        public byte Pad1 { get; set; } //pad1
+        public byte Pad2 { get; set; } //pad2
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Unknown_4h = reader.ReadUInt32();
+            Type = (Rsc6ScaleformObjectType)reader.ReadByte();
+            Pad0 = reader.ReadByte();
+            Pad1 = reader.ReadByte();
+            Pad2 = reader.ReadByte();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteUInt32(Unknown_4h);
+            writer.WriteByte((byte)Type);
+            writer.WriteByte(Pad0);
+            writer.WriteByte(Pad1);
+            writer.WriteByte(Pad2);
+        }
+
+        public static Rsc6ScaleFormObjectBase Create(Rsc6DataReader r)
+        {
+            r.Position += 8;
+            var type = (Rsc6ScaleformObjectType)r.ReadByte();
+            r.Position -= 9;
+            return Create(type);
+        }
+
+        public static Rsc6ScaleFormObjectBase Create(Rsc6ScaleformObjectType type)
+        {
+            return type switch
+            {
+                Rsc6ScaleformObjectType.FONT => new Rsc6ScaleformFont(),
+                _ => throw new Exception("Unknown scaleform type")
+            };
+        }
+    }
+
+    public class Rsc6ScaleformFont : Rsc6ScaleFormObjectBase
+    {
+        public override ulong BlockLength => base.BlockLength; //336
+        public uint Unknown_Ch { get; set; }
+        public uint GlyphToCode { get; set; } //m_GlyphToCode, TODO
+        public uint Advance { get; set; } //m_Advance, TODO
+        public byte[] Glyphs { get; set; } //m_CodeToGlyph
+        public short SheetCount { get; set; } //m_SheetCount
+        public short Ascent { get; set; } //m_Ascent
+        public short Descent { get; set; } //m_Descent
+        public short Leading { get; set; } //m_Leading
+        public byte Flags { get; set; } //m_Flags
+        public byte LangCode { get; set; } //m_LangCode
+        public Rsc6Ptr<Rsc6ScaleformFontSheet> Sheet { get; set; }
+        public ulong Unknown_A8h { get; set; }
+        public ulong Unknown_B0h { get; set; }
+        public ulong Unknown_B8h { get; set; }
+        public ulong Unknown_C0h { get; set; }
+        public ulong Unknown_C8h { get; set; }
+        public ulong Unknown_D0h { get; set; }
+        public ulong Unknown_D8h { get; set; }
+        public ulong Unknown_E0h { get; set; }
+        public ulong Unknown_E8h { get; set; }
+        public ulong Unknown_F0h { get; set; }
+        public ulong Unknown_F8h { get; set; }
+        public uint Unknown_100h { get; set; }
+        public uint Unknown_104h { get; set; } //Hash?
+        public uint Unknown_108h { get; set; } //Hash?
+        public uint Unknown_10Ch { get; set; } //Hash?
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            Unknown_Ch = reader.ReadUInt32();
+            GlyphToCode = reader.ReadUInt32();
+            Advance = reader.ReadUInt32();
+            Glyphs = reader.ReadBytes(128);
+            SheetCount = reader.ReadInt16();
+            Ascent = reader.ReadInt16();
+            Descent = reader.ReadInt16();
+            Leading = reader.ReadInt16();
+            Flags = reader.ReadByte();
+            LangCode = reader.ReadByte();
+            Sheet = reader.ReadPtr<Rsc6ScaleformFontSheet>();
+            Unknown_A8h = reader.ReadUInt64();
+            Unknown_B0h = reader.ReadUInt64();
+            Unknown_B8h = reader.ReadUInt64();
+            Unknown_C0h = reader.ReadUInt64();
+            Unknown_C8h = reader.ReadUInt64();
+            Unknown_D0h = reader.ReadUInt64();
+            Unknown_D8h = reader.ReadUInt64();
+            Unknown_E0h = reader.ReadUInt64();
+            Unknown_E8h = reader.ReadUInt64();
+            Unknown_F0h = reader.ReadUInt64();
+            Unknown_F8h = reader.ReadUInt64();
+            Unknown_100h = reader.ReadUInt32();
+            Unknown_104h = reader.ReadUInt32();
+            Unknown_108h = reader.ReadUInt32();
+            Unknown_10Ch = reader.ReadUInt32();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+        }
+    }
+
+    public class Rsc6ScaleformFontSheet : Rsc6BlockBase
+    {
+        public override ulong BlockLength => 32;
+        public uint Cells { get; set; } //m_Cells
+        public uint Indices { get; set; } //m_Indices
+        public short Size { get; set; } //m_Size
+        public short CellCount { get; set; } //m_CellCount
+        public uint Unknown_Ch { get; set; } //Always 0?
+        public Rsc6StrArr TextureNames { get; set; } //m_TextureNames
+        public uint TextureCount { get; set; } //m_TextureCount
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            Cells = reader.ReadUInt32();
+            Indices = reader.ReadUInt32();
+            Size = reader.ReadInt16();
+            CellCount = reader.ReadInt16();
+            TextureNames = reader.ReadPtr();
+            TextureCount = reader.ReadUInt32();
+
+            TextureNames = reader.ReadItems(TextureNames, TextureCount);
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+
+        }
+    }
+
     public class Rsc6ScaleformType : Rsc6BlockBase
     {
         public override ulong BlockLength => 32;
         public uint VFT { get; set; }
         public uint Unknown_4h { get; set; }
-        public TextureType Type { get; set; }
+        public Rsc6ScaleformObjectType Type { get; set; }
         public List<Rsc6Ptr<Rsc6BlockMap>> TexturesPointers { get; set; } = new();
 
         public override void Read(Rsc6DataReader reader)
         {
             VFT = reader.ReadUInt32();
             Unknown_4h = reader.ReadUInt32();
-            Type = (TextureType)reader.ReadByte();
+            Type = (Rsc6ScaleformObjectType)reader.ReadByte();
 
-            if (Type == TextureType.FONT)
+            if (Type == Rsc6ScaleformObjectType.FONT)
             {
                 ulong offset = reader.Position + 0x9B;
                 for (int i = 0; i < 3; i++)
@@ -646,7 +844,7 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                 }
             }
-            else if (Type == TextureType.BITMAP)
+            else if (Type == Rsc6ScaleformObjectType.BITMAP)
             {
                 reader.Position += 0x3; //Those 3 bytes are 'pad'
                 TexturesPointers.Add(reader.ReadPtr<Rsc6BlockMap>());
@@ -656,12 +854,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             throw new NotImplementedException();
-        }
-
-        public enum TextureType
-        {
-            BITMAP = 4,
-            FONT = 5
         }
     }
 
@@ -714,6 +906,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
 
         }
+    }
+
+    public enum Rsc6ScaleformObjectType
+    {
+        BITMAP = 4,
+        FONT = 5
     }
 
     public enum Rsc6TextureFormat : uint

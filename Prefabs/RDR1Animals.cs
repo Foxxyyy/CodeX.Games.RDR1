@@ -156,7 +156,7 @@ namespace CodeX.Games.RDR1.Prefabs
             Slots = slots.ToArray();
         }
 
-        public override Entity CreateInstance(string preset = null)
+        public override Entity CreateInstance(bool preview, string preset)
         {
             return new RDR1Animal(this);
         }
@@ -170,7 +170,7 @@ namespace CodeX.Games.RDR1.Prefabs
         public string ClipName;
         public static string PreviousWas;
 
-        public RDR1Animal(RDR1AnimalPrefab prefab, bool buildPiece = true) : base(false)
+        public RDR1Animal(RDR1AnimalPrefab prefab) : base(false)
         {
             PhysicsType = PhysicsObjectType.Static;
             DisableMouseSelect = false;
@@ -186,10 +186,7 @@ namespace CodeX.Games.RDR1.Prefabs
             //Turn peds to the sun and the camera
             SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, FloatUtil.HalfPi), false);
 
-            if (buildPiece)
-            {
-                BuildPiece();
-            }
+            BuildPiece();
         }
 
         public void BuildPiece()
@@ -383,6 +380,11 @@ namespace CodeX.Games.RDR1.Prefabs
                     PlayAnim(option as string);
                 }
             }
+        }
+
+        public string GetPresetString()
+        {
+            return null;
         }
     }
 }

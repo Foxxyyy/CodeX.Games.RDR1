@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using SharpDX.DirectWrite;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -2073,32 +2072,36 @@ namespace CodeX.Games.RDR1.RSC6
 
     public static class Rsc6DataMap
     {
-        public static List<T> Build<T>(List<T> entries, bool sortbuckets = false, bool reversebuckets = false, T[] extest = null) where T : IRsc6DataMapEntry<T>
+        public static List<T> Build<T>(List<T> entries, int customBucket = -1, bool sortbuckets = false, bool reversebuckets = false, T[] extest = null) where T : IRsc6DataMapEntry<T>
         {
             if (entries.Count < 1 || ((entries.Count == 1) && (entries[0].MapKey == 0)))
             {
                 return null;
             }
 
-            var numbuckets = 0;
+            var numbuckets = customBucket;
             var numkeys = entries.Count;
-            if (numkeys < 11) numbuckets = 11;
-            else if (numkeys < 29) numbuckets = 29;
-            else if (numkeys < 59) numbuckets = 59;
-            else if (numkeys < 107) numbuckets = 107;
-            else if (numkeys < 191) numbuckets = 191;
-            else if (numkeys < 331) numbuckets = 331;
-            else if (numkeys < 563) numbuckets = 563;
-            else if (numkeys < 953) numbuckets = 953;
-            else if (numkeys < 1609) numbuckets = 1609;
-            else if (numkeys < 2729) numbuckets = 2729;
-            else if (numkeys < 4621) numbuckets = 4621;
-            else if (numkeys < 7841) numbuckets = 7841;
-            else if (numkeys < 13297) numbuckets = 13297;
-            else if (numkeys < 22571) numbuckets = 22571;
-            else if (numkeys < 38351) numbuckets = 38351;
-            else if (numkeys < 65167) numbuckets = 65167;
-            else numbuckets = 65521;
+
+            if (numbuckets < 0)
+            {
+                if (numkeys < 11) numbuckets = 11;
+                else if (numkeys < 29) numbuckets = 29;
+                else if (numkeys < 59) numbuckets = 59;
+                else if (numkeys < 107) numbuckets = 107;
+                else if (numkeys < 191) numbuckets = 191;
+                else if (numkeys < 331) numbuckets = 331;
+                else if (numkeys < 563) numbuckets = 563;
+                else if (numkeys < 953) numbuckets = 953;
+                else if (numkeys < 1609) numbuckets = 1609;
+                else if (numkeys < 2729) numbuckets = 2729;
+                else if (numkeys < 4621) numbuckets = 4621;
+                else if (numkeys < 7841) numbuckets = 7841;
+                else if (numkeys < 13297) numbuckets = 13297;
+                else if (numkeys < 22571) numbuckets = 22571;
+                else if (numkeys < 38351) numbuckets = 38351;
+                else if (numkeys < 65167) numbuckets = 65167;
+                else numbuckets = 65521;
+            }
 
             var buckets = new List<T>[numbuckets];
             foreach (var entry in entries)

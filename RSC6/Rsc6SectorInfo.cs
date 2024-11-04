@@ -2726,12 +2726,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public RDR1GridForestEntity(BaseCreateArgs args, float dist) //Create
         {
-            TreeName = args.Asset;
+            TreeName = args.AssetName;
             LodDistMax = dist;
-            Position = args.Position;
-            Orientation = args.Rotation;
+            Position = args.Transform.Position;
+            Orientation = args.Transform.Orientation;
+            Scale = args.Transform.Scale;
             OrientationInv = Orientation.IsIdentity ? Quaternion.Identity : Quaternion.Inverse(Orientation);
-            Scale = args.Scale;
             Created = true;
         }
 

@@ -10,6 +10,7 @@ using System.Linq;
 using ICSharpCode.SharpZipLib.Core;
 using System.ComponentModel;
 using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -462,7 +463,7 @@ namespace CodeX.Games.RDR1.RPF6
         {
             try
             {
-                using BinaryReader br = new BinaryReader(File.OpenRead(GetPhysicalFilePath()));
+                using var br = new BinaryReader(File.OpenRead(GetPhysicalFilePath()));
                 if (f is Rpf6FileEntry rf)
                     return ExtractFileResource(rf, br);
                 else
@@ -479,16 +480,27 @@ namespace CodeX.Games.RDR1.RPF6
             br.BaseStream.Position = entry.GetOffset();
             byte[] data = br.ReadBytes((int)entry.Size);
 
-            if (!entry.FlagInfos.IsResource && !entry.FlagInfos.IsCompressed)
+            var compr = entry.FlagInfos.IsCompressed;
+            var res = entry.FlagInfos.IsResource;
+            if (!res && !compr)
+            {
                 return data;
+            }
 
             byte[] resourceData = ResourceInfo.GetDataFromResourceBytes(data);
-            if (entry.Size > 0 && entry.FlagInfos.IsCompressed && resourceData == null)
+            if (entry.Size > 0 && compr && resourceData == null)
             {
-                br.BaseStream.Position = entry.GetOffset();
-                byte[] decr = new byte[entry.Size];
-                byte[] deflated = DecompressZStandard(br.ReadBytes(decr.Length));
-                return deflated;
+                try
+                {
+                    br.BaseStream.Position = entry.GetOffset();
+                    byte[] decr = new byte[entry.Size];
+                    byte[] deflated = DecompressZStandard(br.ReadBytes(decr.Length));
+                    return deflated;
+                }
+                catch //Some files still use zlib (audio dat files)
+                {
+                    return ResourceInfo.GetZLibData(data, entry.FlagInfos.GetTotalSize(), true);
+                }
             }
             return resourceData;
         }
@@ -953,7 +965,7 @@ namespace CodeX.Games.RDR1.RPF6
         public static Rpf6ResourceFileEntry Create(ref byte[] data, ref int decompressedSize)
         {
             var e = new Rpf6ResourceFileEntry();
-            using DataReader reader = new DataReader(new MemoryStream(data), DataEndianess.BigEndian);
+            using var reader = new DataReader(new MemoryStream(data), DataEndianess.BigEndian);
             uint rsc6 = reader.ReadUInt32();
 
             if (rsc6 == 2235781970) //RSC6 header present!
@@ -973,7 +985,7 @@ namespace CodeX.Games.RDR1.RPF6
                     numArray = DecryptAES(numArray);
                 }
 
-                using DataReader dReader = new DataReader(new MemoryStream(numArray), DataEndianess.BigEndian);
+                using var dReader = new DataReader(new MemoryStream(numArray), DataEndianess.BigEndian);
                 data = new byte[flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV];
                 decompressedSize = data.Length;
 
@@ -1443,13 +1455,11 @@ namespace CodeX.Games.RDR1.RPF6
 
     public class ResourceInfo
     {
-        public static byte[] GetDataFromResourceBytes(byte[] data) => GetDataFromStream(new MemoryStream(data));
-
-        public static byte[] GetDataFromStream(Stream resourceStream)
+        public static byte[] GetDataFromResourceBytes(byte[] rdata)
         {
-            using var br = new DataReader(resourceStream);
-            uint num1 = br.ReadUInt32();
-            int num2 = br.ReadInt32();
+            using var br = new DataReader(new MemoryStream(rdata));
+            var num1 = br.ReadUInt32();
+            var num2 = br.ReadInt32();
             FlagInfo flagInfo;
 
             if (num1 == 2235781970U || num1 == 2252559186U)
@@ -1480,12 +1490,17 @@ namespace CodeX.Games.RDR1.RPF6
             }
             catch //Some resources still use zlib (.wtx)
             {
-                try
-                {
-                    return DecompressDeflate(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
-                }
-                catch { return null; }
+                return GetZLibData(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
             }
+        }
+
+        public static byte[] GetZLibData(byte[] data, int decompSize, bool noHeader)
+        {
+            try
+            {
+                return DecompressDeflate(data, decompSize, noHeader);
+            }
+            catch { return null; }
         }
     }
 

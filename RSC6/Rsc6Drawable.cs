@@ -300,7 +300,7 @@ namespace CodeX.Games.RDR1.RSC6
             var elems = VertexLayout.Elements;
             var elemcount = elems.Length;
             var terrainMesh = reader.FileEntry.Name.StartsWith("tile");
-            var highTerrainLOD = reader.FileEntry.EntryParent.Name == "resource_0";
+            var highTerrainLOD = reader.FileEntry.EntryParent?.Name == "resource_0";
 
             for (int index = 0; index < numArray.Length; index += VertexStride)
             {
@@ -319,10 +319,15 @@ namespace CodeX.Games.RDR1.RSC6
                             var v4 = BufferUtil.ReadVector4(numArray, index + elemoffset);
                             Rpf6Crypto.WriteVector4AtIndex(v4, numArray, index + elemoffset);
                             break;
+                        case VertexElementFormat.Colour:
+                            var color = BufferUtil.ReadColour(numArray, index + elemoffset);
+                            var newColor = new Colour(color.B, color.G, color.R, color.A);
+                            BufferUtil.WriteColour(numArray, index + elemoffset, ref newColor);
+                            break;
                         case VertexElementFormat.Dec3N:
                             var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
-                            var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
-                            var np1 = FloatUtil.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N from RDR axis
+                            var pv = Rpf6Crypto.Dec3NToVector4(packed); //Convert Dec3N to Vector4
+                            var np1 = Rpf6Crypto.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N
                             BufferUtil.WriteUint(numArray, index + elemoffset, np1);
                             break;
                         case VertexElementFormat.Half2: //Scale terrain UVs
@@ -417,9 +422,14 @@ namespace CodeX.Games.RDR1.RSC6
                             break;
                         case VertexElementFormat.Dec3N:
                             var packed = BufferUtil.ReadUint(VertexData, index + elemoffset);
-                            var pv = FloatUtil.Dec3NToVector4(packed); //Convert Dec3N to Vector4
+                            var pv = Rpf6Crypto.Dec3NToVector4(packed); //Convert Dec3N to Vector4
                             var np = Rpf6Crypto.GetDec3N(pv, false); //Convert Vector4 back to Dec3N with RDR axis
                             BufferUtil.WriteUint(VertexData, index + elemoffset, np);
+                            break;
+                        case VertexElementFormat.Colour:
+                            var color = BufferUtil.ReadColour(VertexData, index + elemoffset);
+                            color = new Colour(color.B, color.G, color.R, color.A);
+                            BufferUtil.WriteColour(VertexData, index + elemoffset, ref color);
                             break;
                         default:
                             break;

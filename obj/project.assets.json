@@ -1,32 +1,32 @@
 {
   "version": 3,
   "targets": {
-    "net7.0-windows7.0": {
-      "BepuPhysics/2.4.0": {
+    "net8.0-windows7.0": {
+      "BepuPhysics/2.5.0-beta.23": {
         "type": "package",
         "dependencies": {
-          "BepuUtilities": "2.4.0"
+          "BepuUtilities": "2.5.0-beta.23"
         },
         "compile": {
-          "lib/net6.0/BepuPhysics.dll": {
+          "lib/net8.0/BepuPhysics.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net6.0/BepuPhysics.dll": {
+          "lib/net8.0/BepuPhysics.dll": {
             "related": ".xml"
           }
         }
       },
-      "BepuUtilities/2.4.0": {
+      "BepuUtilities/2.5.0-beta.23": {
         "type": "package",
         "compile": {
-          "lib/net6.0/BepuUtilities.dll": {
+          "lib/net8.0/BepuUtilities.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net6.0/BepuUtilities.dll": {
+          "lib/net8.0/BepuUtilities.dll": {
             "related": ".xml"
           }
         }
@@ -1525,10 +1525,10 @@
       },
       "CodeX.Core/1.0.0": {
         "type": "project",
-        "framework": ".NETCoreApp,Version=v7.0",
+        "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
-          "BepuPhysics": "2.4.0",
-          "BepuUtilities": "2.4.0",
+          "BepuPhysics": "2.5.0-beta.23",
+          "BepuUtilities": "2.5.0-beta.23",
           "SharpDX": "4.2.0",
           "SharpDX.D3DCompiler": "4.2.0",
           "SharpDX.Direct2D1": "4.2.0",
@@ -1546,32 +1546,32 @@
     }
   },
   "libraries": {
-    "BepuPhysics/2.4.0": {
-      "sha512": "Ck/BJgSQrBqYrj0T9jGljDdHNILBP5kTPTylc7N/hCzR1XJJc7p6ORzwtjTfjgoYkkdajvLHxEQv6BRC8kaysQ==",
+    "BepuPhysics/2.5.0-beta.23": {
+      "sha512": "/wfKGWkK2gL7jlZrU5lylNcsWFrL3d9ohTSdvh7F5brSMxAl2YfOFVWdaqnObdKc9wszL7f25r1de/4G0NPMhQ==",
       "type": "package",
-      "path": "bepuphysics/2.4.0",
+      "path": "bepuphysics/2.5.0-beta.23",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
-        "bepuphysics.2.4.0.nupkg.sha512",
+        "bepuphysics.2.5.0-beta.23.nupkg.sha512",
         "bepuphysics.nuspec",
         "bepuphysicslogo256.png",
-        "lib/net6.0/BepuPhysics.dll",
-        "lib/net6.0/BepuPhysics.xml"
+        "lib/net8.0/BepuPhysics.dll",
+        "lib/net8.0/BepuPhysics.xml"
       ]
     },
-    "BepuUtilities/2.4.0": {
-      "sha512": "KNMxkzKLHAvV7jRtErxs3rPv71fHToqo/WN96HlT6iomWuwL97tohEbt0B1WA8A6sO5t6PP+qF08d4T9A8k2uA==",
+    "BepuUtilities/2.5.0-beta.23": {
+      "sha512": "NlY01uMcPtRYL+faXCK1u16dq5JEe1424M7hKoBnQeoHQZdhxYwgTmVw4feTL/kMaCBTDnSUiECgX5+i6k+nBA==",
       "type": "package",
-      "path": "bepuutilities/2.4.0",
+      "path": "bepuutilities/2.5.0-beta.23",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "bepuphysicslogo256.png",
-        "bepuutilities.2.4.0.nupkg.sha512",
+        "bepuutilities.2.5.0-beta.23.nupkg.sha512",
         "bepuutilities.nuspec",
-        "lib/net6.0/BepuUtilities.dll",
-        "lib/net6.0/BepuUtilities.xml"
+        "lib/net8.0/BepuUtilities.dll",
+        "lib/net8.0/BepuUtilities.xml"
       ]
     },
     "Microsoft.NETCore.Platforms/5.0.0": {
@@ -5219,7 +5219,7 @@
     }
   },
   "projectFileDependencyGroups": {
-    "net7.0-windows7.0": [
+    "net8.0-windows7.0": [
       "CodeX.Core >= 1.0.0",
       "Microsoft.Win32.Registry >= 5.0.0",
       "SharpZipLib >= 1.4.2",
@@ -5232,18 +5232,18 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+      "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
       "projectName": "CodeX.Games.RDR1",
-      "projectPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+      "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
       "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-      "outputPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
+      "outputPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
-        "net7.0-windows"
+        "net8.0-windows7.0"
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
@@ -5251,11 +5251,11 @@
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net7.0-windows7.0": {
-          "targetAlias": "net7.0-windows",
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows7.0",
           "projectReferences": {
-            "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
-              "projectPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
+            "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+              "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
             }
           }
         }
@@ -5272,8 +5272,8 @@
       }
     },
     "frameworks": {
-      "net7.0-windows7.0": {
-        "targetAlias": "net7.0-windows",
+      "net8.0-windows7.0": {
+        "targetAlias": "net8.0-windows7.0",
         "dependencies": {
           "Microsoft.Win32.Registry": {
             "target": "Package",
@@ -5304,7 +5304,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -11,7 +11,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Runtime.Intrinsics.X86;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -549,6 +548,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             PartColour = Material.Type.Colour;
             PartSize = new Vector3(SphereRadius, 0.0f, 0.0f);
+            PartTransform = Matrix3x4.CreateTranslation(SphereCenter);
             ComputeMass(ColliderType.Sphere, PartSize, 1.0f);
             ComputeBodyInertia();
         }
@@ -797,7 +797,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_18h { get; set; } //Padding
         public uint Unknown_1Ch { get; set; } //Padding
 
-        public Rsc6BoundCurvedGeometry(Rsc6BoundsType type = Rsc6BoundsType.CurvedGeometry) : base(type)
+        public Rsc6BoundCurvedGeometry() : base(Rsc6BoundsType.CurvedGeometry)
         {
         }
 
@@ -1166,7 +1166,7 @@ namespace CodeX.Games.RDR1.RSC6
                 if (!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f)
                 {
                     type = Rsc6BoundPolygonType.Triangle;
-                    PartShape = EditablePartShape.TriMesh;
+                    PartShape = EditablePartShape.Mesh;
                 }
 
                 var p = new Rsc6BoundPolygon(type, this, i);
@@ -1238,7 +1238,7 @@ namespace CodeX.Games.RDR1.RSC6
                 if ((!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f) || Type == Rsc6BoundsType.Box)
                 {
                     type = Rsc6BoundPolygonType.Triangle;
-                    PartShape = EditablePartShape.TriMesh;
+                    PartShape = EditablePartShape.Mesh;
                 }
 
                 var matind = GetMaterialIndex(i);

@@ -7,7 +7,7 @@ namespace CodeX.Games.RDR1.Files
 {
     public class WsfFile : TexturePack
     {
-        public Rsc6TextureScaleForm TexturesScaleForm;
+        public Rsc6ScaleFormFile TexturesScaleForm;
 
         public WsfFile(Rpf6FileEntry file) : base(file)
         {
@@ -18,7 +18,7 @@ namespace CodeX.Games.RDR1.Files
             var e = FileInfo as Rpf6ResourceFileEntry;
             var r = new Rsc6DataReader(e, data);
 
-            TexturesScaleForm = r.ReadBlock<Rsc6TextureScaleForm>();
+            TexturesScaleForm = r.ReadBlock<Rsc6ScaleFormFile>();
             Textures = new Dictionary<string, Texture>();
 
             if (TexturesScaleForm?.Textures != null)

@@ -8,7 +8,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using CodeX.Games.RDR1.Files;
-using System.Threading.Tasks;
 
 namespace CodeX.Games.RDR1
 {
@@ -139,7 +138,7 @@ namespace CodeX.Games.RDR1
 
                 if (colMode == "Only collisions")
                 {
-                    this.StreamCollisionsRange = 1000.0f;
+                    this.StreamPhysicsRange = 1000.0f;
                 }
             }
 
@@ -275,7 +274,7 @@ namespace CodeX.Games.RDR1
                     else
                     {
                         ent.SetPiece(pieces[0]);
-                        ent.Batch?.Update(ref spos);
+                        ent.Batch?.StreamingUpdate(spos);
 
                         //If we have a tree, let's not switch between lods, low lods have no trunks...
                         if (ent is RDR1GridForestEntity ft)
@@ -369,7 +368,7 @@ namespace CodeX.Games.RDR1
         {
             if (boundsStore != null)
             {
-                var collsRng = new Vector3(this.StreamCollisionsRange);
+                var collsRng = new Vector3(this.StreamPhysicsRange);
                 var collsBox = new BoundingBox(spos - collsRng, spos + collsRng);
                 foreach (var bnd in boundsStore)
                 {
@@ -380,7 +379,7 @@ namespace CodeX.Games.RDR1
                         {
                             foreach (var b in bounds)
                             {
-                                if (b != null) this.StreamCollisions.Add(b);
+                                if (b != null) this.StreamPhysics.Add(b);
                             }
                         }
                     }
@@ -1224,7 +1223,7 @@ namespace CodeX.Games.RDR1
             return new[] { BaseCreateType.Entity };
         }
 
-        public override BaseObject CreateObject(BaseCreateArgs args)
+        public override BaseObject CreateObject(in BaseCreateArgs args)
         {
             if (args.Type.Name == "Entity")
             {
@@ -1232,29 +1231,23 @@ namespace CodeX.Games.RDR1
                 {
                     Level = this
                 };
-                AddObject(ent);
+                InsertObject(ent);
                 return ent;
             }
             return null;
         }
 
-        public override void AddObject(BaseObject obj, int id = -1)
+        public override void InsertObject(BaseObject obj)
         {
-            if (obj is RDR1GridForestEntity ent == false) return;
             Map.StreamInvoke(() => //Make sure this runs on stream thread to synchronise Entities use
             {
-                if ((id >= 0) && (id <= Entities.Count) && (ent.Index == id)) //This insert case happens for undo delete
+                if (obj is RDR1GridForestEntity ent)
                 {
+                    var id = ((ent.Index >= 0) && (ent.Index <= Entities.Count)) ? ent.Index : Entities.Count;
                     Entities.Insert(id, ent);
                     if (ent.ParentInParentLevel || (ent.ParentIndex < 0)) RootEntities.Add(ent);
                     UpdateEntityIndexes();
                     ent.LodParent?.AddLodChild(ent);
-                }
-                else
-                {
-                    ent.Index = Entities.Count;
-                    Entities.Add(ent);
-                    if (ent.ParentInParentLevel || (ent.ParentIndex < 0)) RootEntities.Add(ent);
                 }
             });
         }

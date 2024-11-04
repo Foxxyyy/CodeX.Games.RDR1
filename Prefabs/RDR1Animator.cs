@@ -46,9 +46,9 @@ namespace CodeX.Games.RDR1.Prefabs
             }
 
             UpdateSkeleton();
+
             Skeleton.AnimateRenderables = true;
             Skeleton.UpdateBoneTransforms();
-            Target?.Piece?.UpdateRigs();
 
             for (int i = 0; i < Skeleton.Bones.Length; i++)
             {

@@ -195,7 +195,7 @@ namespace CodeX.Games.RDR1.Prefabs
             Slots = slots.ToArray();
         }
 
-        public override Entity CreateInstance(string preset = null)
+        public override Entity CreateInstance(bool preview, string preset)
         {
             return new RDR1Ped(this);
         }
@@ -440,6 +440,11 @@ namespace CodeX.Games.RDR1.Prefabs
                     PlayAnim(option as string);
                 }
             }
+        }
+
+        public string GetPresetString()
+        {
+            return null;
         }
     }
 }

@@ -158,7 +158,7 @@ namespace CodeX.Games.RDR1.Prefabs
             WtdEntry = dfman.TryGetStreamEntry(NameHash, Rpf6FileExt.wtd_wtx);
         }
 
-        public override Entity CreateInstance(string preset = null)
+        public override Entity CreateInstance(bool preview, string preset)
         {
             return new RDR1Vehicle(this);
         }
@@ -221,6 +221,11 @@ namespace CodeX.Games.RDR1.Prefabs
         public void SetSlotOption(PrefabSlot slot, object option)
         {
             return;
+        }
+
+        public string GetPresetString()
+        {
+            return null;
         }
     }
 }

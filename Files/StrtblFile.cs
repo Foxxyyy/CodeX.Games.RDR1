@@ -810,7 +810,9 @@ namespace CodeX.Games.RDR1.Files
             get
             {
                 if (StringData == null) return null;
-                return StringData.Where(s => s.FontTex != null).ToDictionary(s => s.FontTex.Character, s => s.Value);
+                var dict = StringData.Where(s => s.FontTex != null).ToDictionary(s => s.FontTex.Character, s => s.Value);
+                dict[Hash] = StringData[^1].Value;
+                return dict;
             }
         }
 

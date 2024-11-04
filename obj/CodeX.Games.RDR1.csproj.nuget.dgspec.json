@@ -1,24 +1,24 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {}
+    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {}
   },
   "projects": {
-    "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "projectName": "CodeX.Core",
-        "projectPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-        "outputPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\obj\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net7.0-windows"
+          "net8.0-windows"
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
@@ -26,8 +26,8 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net7.0-windows7.0": {
-            "targetAlias": "net7.0-windows",
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
             "projectReferences": {}
           }
         },
@@ -43,16 +43,16 @@
         }
       },
       "frameworks": {
-        "net7.0-windows7.0": {
-          "targetAlias": "net7.0-windows",
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
           "dependencies": {
             "BepuPhysics": {
               "target": "Package",
-              "version": "[2.4.0, )"
+              "version": "[2.5.0-beta.23, )"
             },
             "BepuUtilities": {
               "target": "Package",
-              "version": "[2.4.0, )"
+              "version": "[2.5.0-beta.23, )"
             },
             "SharpDX": {
               "target": "Package",
@@ -95,25 +95,25 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {
+    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
         "projectName": "CodeX.Games.RDR1",
-        "projectPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
         "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-        "outputPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net7.0-windows"
+          "net8.0-windows7.0"
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
@@ -121,11 +121,11 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net7.0-windows7.0": {
-            "targetAlias": "net7.0-windows",
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows7.0",
             "projectReferences": {
-              "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
-                "projectPath": "C:\\Research\\CodeX\\CodeX-026\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
+              "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+                "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
               }
             }
           }
@@ -142,8 +142,8 @@
         }
       },
       "frameworks": {
-        "net7.0-windows7.0": {
-          "targetAlias": "net7.0-windows",
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows7.0",
           "dependencies": {
             "Microsoft.Win32.Registry": {
               "target": "Package",
@@ -174,7 +174,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

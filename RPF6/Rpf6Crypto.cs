@@ -7,11 +7,9 @@ using Zstandard.Net;
 using System.Collections.Generic;
 using CodeX.Core.Utilities;
 using System.Numerics;
-using System.Xml;
 using CodeX.Core.Numerics;
 using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RSC6;
-using System.ComponentModel;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -516,6 +514,41 @@ namespace CodeX.Games.RDR1.RPF6
 
             BufferUtil.WriteArray(buffer, offset, BitConverter.GetBytes((ushort)(xVal / 3.05185094e-005f)));
             BufferUtil.WriteArray(buffer, offset + 2, BitConverter.GetBytes((ushort)(yVal / 3.05185094e-005f)));
+        }
+
+        public static Vector4 Dec3NToVector4(uint u)
+        {
+            var ux1 = (int)((u & 0x3FF) << 22);
+            var uy1 = (int)(((u >> 10) & 0x3FF) << 22);
+            var uz1 = (int)(((u >> 20) & 0x3FF) << 22);
+            var uw1 = (int)u;
+            var fx = (float)(ux1 >> 22);
+            var fy = (float)(uy1 >> 22);
+            var fz = (float)(uz1 >> 22);
+            var fw = (float)(uw1 >> 30);
+
+            var scale = 0.0019569471624266144814090019569472f;
+            var v = new Vector4(fx * scale, fy * scale, fz * scale, fw);
+
+            return v;
+        }
+
+        public static uint Vector4ToDec3N(in Vector4 v)
+        {
+            var sx = (v.X >= 0.0f);
+            var sy = (v.Y >= 0.0f);
+            var sz = (v.Z >= 0.0f);
+            var sw = (v.W >= 0.0f);
+            var x = Math.Min((uint)(Math.Abs(v.X) * 511.0f), 511);
+            var y = Math.Min((uint)(Math.Abs(v.Y) * 511.0f), 511);
+            var z = Math.Min((uint)(Math.Abs(v.Z) * 511.0f), 511);
+            var w = (v.W == 0.0f) ? 0 : (v.W == 1.0f) ? 1 : (v.W == -1.0f) ? 2 : 3;
+            var ux = ((sx ? x : ~x) & 0x1FF) + (sx ? 0x200 : 0);
+            var uy = ((sy ? y : ~y) & 0x1FF) + (sy ? 0x200 : 0);
+            var uz = ((sz ? z : ~z) & 0x1FF) + (sz ? 0x200 : 0);
+            var uw = ((sw ? w : ~w) & 0x3) + (sw ? 0x200 : 0);
+            var u = ux + (uy << 10) + (uz << 20) + (uw << 30);
+            return (uint)u;
         }
 
         ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>
