@@ -9,7 +9,10 @@ More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker dis
 
 --------------------             
 
-When granted access, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them to the CodeX/Explorer folders, next to the executable.                                 
+When granted access, [download the files](https://github.com/Foxxyyy/CodeX.Games.RDR1/releases/latest) and paste them to the CodeX/Explorer folders, next to the executable.           
+
+WFT/WSI/WSF/WPFL FILES CANNOT BE EDITED FOR NOW SO PLEASE BE PATIENT.                         
+Editing will eventually come out sooner or later for these files. I am also doing ASI mods and don't always have the time for CodeX.             
 
 # CodeX Contributors
 * dexyfex     
