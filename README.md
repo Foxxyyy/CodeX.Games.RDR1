@@ -5,7 +5,7 @@ CodeX implementation for Red Dead Redemption on PC, Nintendo Switch & PS4.
 --------------------
 
 You need the main CodeX engine to either run this or compile the source.     
-More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker discord](https://discord.gg/rgU4SbeR)   
+More info here : [@dexyfex](https://www.patreon.com/dexyfex) and [CodeWalker discord](https://discord.gg/BxfKHkk)   
 
 --------------------             
 
