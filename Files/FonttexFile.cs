@@ -1,11 +1,12 @@
 ﻿using System.IO;
+using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.Files
 {
-    [TC(typeof(EXP))] public class FonttexFile : MetaNode
+    [TC(typeof(EXP))] public class FonttexFile : FilePack, MetaNode
     {
         public float Version { get; set; } //version, 1.02f
         public int CharHeight { get; set; } //m_CharHeight, delta y for a linefeed
@@ -28,7 +29,7 @@ namespace CodeX.Games.RDR1.Files
 
         }
 
-        public void Load(byte[] data)
+        public override void Load(byte[] data)
         {
             using var ms = new MemoryStream(data);
             var r = new DataReader(ms);
@@ -69,7 +70,7 @@ namespace CodeX.Games.RDR1.Files
             }
         }
 
-        public byte[] Save()
+        public override byte[] Save()
         {
             var ms = new MemoryStream();
             this.Save(ms);
@@ -106,7 +107,7 @@ namespace CodeX.Games.RDR1.Files
             writer.WriteArray(GlyphsPerTexture, (wtr, v) => wtr.Write(v));
         }
 
-        public void Read(MetaNodeReader reader)
+        public override void Read(MetaNodeReader reader)
         {
             CharHeight = reader.ReadInt32("CharHeight");
             CharSpacing = reader.ReadInt32("CharSpacing");
@@ -126,7 +127,7 @@ namespace CodeX.Games.RDR1.Files
             NumTextures = GlyphsPerTexture?.Length ?? 0;
         }
 
-        public void Write(MetaNodeWriter writer)
+        public override void Write(MetaNodeWriter writer)
         {
             writer.WriteInt32("CharHeight", CharHeight);
             writer.WriteInt32("CharSpacing", CharSpacing);

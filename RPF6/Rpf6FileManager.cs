@@ -13,10 +13,8 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
@@ -46,7 +44,7 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".nvn", "Compiled Shaders", FileTypeIcon.SystemFile, FileTypeAction.ViewHex);
             InitFileType(".wnm", "Nav Mesh", FileTypeIcon.SystemFile, FileTypeAction.ViewModels, false, false, true);
             InitFileType(".wfd", "Frag Drawable", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
-            InitFileType(".wft", "Fragment", FileTypeIcon.Piece, FileTypeAction.ViewModels, false, true, true);
+            InitFileType(".wft", "Fragment", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
             InitFileType(".wvd", "Visual Dictionary", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
             InitFileType(".wbd", "Bounds Dictionary", FileTypeIcon.Collisions, FileTypeAction.ViewModels, false, false, true);
             InitFileType(".was", "Animation Set", FileTypeIcon.Animation, FileTypeAction.ViewXml, false, false, true);
@@ -78,7 +76,7 @@ namespace CodeX.Games.RDR1.RPF6
         private void InitGenericRDR1Types()
         {
             InitFileType(".cutbin", "Cutscene Binary", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true);
-            InitFileType(".strtbl", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml, true);
+            InitFileType(".strtbl", "String Table", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true, true, false);
             InitFileType(".fonttex", "Font Data", FileTypeIcon.Canvas, FileTypeAction.ViewXml, true);
             InitFileType(".tr", "AI Programs", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".csv", "Comma-Separated Values File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
@@ -306,17 +304,14 @@ namespace CodeX.Games.RDR1.RPF6
 
             switch (fileext)
             {
-                case ".fonttex":
-                    var fonttex = new FonttexFile();
-                    fonttex.Load(data);
-                    newfilename = file.Name + ".xml";
-                    return XmlMetaNodeWriter.GetXml("RDR1FontTex", fonttex, GetXmlFileFolder(file, folder));
                 case ".xml":
                 case ".meta":
                     newfilename = file.Name;
                     return TextUtil.GetUTF8Text(data);
 
-                //case ".wft": return ConvertToXml<WftFile>(file, data, out newfilename, "RDR1Fragment", GetXmlFileFolder(file, folder));
+                case ".strtbl": return ConvertToXml<StrtblFile>(file, data, out newfilename, "RDR1StringTable", GetXmlFileFolder(file, folder));
+                case ".fonttex": return ConvertToXml<FonttexFile>(file, data, out newfilename, "RDR1Fonttex", GetXmlFileFolder(file, folder));
+                case ".wft": return ConvertToXml<WftFile>(file, data, out newfilename, "RDR1Fragment", GetXmlFileFolder(file, folder));
                 case ".wfd": return ConvertToXml<WfdFile>(file, data, out newfilename, "RDR1FragDrawable", GetXmlFileFolder(file, folder));
                 case ".wvd": return ConvertToXml<WvdFile>(file, data, out newfilename, "RDR1VisualDictionary", GetXmlFileFolder(file, folder));
                 //case ".wsi": return ConvertToXml<WsiFile>(file, data, out newfilename, "RDR1SectorInfo");
@@ -331,8 +326,7 @@ namespace CodeX.Games.RDR1.RPF6
                 //case ".wgd": return ConvertToXml<WgdFile>(file, data, out newfilename, "RDR1GringoDictionary");
                 //case ".wpfl": return ConvertToXml<WpflFile>(file, data, out newfilename, "RDR1ParticleEffectsLibrary", GetXmlFileFolder(file, folder));
                 case ".wst":
-                case ".sst":
-                    return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
+                case ".sst": return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
             }
 
             newfilename = file.Name + ".xml";
@@ -348,16 +342,8 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override byte[] ConvertFromXml(string xml, string filename, string folder = "")
         {
-            if (filename.EndsWith(".strtbl.xml"))
-            {
-                var strtbl = new StrtblFile(xml);
-                return strtbl.Save();
-            }
-            else if (filename.EndsWith(".fonttex.xml"))
-            {
-                var fonttex = XmlMetaNodeReader.GetMetaNode<FonttexFile>(xml, null, folder);
-                return fonttex?.Save();
-            }
+            if (filename.EndsWith(".strtbl.xml")) return ConvertFromXml<StrtblFile>(xml, folder);
+            else if (filename.EndsWith(".fonttex.xml")) return ConvertFromXml<FonttexFile>(xml, folder);
             else if (filename.EndsWith(".wvd.xml")) return ConvertFromXml<WvdFile>(xml, folder);
             else if (filename.EndsWith(".wfd.xml")) return ConvertFromXml<WfdFile>(xml, folder);
             //else if (filename.EndsWith(".wft.xml")) return ConvertFromXml<WftFile>(xml, folder);
@@ -429,7 +415,19 @@ namespace CodeX.Games.RDR1.RPF6
             if (data == null) return null;
 
             var enl = entry.NameLower;
-            if (enl.EndsWith(".wft")) //Fragments
+            if (entry.Name.EndsWith(".strtbl")) //Stringtable
+            {
+                var sst = new StrtblFile();
+                sst.Load(data);
+                return sst;
+            }
+            else if (entry.Name.EndsWith(".fonttex")) //Fonttex
+            {
+                var sst = new FonttexFile();
+                sst.Load(data);
+                return sst;
+            }
+            else if (enl.EndsWith(".wft")) //Fragments
             {
                 var wft = new WftFile(entry);
                 wft.Load(data);
@@ -852,10 +850,6 @@ namespace CodeX.Games.RDR1.RPF6
                     default:
                         switch (Path.GetExtension(file.Name).ToLowerInvariant())
                         {
-                            case ".strtbl":
-                                var strtbl = new StrtblFile(entry);
-                                strtbl.Load(data);
-                                return strtbl;
                             case ".xml":
                             case ".meta":
                                 return DataBagPack.FromXml(file, TextUtil.GetUTF8Text(data));
@@ -1038,15 +1032,17 @@ namespace CodeX.Games.RDR1.RPF6
                                 wsg.Load(data);
                             }
                         }
-                        if (strtable && n.EndsWith(".strtbl") && archive.Name == "strings_switch.rpf")
+                        if (strtable && n.EndsWith(".strtbl") && archive.Name == "strings_d11generic.rpf" /*&& fe.Parent.Name == "strings"*/)
                         {
                             Core.Engine.Console.Write("StringTable", fe.Path);
                             var data = EnsureFileData(fe, null);
                             if (data != null)
                             {
-                                var strtbl = new StrtblFile(fe);
+                                var strtbl = new StrtblFile();
                                 strtbl.Load(data);
                             }
+                            //var xml = ConvertToXml(fe, data, out string filepath, out object lol);
+                            //File.WriteAllText(@"C:\Users\fumol\OneDrive\Bureau\xml\" + filepath, xml);
                         }
                         else if (fragments && n.EndsWith(".wft"))
                         {

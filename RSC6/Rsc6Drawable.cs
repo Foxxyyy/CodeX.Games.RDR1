@@ -150,11 +150,15 @@ namespace CodeX.Games.RDR1.RSC6
         {
             var textures = new List<Rsc6Texture>();
             var hashes = new List<JenkHash>();
+            var texs = Drawable.Item?.ShaderGroup.Item?.TextureDictionary.Item?.Textures.Items;
 
-            foreach (var tex in Drawable.Item?.ShaderGroup.Item?.TextureDictionary.Item?.Textures.Items)
+            if (texs != null)
             {
-                textures.Add(tex);
-                hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't store the .dds extension
+                foreach (var tex in texs)
+                {
+                    textures.Add(tex);
+                    hashes.Add(JenkHash.GenHash(tex.NameRef.Value.Replace(".dds", ""))); //Hashes don't store the .dds extension
+                }
             }
 
             var dict = new Rsc6TextureDictionary
@@ -2720,22 +2724,26 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
 
-            var dictionary = new WtdFile(TextureDictionary.Item.Textures.Items.ToList());
-            if ((Shaders.Items != null) && (TextureDictionary.Item != null))
+            var texs = TextureDictionary.Item?.Textures.Items;
+            if (texs != null)
             {
-                foreach (var shader in Shaders.Items)
+                var dictionary = new WtdFile(TextureDictionary.Item?.Textures.Items?.ToList());
+                if ((Shaders.Items != null) && (TextureDictionary.Item != null))
                 {
-                    var sparams = shader?.ParametersList.Item?.Parameters;
-                    if (sparams != null)
+                    foreach (var shader in Shaders.Items)
                     {
-                        foreach (var sparam in sparams)
+                        var sparams = shader?.ParametersList.Item?.Parameters;
+                        if (sparams != null)
                         {
-                            if (sparam.Texture != null && dictionary != null)
+                            foreach (var sparam in sparams)
                             {
-                                var tex2 = dictionary.Lookup(JenkHash.GenHash(sparam.Texture.NameRef.Value));
-                                if (tex2 != null)
+                                if (sparam.Texture != null && dictionary != null)
                                 {
-                                    sparam.Texture = tex2; //Swap the parameter out for the embedded texture
+                                    var tex2 = dictionary.Lookup(JenkHash.GenHash(sparam.Texture.NameRef.Value));
+                                    if (tex2 != null)
+                                    {
+                                        sparam.Texture = tex2; //Swap the parameter out for the embedded texture
+                                    }
                                 }
                             }
                         }

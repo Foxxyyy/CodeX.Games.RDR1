@@ -113,7 +113,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint NextTextureOffset { get; set; } = 0xCDCDCDCD;
         public Rsc6Ptr<Rsc6TextureData> DataRef { get; set; }
         public Rsc6Ptr<Rsc6TextureCRN> DataCRND { get; set; }
-        public uint IsSRBG { get; set; } = 1; //m_IsSRBG
+        public uint IsSRBG { get; set; } //m_IsSRBG
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -219,9 +219,9 @@ namespace CodeX.Games.RDR1.RSC6
                 0x33545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT3), //861165636
                 0x35545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT5), //894720068
                 0x444E5243 => ConvertToEngineFormat(Rsc6TextureFormat.CRND),        //1145983555
-                0x32 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_L8),         //50
+                0x32 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8),         //50
                 0x20 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8),   //32
-                _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8) //throw new NotImplementedException("Unknown pixel format!")
+                _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8)
             };
         }
 
@@ -232,7 +232,7 @@ namespace CodeX.Games.RDR1.RSC6
                 TextureFormat.BC1 => 0x31545844, //DXT1
                 TextureFormat.BC2 => 0x33545844, //DXT3
                 TextureFormat.BC3 => 0x35545844, //DXT5
-                TextureFormat.L8 => 0x32,        //L8
+                TextureFormat.A8 => 0x32,        //A8
                 TextureFormat.A8R8G8B8 => 0x20,  //A8R8G8B8
                 _ => throw new NotImplementedException("Unknown pixel format!")
             };
@@ -246,22 +246,9 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6TextureFormat.D3DFMT_DXT3 => TextureFormat.BC2,
                 Rsc6TextureFormat.D3DFMT_DXT5 => TextureFormat.BC3,
                 Rsc6TextureFormat.D3DFMT_A8R8G8B8 => TextureFormat.A8R8G8B8,
-                Rsc6TextureFormat.D3DFMT_L8 => TextureFormat.L8,
+                Rsc6TextureFormat.D3DFMT_A8 => TextureFormat.A8,
                 Rsc6TextureFormat.CRND => TextureFormat.Unknown,
                 _ => TextureFormat.BC1,
-            };
-        }
-
-        public static Rsc6TextureFormat ConvertToRsc6Format(TextureFormat format)
-        {
-            return format switch
-            {
-                TextureFormat.BC2 => Rsc6TextureFormat.D3DFMT_DXT3,
-                TextureFormat.BC3 => Rsc6TextureFormat.D3DFMT_DXT5,
-                TextureFormat.A8R8G8B8 => Rsc6TextureFormat.D3DFMT_A8R8G8B8,
-                TextureFormat.L8 => Rsc6TextureFormat.D3DFMT_L8,
-                TextureFormat.Unknown => Rsc6TextureFormat.CRND,
-                _ => Rsc6TextureFormat.D3DFMT_DXT1,
             };
         }
 
@@ -340,7 +327,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             writer.WriteUInt32(BlockMap);
             writer.WriteUInt32(RefCount);
-            writer.WriteUInt16((ushort)(TextureSize == 0 ? ResourceTextureType.SEPARATED : ResourceType));
+            writer.WriteUInt16((ushort)(ResourceType));
             writer.WriteUInt16(LayerCount);
             writer.WriteUInt32(Unknown_10h);
             writer.WriteInt32(TextureSize);
@@ -368,7 +355,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(MetaNodeWriter writer)
         {
-            string[] separators = { ":", "/" };
+            string[] separators = [":", "/"];
             foreach (var separator in separators)
             {
                 int lastIndex = Name.LastIndexOf(separator);
@@ -917,7 +904,7 @@ namespace CodeX.Games.RDR1.RSC6
     public enum Rsc6TextureFormat : uint
     {
         CRND = 0,
-        D3DFMT_L8 = 2,
+        D3DFMT_A8 = 2,
         D3DFMT_DXT1 = 82,
         D3DFMT_DXT3 = 83,
         D3DFMT_DXT5 = 84,
