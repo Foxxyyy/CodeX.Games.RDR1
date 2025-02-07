@@ -330,15 +330,15 @@ namespace CodeX.Games.RDR1.RSC6
         public float SphereRadius { get; set; } //m_RadiusAroundCentroid, upper bound on the distance from center to any point in this bound.
         public float WorldRadius { get; set; } //m_RadiusAroundLocalOrigin
         public Vector3 BoxMax { get; set; } //m_BoundingBoxMax
-        public float Unknown_2Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float Unknown_2Ch { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector3 BoxMin { get; set; } //m_BoundingBoxMin
-        public float Unknown_3Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float Unknown_3Ch { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector3 BoxCenter { get; set; } //m_CentroidOffset, offset of the centroid from the local coordinate system origin
-        public float Unknown_4Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float Unknown_4Ch { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector3 CentroidOffsetWorldSpace { get; set; } //m_CentroidOffsetWorldSpace
-        public float Unknown_5Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float Unknown_5Ch { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector3 SphereCenter { get; set; } //m_CGOffset, center of gravity location in the local coordinate system
-        public float Unknown_6Ch { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float Unknown_6Ch { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector4 VolumeDistribution { get; set; } //m_VolumeDistribution, angular inertia that this bound would have with a mass of 1kg and the bound's volume (element w).
         public Vector3 Margin { get; set; } //m_MarginV, the distance by which collision detection will be expanded beyond the bound's surface
         public uint RefCount { get; set; } = 1; //Number of physics instances (or sometimes other classes) using this bound, mostly 1, can also be 2
@@ -682,7 +682,7 @@ namespace CodeX.Games.RDR1.RSC6
             var vertices = new List<Vector4>();
             for (int i = 0; i < Vertices.Length; i++)
             {
-                vertices.Add(new Vector4(Vertices[i], Rpf6Crypto.NaN()));
+                vertices.Add(new Vector4(Vertices[i], Rpf6Crypto.FNaN));
             }
             PlainVertices = vertices.ToArray();
             base.InitPolyhedronPart();
@@ -997,9 +997,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint VerticesWorldSpace { get; set; } //m_VerticesWorldSpace
         public Rsc6RawArr<byte> PolygonsData { get; set; } //m_Polygons
         public Vector3 Quantum { get; set; } //m_UnQuantizeFactor
-        public float QuantumW { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float QuantumW { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Vector3 CenterGeom { get; set; } //m_BoundingBoxCenter
-        public float CenterGeomW { get; set; } = Rpf6Crypto.NaN(); //0x0100807F
+        public float CenterGeomW { get; set; } = Rpf6Crypto.FNaN; //0x0100807F
         public Rsc6RawArr<Vector3S> VerticesData { get; set; } //m_CompressedVertices
         public uint SmallPolygonsWorldSpace { get; set; } //m_SmallPolygonsWorldSpace
         public bool UseActiveComponents { get; set; } //m_UseActiveComponents, true if this bound supports subsets of itself being active at any time
@@ -1207,7 +1207,7 @@ namespace CodeX.Games.RDR1.RSC6
                     Normal = norm,
                     Colour = (usevertexcolours && (VertexColours.Items != null)) ? VertexColours.Items[index] : matcol,
                     Texcoord = Vector2.Zero,
-                    Tangent = Vector3.Zero
+                    Tangent = Vector4.UnitX
                 });
                 indsl.Add((ushort)c);
             }
@@ -1718,7 +1718,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            VelocityGrid = reader.ReadVector2Arr(GridPointCount);
+            VelocityGrid = reader.ReadStructArray<Vector2>(GridPointCount);
             OffsetGrid = reader.ReadSingleArr(GridPointCount);
             PeakWaveHeight = reader.ReadSingle();
             Spacing = reader.ReadSingle();
@@ -1739,7 +1739,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
-            writer.WriteVector2Array(VelocityGrid);
+            writer.WriteStructArray(VelocityGrid);
             writer.WriteSingleArray(OffsetGrid);
             writer.WriteSingle(PeakWaveHeight);
             writer.WriteSingle(Spacing);

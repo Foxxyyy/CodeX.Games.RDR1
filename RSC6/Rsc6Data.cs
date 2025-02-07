@@ -6,18 +6,21 @@ using System.Collections.Generic;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using TC = System.ComponentModel.TypeConverterAttribute;
+using EXP = System.ComponentModel.ExpandableObjectConverter;
 
 namespace CodeX.Games.RDR1.RSC6
 {
     public class Rsc6DataReader : BlockReader
     {
+        public const ulong VIRTUAL_BASE = 0x50000000;
+        public const ulong PHYSICAL_BASE = 0x60000000;
+
         public Rpf6ResourceFileEntry FileEntry;
         public DataEndianess Endianess;
         public int VirtualSize;
         public int PhysicalSize;
 
-        private static ulong VIRTUAL_BASE => Rpf6Crypto.VIRTUAL_BASE;
-        private static ulong PHYSICAL_BASE => Rpf6Crypto.PHYSICAL_BASE;
         public int Offset => GetDataOffset();
 
         public Rsc6DataReader(Rpf6ResourceFileEntry entry, byte[] data, DataEndianess endianess = DataEndianess.LittleEndian)
@@ -52,49 +55,49 @@ namespace CodeX.Games.RDR1.RSC6
         {
             var v = BufferUtil.ReadShort(Data, GetDataOffset());
             Position += 2;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v);
         }
 
         public new ushort ReadUInt16()
         {
             var v = BufferUtil.ReadUshort(Data, GetDataOffset());
             Position += 2;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v);
         }
 
         public new int ReadInt32()
         {
             var v = BufferUtil.ReadInt(Data, GetDataOffset());
             Position += 4;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v);
         }
 
         public new uint ReadUInt32()
         {
             var v = BufferUtil.ReadUint(Data, GetDataOffset());
             Position += 4;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v);
         }
 
         public new long ReadInt64()
         {
             var v = BufferUtil.ReadLong(Data, GetDataOffset());
             Position += 8;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v, true);
         }
 
         public new ulong ReadUInt64()
         {
             var v = BufferUtil.ReadUlong(Data, GetDataOffset());
             Position += 8;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v, true);
         }
 
         public new float ReadSingle()
         {
             var v = BufferUtil.ReadSingle(Data, GetDataOffset());
             Position += 4;
-            return (Endianess == DataEndianess.LittleEndian) ? v : Rpf6Crypto.Swap(v);
+            return (Endianess == DataEndianess.LittleEndian) ? v : BufferUtil.SwapBytes(v);
         }
 
         public float[] ReadSingleArr(int count)
@@ -138,24 +141,6 @@ namespace CodeX.Games.RDR1.RSC6
         {
             byte[] buffer = ReadBytes(8);
             return BufferUtil.ReadStruct<Half4>(buffer, 0);
-        }
-
-        public new Vector2 ReadVector2()
-        {
-            var v = BufferUtil.ReadVector2(Data, GetDataOffset());
-            Position += 8;
-            return v;
-        }
-
-        public Vector2[] ReadVector2Arr(int count)
-        {
-            var vectors = new Vector2[count];
-            for (int i = 0; i < count; i++)
-            {
-                vectors[i] = BufferUtil.ReadVector2(Data, GetDataOffset());
-                Position += 8;
-            }
-            return vectors;
         }
 
         public new Vector3 ReadVector3()
@@ -218,7 +203,7 @@ namespace CodeX.Games.RDR1.RSC6
             var bb = new BoundingBox4
             {
                 Min = BufferUtil.ReadVector4(Data, GetDataOffset()),
-                Max = BufferUtil.ReadVector4(Data, GetDataOffset())
+                Max = BufferUtil.ReadVector4(Data, GetDataOffset() + 16)
             };
             Position += 32;
             return Rpf6Crypto.ToZXY(bb);
@@ -345,6 +330,13 @@ namespace CodeX.Games.RDR1.RSC6
             var mapArr = new Rsc6AtMapArr<T>();
             mapArr.Read(this, createFunc);
             return mapArr;
+        }
+
+        public Rsc6AtPool<T> ReadAtPool<T>() where T : unmanaged
+        {
+            var pool = new Rsc6AtPool<T>();
+            pool.Read(this);
+            return pool;
         }
 
         public Rsc6ManagedSizedArr<T> ReadSizedArrPtr<T>() where T : IRsc6Block, new()
@@ -702,28 +694,31 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void WriteBoolean(bool value)
         {
-            this.WriteByte(value ? (byte)1 : (byte)0);
+            WriteByte(value ? (byte)1 : (byte)0);
         }
 
         public new void WriteHalf(Half value)
         {
-            byte[] buffer = new byte[2];
-            BufferUtil.WriteStruct(buffer, 0, ref value);
-            this.WriteBytes(buffer);
+            WriteStruct(value);
+            //byte[] buffer = new byte[2];
+            //BufferUtil.WriteStruct(buffer, 0, ref value);
+            //this.WriteBytes(buffer);
         }
 
         public void WriteHalf2(Half2 value)
         {
-            byte[] buffer = new byte[4];
-            BufferUtil.WriteStruct(buffer, 0, ref value);
-            this.WriteBytes(buffer);
+            WriteStruct(value);
+            //byte[] buffer = new byte[4];
+            //BufferUtil.WriteStruct(buffer, 0, ref value);
+            //this.WriteBytes(buffer);
         }
 
         public void WriteHalf4(Half4 value)
         {
-            byte[] buffer = new byte[8];
-            BufferUtil.WriteStruct(buffer, 0, ref value);
-            this.WriteBytes(buffer);
+            WriteStruct(value);
+            //byte[] buffer = new byte[8];
+            //BufferUtil.WriteStruct(buffer, 0, ref value);
+            //this.WriteBytes(buffer);
         }
 
         public new void WriteVector3(Vector3 value)
@@ -732,10 +727,10 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 value = Rpf6Crypto.ToXYZ(value);
             }
-
-            byte[] buffer = new byte[12];
-            BufferUtil.WriteVector3(buffer, 0, ref value);
-            this.WriteBytes(buffer);
+            base.WriteVector3(value);
+            //byte[] buffer = new byte[12];
+            //BufferUtil.WriteVector3(buffer, 0, ref value);
+            //this.WriteBytes(buffer);
         }
 
         public new void WriteVector4(Vector4 value)
@@ -744,50 +739,61 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 value = Rpf6Crypto.ToXYZ(value);
             }
+            base.WriteVector4(value);
+            //byte[] buffer = new byte[16];
+            //BufferUtil.WriteVector4(buffer, 0, ref value);
+            //this.WriteBytes(buffer);
+        }
 
-            byte[] buffer = new byte[16];
-            BufferUtil.WriteVector4(buffer, 0, ref value);
-            this.WriteBytes(buffer);
+        public void WriteBoundingBox4(BoundingBox4 value)
+        {
+            WriteVector4(value.Min);
+            WriteVector4(value.Max);
         }
 
         public void WriteUInt16Array(ushort[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteUInt16(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteUInt16(arr[i]);
+            //}
         }
 
         public void WriteInt32Array(int[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteInt32(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteInt32(arr[i]);
+            //}
         }
 
         public void WriteUInt32Array(uint[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteUInt32(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteUInt32(arr[i]);
+            //}
         }
 
         public void WriteSingleArray(float[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteSingle(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteSingle(arr[i]);
+            //}
         }
 
         public void WriteVector2Array(Vector2[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteVector2(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteVector2(arr[i]);
+            //}
         }
 
         public void WriteVector3Array(Vector3[] arr)
@@ -808,10 +814,11 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void WriteColourArray(Colour[] arr)
         {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                this.WriteColour(arr[i]);
-            }
+            WriteStructArray(arr);
+            //for (int i = 0; i < arr.Length; i++)
+            //{
+            //    this.WriteColour(arr[i]);
+            //}
         }
 
         public void WriteArr<T>(Rsc6Arr<T> arr, bool useArraySizeOf64 = false) where T : unmanaged
@@ -850,6 +857,11 @@ namespace CodeX.Games.RDR1.RSC6
         }
 
         public void WritePoolArr<T>(Rsc6PoolArr<T> arr) where T : unmanaged
+        {
+            arr.Write(this);
+        }
+
+        public void WriteAtPool<T>(Rsc6AtPool<T> arr) where T : unmanaged
         {
             arr.Write(this);
         }
@@ -907,10 +919,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6Ptr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6Ptr<T> where T : IRsc6Block, new()
     {
-        public ulong Position;
-        public T Item;
+        public ulong Position { get; set; }
+        public T Item { get; set; }
 
         public Rsc6Ptr(T item)
         {
@@ -952,10 +964,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6PtrUnmanaged<T> where T : unmanaged
+    [TC(typeof(EXP))] public struct Rsc6PtrUnmanaged<T> where T : unmanaged
     {
-        public ulong Position;
-        public T Item;
+        public ulong Position { get; set; }
+        public T Item { get; set; }
 
         public Rsc6PtrUnmanaged(T item)
         {
@@ -1014,18 +1026,18 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6Arr<T> where T : unmanaged
+    [TC(typeof(EXP))] public struct Rsc6Arr<T> where T : unmanaged
     {
-        public uint Position;
-        public uint Count;
-        public uint Capacity;
-        public T[] Items;
-        public bool Size64; //Store position + count + capacity on 12 bytes or 8 bytes
+        public uint Position { get; set; }
+        public uint Count { get; set; }
+        public uint Capacity { get; set; }
+        public T[] Items { get; set; }
+        public bool Size64 { get; set; } //Store position + count + capacity on 12 bytes or 8 bytes
 
         public Rsc6Arr(T[] items, bool useArraySizeOf64 = false, uint capacity = 0)
         {
             Position = 0;
-            Count = (ushort)(items?.Length ?? 0);
+            Count = useArraySizeOf64 ? ((uint)(items?.Length ?? 0)) : ((ushort)(items?.Length ?? 0));
             Capacity = (capacity > 0) ? capacity : Count;
             Items = items;
             Size64 = useArraySizeOf64;
@@ -1084,21 +1096,21 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6PackedArr
+    [TC(typeof(EXP))] public struct Rsc6PackedArr
     {
-        public uint Position;
-        public uint ElementSize; //32 is max
-        public uint ElementMax;
-        public uint[] Items;
+        public uint Position { get; set; }
+        public uint ElementSize { get; set; } //32 is max
+        public uint ElementMax { get; set; }
+        public uint[] Items { get; set; }
 
-        public static uint[] MaskTable = new uint[]
-        {
+        public static uint[] MaskTable =
+        [
             0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F, 0x7F, 0xFF, 0x1FF, 0x3FF,
             0x7FF, 0xFFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF, 0x1FFFF,
             0x3FFFF, 0x7FFFF, 0xFFFFF, 0x1FFFFF, 0x3FFFFF, 0x7FFFFF,
             0xFFFFFF, 0x1FFFFFF, 0x3FFFFFF, 0x7FFFFFF, 0xFFFFFFF,
             0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF
-        };
+        ];
 
         public Rsc6PackedArr(uint[] items)
         {
@@ -1158,12 +1170,12 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6ManagedArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6ManagedArr<T> where T : IRsc6Block, new()
     {
-        public uint Position;
-        public ushort Count;
-        public ushort Capacity;
-        public T[] Items;
+        public uint Position { get; set; }
+        public ushort Count { get; set; }
+        public ushort Capacity { get; set; }
+        public T[] Items { get; set; }
 
         public Rsc6ManagedArr(T[] items)
         {
@@ -1218,12 +1230,12 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6ManagedSizedArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6ManagedSizedArr<T> where T : IRsc6Block, new()
     {
-        public uint Position;
-        public ushort Count;
-        public ushort Capacity;
-        public T[] Items;
+        public uint Position { get; set; }
+        public ushort Count { get; set; }
+        public ushort Capacity { get; set; }
+        public T[] Items { get; set; }
 
         public Rsc6ManagedSizedArr(T[] items)
         {
@@ -1277,15 +1289,15 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6AtMapArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6AtMapArr<T> where T : IRsc6Block, new()
     {
-        public uint Position;
-        public ushort Count; //m_Slots, number of slots in toplevel hash
-        public ushort Capacity; //m_Used, number of those slots currently in use
+        public uint Position { get; set; }
+        public ushort Count { get; set; } //m_Slots, number of slots in toplevel hash
+        public ushort Capacity { get; set; } //m_Used, number of those slots currently in use
         public byte Unknown_8h = 0xCD;
         public byte Unknown_9h = 0xCD;
         public byte Unknown_Ah = 0xCD;
-        public bool AllowRecompute; //m_AllowReCompute, for dynamic memory allocation
+        public bool AllowRecompute { get; set; } //m_AllowReCompute, for dynamic memory allocation
 
         public uint[] Pointers;
         public T[] Items;
@@ -1316,7 +1328,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < Count; i++)
             {
-                Items[i] = reader.ReadBlock(Pointers[i], createFunc);;
+                Items[i] = reader.ReadBlock(Pointers[i], createFunc);
             }
             reader.Position = p;
         }
@@ -1350,25 +1362,98 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return "Count: " + Count.ToString();
         }
     }
 
-    public struct Rsc6PtrArr<T> where T : IRsc6Block, new()
+    public struct Rsc6AtPool<T> where T : unmanaged
     {
-        public uint Position;
-        public ushort Count;
-        public ushort Capacity;
-        public uint[] Pointers;
-        public T[] Items;
+        /*
+         * rage::atPool
+         * Maintains an array of objects on the caller's behalf and will allow random access allocation and deallocation of the contained objects
+         */
+
+        public uint Position; //m_Pool, pointer to the start of the pool
+        public ushort Size; //m_Size, number of entries in the pool
+        public ushort FreeCount; //m_FreeCount, number of free entries in the pool
+        public int ElemSize; //m_ElemSize, size of a pool entry
+        public uint FirstFree; //m_FirstFree, pointer to the first free item in the pool
+        public ushort PeakUse; //m_PeakUse, lowest value m_FreeCount can have
+        public ushort Dummy; //m_Dummy, padding
+        public bool OwnMemory; //m_OwnMem, whether we own the memory pointed to be m_Pool
+        public byte Pad0;
+        public byte Pad1;
+        public byte Pad2;
+        public T[][] Items; //The objects in each pool entry stored in a byte array (array of 0xCD bytes)
+
+        public Rsc6AtPool()
+        {
+            Position = 0;
+            Dummy = 0xFFFF;
+        }
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Position = reader.ReadUInt32();
+            Size = reader.ReadUInt16();
+            FreeCount = reader.ReadUInt16();
+            ElemSize = reader.ReadInt32();
+            FirstFree = reader.ReadUInt32();
+            PeakUse = reader.ReadUInt16();
+            Dummy = reader.ReadUInt16();
+            OwnMemory = reader.ReadBoolean();
+            Pad0 = reader.ReadByte();
+            Pad1 = reader.ReadByte();
+            Pad2 = reader.ReadByte();
+
+            var p = reader.Position;
+            reader.Position = Position;
+
+            Items = new T[Size][];
+            for (int i = 0; i < Size; i++)
+            {
+                Items[i] = reader.ReadArray<T>((uint)ElemSize);
+            }
+            reader.Position = p;
+        }
+
+        public readonly void Write(Rsc6DataWriter writer)
+        {
+            writer.AddPointerRef(Items);
+            writer.WriteUInt32(Position);
+            writer.WriteUInt16(Size);
+            writer.WriteUInt16(FreeCount);
+            writer.WriteInt32(ElemSize);
+            writer.WriteUInt32(Position); //FirstFree points to FirstFree anyways...
+            writer.WriteUInt16(PeakUse);
+            writer.WriteUInt16(Dummy);
+            writer.WriteBoolean(OwnMemory);
+            writer.WriteByte(Pad0);
+            writer.WriteByte(Pad1);
+            writer.WriteByte(Pad2);
+        }
+
+        public override readonly string ToString()
+        {
+            return "Count: " + Size.ToString() + ", PoolEntrySize: " + ElemSize.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public struct Rsc6PtrArr<T> where T : IRsc6Block, new()
+    {
+        public uint Position { get; set; }
+        public ushort Count { get; set; }
+        public ushort Capacity { get; set; }
+        public uint[] Pointers { get; set; }
+        public T[] Items { get; set; }
 
         public Rsc6PtrArr(T[] items)
         {
@@ -1451,7 +1536,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6RawLst<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6RawLst<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public T[] Items { get; set; }
@@ -1502,10 +1587,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6RawArr<T> where T : unmanaged
+    [TC(typeof(EXP))] public struct Rsc6RawArr<T> where T : unmanaged
     {
-        public ulong Position;
-        public T[] Items;
+        public ulong Position { get; set; }
+        public T[] Items { get; set; }
 
         public Rsc6RawArr(T[] items)
         {
@@ -1546,11 +1631,11 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6RawPtrArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6RawPtrArr<T> where T : IRsc6Block, new()
     {
-        public uint Position;
-        public uint[] Pointers;
-        public T[] Items;
+        public uint Position { get; set; }
+        public uint[] Pointers { get; set; }
+        public T[] Items { get; set; }
 
         public Rsc6RawPtrArr(T[] items)
         {
@@ -1616,10 +1701,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6PtrToPtrArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))] public struct Rsc6PtrToPtrArr<T> where T : IRsc6Block, new()
     {
-        public uint Position;
-        public Rsc6ManagedArr<T> Array;
+        public uint Position { get; set; }
+        public Rsc6ManagedArr<T> Array { get; set; }
 
         public Rsc6PtrToPtrArr(Rsc6ManagedArr<T> arr)
         {
@@ -1649,22 +1734,16 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArr(Array);
         }
 
-        public T this[int index]
-        {
-            get => Array[index];
-            set => Array[index] = value;
-        }
-
         public override string ToString()
         {
             return "Count: " + (Array.Items?.Length.ToString() ?? "0");
         }
     }
 
-    public struct Rsc6Str
+    [TC(typeof(EXP))] public struct Rsc6Str
     {
-        public ulong Position;
-        public string Value;
+        public ulong Position { get; set; }
+        public string Value { get; set; }
 
         public Rsc6Str(string str)
         {
@@ -1733,10 +1812,10 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6StrArr
+    [TC(typeof(EXP))] public struct Rsc6StrArr
     {
-        public ulong Position;
-        public Rsc6Str[] Items;
+        public ulong Position { get; set; }
+        public Rsc6Str[] Items { get; set; }
 
         public Rsc6StrArr(Rsc6Str[] items)
         {
@@ -1818,12 +1897,12 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6PtrStr
+    [TC(typeof(EXP))] public struct Rsc6PtrStr
     {
-        public ulong Position;
-        public ushort Count;
-        public ushort Capacity;
-        public Rsc6Str[] Items;
+        public ulong Position { get; set; }
+        public ushort Count { get; set; }
+        public ushort Capacity { get; set; }
+        public Rsc6Str[] Items { get; set; }
 
         public Rsc6PtrStr()
         {
@@ -1927,17 +2006,17 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
+    [TC(typeof(EXP))] public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
     {
-        public uint Position;
-        public ushort Count; //m_Size
-        public ushort Capacity; //m_FreeCount
-        public uint Size; //m_ElemSize
-        public uint FirstFree; //m_FirstFree, 2nd pointer
-        public ushort PeakUse; //m_PeakUse
-        public ushort Dummy = 0xCDCD; //m_Dummy
-        public byte OwnMem = 1; //m_OwnMem
-        public T[] Items;
+        public uint Position { get; set; }
+        public ushort Count { get; set; } //m_Size
+        public ushort Capacity { get; set; } //m_FreeCount
+        public uint Size { get; set; } //m_ElemSize
+        public uint FirstFree { get; set; } //m_FirstFree, 2nd pointer
+        public ushort PeakUse { get; set; } //m_PeakUse
+        public ushort Dummy { get; set; } = 0xCDCD; //m_Dummy
+        public byte OwnMem { get; set; } = 1; //m_OwnMem
+        public T[] Items { get; set; }
 
         public Rsc6PoolArr(T[] items)
         {
@@ -1991,7 +2070,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6BlockMap : Rsc6BlockBase
+    [TC(typeof(EXP))] public class Rsc6BlockMap : Rsc6BlockBase
     {
         public override ulong BlockLength => 4;
         public uint Block { get; set; }
@@ -2007,7 +2086,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public abstract class Rsc6BlockBase : IRsc6Block
+    [TC(typeof(EXP))] public abstract class Rsc6BlockBase : IRsc6Block
     {
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
@@ -2016,7 +2095,7 @@ namespace CodeX.Games.RDR1.RSC6
         public abstract void Write(Rsc6DataWriter writer);
     }
 
-    public abstract class Rsc6FileBase : Rsc6BlockBase
+    [TC(typeof(EXP))] public abstract class Rsc6FileBase : Rsc6BlockBase
     {
         public abstract uint VFT { get; set; }
 
@@ -2031,7 +2110,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public abstract class Rsc6BlockBaseMap : Rsc6FileBase //rage::pgBase
+    [TC(typeof(EXP))] public abstract class Rsc6BlockBaseMap : Rsc6FileBase //rage::pgBase
     {
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
 
@@ -2048,7 +2127,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public abstract class Rsc6BlockBaseMapRef : Rsc6BlockBaseMap //rage::pgBaseRefCounted
+    [TC(typeof(EXP))] public abstract class Rsc6BlockBaseMapRef : Rsc6BlockBaseMap //rage::pgBaseRefCounted
     {
         public uint RefCount { get; set; } //m_RefCount
 

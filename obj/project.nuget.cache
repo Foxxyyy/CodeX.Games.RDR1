@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "Aa8/IiO+2Fs=",
+  "dgSpecHash": "vYDh5851Hwc=",
   "success": true,
-  "projectFilePath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+  "projectFilePath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\fumol\\.nuget\\packages\\bepuphysics\\2.5.0-beta.23\\bepuphysics.2.5.0-beta.23.nupkg.sha512",
-    "C:\\Users\\fumol\\.nuget\\packages\\bepuutilities\\2.5.0-beta.23\\bepuutilities.2.5.0-beta.23.nupkg.sha512",
+    "C:\\Users\\fumol\\.nuget\\packages\\bepuphysics\\2.5.0-beta.24\\bepuphysics.2.5.0-beta.24.nupkg.sha512",
+    "C:\\Users\\fumol\\.nuget\\packages\\bepuutilities\\2.5.0-beta.24\\bepuutilities.2.5.0-beta.24.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\microsoft.netcore.platforms\\5.0.0\\microsoft.netcore.platforms.5.0.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\microsoft.netcore.targets\\1.1.0\\microsoft.netcore.targets.1.1.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\microsoft.win32.primitives\\4.3.0\\microsoft.win32.primitives.4.3.0.nupkg.sha512",
@@ -42,6 +42,7 @@
     "C:\\Users\\fumol\\.nuget\\packages\\system.console\\4.3.0\\system.console.4.3.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\system.diagnostics.debug\\4.3.0\\system.diagnostics.debug.4.3.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\system.diagnostics.diagnosticsource\\4.3.0\\system.diagnostics.diagnosticsource.4.3.0.nupkg.sha512",
+    "C:\\Users\\fumol\\.nuget\\packages\\system.diagnostics.eventlog\\9.0.0\\system.diagnostics.eventlog.9.0.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\system.diagnostics.tools\\4.3.0\\system.diagnostics.tools.4.3.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\system.diagnostics.tracing\\4.3.0\\system.diagnostics.tracing.4.3.0.nupkg.sha512",
     "C:\\Users\\fumol\\.nuget\\packages\\system.globalization\\4.3.0\\system.globalization.4.3.0.nupkg.sha512",

@@ -8,8 +8,6 @@ using CodeX.Core.Numerics;
 using CodeX.Games.RDR1.RPF6;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using System.Diagnostics;
-using System.Security.AccessControl;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -25,38 +23,38 @@ namespace CodeX.Games.RDR1.RSC6
         public bool MissingMedLOD { get; set; } //m_MissingMedLOD, always FALSE
         public byte Unknown_1Bh { get; set; } = 0xFF; //0xFF padding
         public JenkHash ScopedNameHash { get; set; } //m_iScopeNameHash, only for scoped sectors, otherwise 0
-        public Rsc6Ptr<Rsc6CurveGroup>[] Curves { get; set; } = new Rsc6Ptr<Rsc6CurveGroup>[24]; //m_CurveArrays, not used in 'swTerrain', 'swAll' & some random areas
+        public Rsc6Ptr<Rsc6CurveGroup>[] CurveArrays { get; set; } = new Rsc6Ptr<Rsc6CurveGroup>[24]; //m_CurveArrays, not used in 'swTerrain', 'swAll' & some random areas
         public int ParentLevelIndex { get; set; } = 24; //m_ParentLevelIndex, always 24
         public int Unknown_84h { get; set; } = -1; //Always -1
         public uint Unknown_88h { get; set; } //Always 0
-        public uint ExtraCurveData { get; set; } //Used only in 'swAiCurves' - (sagCurveExtraData, sagCurveStringMap & CurveNetworkGraph)
+        public uint CurveExtraData { get; set; } //Used only in 'swAiCurves' - (sagCurveExtraData, sagCurveStringMap & CurveNetworkGraph)
         public Vector4 MinAndBoundingRadius { get; set; } //m_MinAndBoundingRadius
         public Vector4 MaxAndInscribedRadius { get; set; } //m_MaxAndInscribedRadius
         public Vector4 BoundMin { get; set; }
         public Vector4 BoundMax { get; set; }
         public Rsc6Ptr<Rsc6PlacedLightsGroup> PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
-        public Rsc6ManagedArr<Rsc6PropInstanceInfo> Entities { get; set; } //m_Props
+        public Rsc6ManagedArr<Rsc6PropInstanceInfo> Props { get; set; } //m_Props
         public Rsc6PtrArr<Rsc6MapAttribute> DoorsAttributes { get; set; }
         public uint Unknown_E4h { get; set; } = 0x00CDCDCD; //Padding
-        public Rsc6ManagedArr<Rsc6SectorChild> ItemMapChilds { get; set; } //m_Children, 'swAll.wsi' only
-        public Rsc6Ptr<Rsc6ScopedSectors> ItemChilds { get; set; } //m_ChildGroup
+        public Rsc6ManagedArr<Rsc6SectorChild> Children { get; set; } //m_Children, 'swAll.wsi' only
+        public Rsc6Ptr<Rsc6ScopedSectors> ChildGroup { get; set; } //m_ChildGroup
         public Rsc6PtrArr<Rsc6SectorInfo> ChildPtrs { get; set; } //m_ChildPtrs, used only in swTerrain, swHorseCurves, etc.
         public Rsc6ManagedArr<Rsc6DrawableInstanceBase> DrawableInstances { get; set; } //m_SectorDrawableInstances
-        public Rsc6ManagedArr<Rsc6DrawableInstance> Unknown_104h { get; set; }
+        public Rsc6ManagedArr<Rsc6DrawableInstance> DrawableInstances2 { get; set; }
         public Rsc6ManagedArr<Rsc6Portal> Portals { get; set; } //m_Portals
         public Rsc6PtrArr<Rsc6Attribute> Attributes { get; set; } //m_Attributes
-        public uint Unknown_11Ch { get; set; } //Always 0
-        public Rsc6StreamableBase VisualDictionary { get; set; } = new Rsc6StreamableBase();
-        public Rsc6StreamableBase MedVisualDictionary { get; set; } = new Rsc6StreamableBase();
+        public Rsc6StreamableBase VisualDictionary { get; set; }
+        public Rsc6StreamableBase MedVisualDictionary { get; set; }
         public uint Unknown_140h { get; set; } //Always 0
         public uint Unknown_144h { get; set; } //Always 0
         public uint Unknown_148h { get; set; } //Always 0
         public uint Unknown_14Ch { get; set; } //Always 0
-        public Rsc6StreamableBase VLowVisualDictionary { get; set; } = new Rsc6StreamableBase();
-        public Rsc6StreamableBase BoundDictionary { get; set; } = new Rsc6StreamableBase();
+        public Rsc6StreamableBase VLowVisualDictionary { get; set; }
+        public Rsc6StreamableBase BoundDictionary { get; set; }
+        public uint Unknown_16Ch { get; set; } //Always 0
         public uint Unknown_170h { get; set; } //Always 0
         public float LowLODFade { get; set; } = 1.0f; //m_VLowLODFade, always 1.0f
-        public JenkHash SectorNameLower { get; set; } //m_NameHash
+        public JenkHash NameHash { get; set; } //m_NameHash   (SectorNameLower)
         public Rsc6ManagedArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
         public uint LastVisibleMarker { get; set; } //m_LastVisibleMarker, always 0
         public uint ResidentStatus { get; set; } = 85; //m_ResidentStatus - 0 or 85
@@ -87,7 +85,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte RefCount { get; set; } //m_RefCount
         public byte ParentChildIndex { get; set; } //m_ParentChildIndex, always 0
         public uint Flags { get; set; } //m_Flags
-        public bool InnerPropsInstanciated { get; set; } = true; //m_InnerPropsInstantiated, always TRUE
+        public bool InnerPropsInstantiated { get; set; } = true; //m_InnerPropsInstantiated, always TRUE
         public byte InnerPropsAge { get; set; } //m_InnerPropsAge, always 0
         public byte RawPropsGroup { get; set; } //m_RawPropsGroup, always 0
         public byte GroupFileFlags { get; set; } //m_GroupFileFlags, always 0
@@ -109,42 +107,42 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1Bh = reader.ReadByte(); 
             ScopedNameHash = reader.ReadUInt32();
 
-            for (int i = 0; i < Curves.Length; i++) //Start of sagCurveGroup
+            for (int i = 0; i < CurveArrays.Length; i++) //Start of sagCurveGroup
             {
-                Curves[i] = reader.ReadPtr<Rsc6CurveGroup>(); //sagCurveArray
+                CurveArrays[i] = reader.ReadPtr<Rsc6CurveGroup>(); //sagCurveArray
             }
 
             ParentLevelIndex = reader.ReadInt32();
             Unknown_84h = reader.ReadInt32();
             Unknown_88h = reader.ReadUInt32();
-            ExtraCurveData = reader.ReadUInt32();
+            CurveExtraData = reader.ReadUInt32();
             MinAndBoundingRadius = reader.ReadVector4();
             MaxAndInscribedRadius = reader.ReadVector4(); //End of sagCurveGroup
             BoundMin = reader.ReadVector4();
             BoundMax = reader.ReadVector4();
             PlacedLightsGroup = reader.ReadPtr<Rsc6PlacedLightsGroup>();
-            Entities = reader.ReadArr<Rsc6PropInstanceInfo>();
+            Props = reader.ReadArr<Rsc6PropInstanceInfo>();
             DoorsAttributes = reader.ReadPtrArr<Rsc6MapAttribute>();
             Unknown_E4h = reader.ReadUInt32();
-            ItemMapChilds = reader.ReadArr<Rsc6SectorChild>();
-            ItemChilds = reader.ReadPtr<Rsc6ScopedSectors>();
+            Children = reader.ReadArr<Rsc6SectorChild>();
+            ChildGroup = reader.ReadPtr<Rsc6ScopedSectors>();
             ChildPtrs = reader.ReadPtrArr<Rsc6SectorInfo>();
             DrawableInstances = reader.ReadArr<Rsc6DrawableInstanceBase>();
-            Unknown_104h = reader.ReadArr<Rsc6DrawableInstance>();
+            DrawableInstances2 = reader.ReadArr<Rsc6DrawableInstance>();
             Portals = reader.ReadArr<Rsc6Portal>();
             Attributes = reader.ReadPtrArr(Rsc6Attribute.Create);
-            Unknown_11Ch = reader.ReadUInt32();
-            VisualDictionary.Read(reader);
-            MedVisualDictionary.Read(reader);
+            VisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
+            MedVisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
             Unknown_140h = reader.ReadUInt32();
             Unknown_144h = reader.ReadUInt32();
             Unknown_148h = reader.ReadUInt32();
             Unknown_14Ch = reader.ReadUInt32();
-            VLowVisualDictionary.Read(reader);
-            BoundDictionary.Read(reader);
+            VLowVisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
+            BoundDictionary = reader.ReadStruct<Rsc6StreamableBase>();
+            Unknown_16Ch = reader.ReadUInt32();
             Unknown_170h = reader.ReadUInt32();
             LowLODFade = reader.ReadSingle();
-            SectorNameLower = reader.ReadUInt32();
+            NameHash = reader.ReadUInt32();
             Occluders = reader.ReadArr<Rsc6Portal>();
             LastVisibleMarker = reader.ReadUInt32();
             ResidentStatus = reader.ReadUInt32();
@@ -175,7 +173,7 @@ namespace CodeX.Games.RDR1.RSC6
             RefCount = reader.ReadByte();
             ParentChildIndex = reader.ReadByte();
             Flags = reader.ReadUInt32();
-            InnerPropsInstanciated = reader.ReadBoolean();
+            InnerPropsInstantiated = reader.ReadBoolean();
             InnerPropsAge = reader.ReadByte();
             RawPropsGroup = reader.ReadByte();
             GroupFileFlags = reader.ReadByte();
@@ -197,42 +195,42 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Unknown_1Bh);
             writer.WriteUInt32(ScopedNameHash);
 
-            for (int i = 0; i < Curves.Length; i++)
+            for (int i = 0; i < CurveArrays.Length; i++)
             {
-                writer.WritePtr(Curves[i]);
+                writer.WritePtr(CurveArrays[i]);
             }
 
             writer.WriteInt32(ParentLevelIndex);
             writer.WriteInt32(Unknown_84h);
             writer.WriteUInt32(Unknown_88h);
-            writer.WriteUInt32(ExtraCurveData);
+            writer.WriteUInt32(CurveExtraData);
             writer.WriteVector4(MinAndBoundingRadius);
             writer.WriteVector4(MaxAndInscribedRadius);
             writer.WriteVector4(BoundMin);
             writer.WriteVector4(BoundMax);
             writer.WritePtr(PlacedLightsGroup);
-            writer.WriteArr(Entities);
+            writer.WriteArr(Props);
             writer.WritePtrArr(DoorsAttributes, true);
             writer.WriteUInt32(Unknown_E4h);
-            writer.WriteArr(ItemMapChilds);
-            writer.WritePtr(ItemChilds);
+            writer.WriteArr(Children);
+            writer.WritePtr(ChildGroup);
             writer.WritePtrArr(ChildPtrs);
             writer.WriteArr(DrawableInstances);
-            writer.WriteArr(Unknown_104h);
+            writer.WriteArr(DrawableInstances2);
             writer.WriteArr(Portals);
             writer.WritePtrArr(Attributes);
-            writer.WriteUInt32(Unknown_11Ch);
-            VisualDictionary.Write(writer);
-            MedVisualDictionary.Write(writer);
+            writer.WriteStruct(VisualDictionary);
+            writer.WriteStruct(MedVisualDictionary);
             writer.WriteUInt32(Unknown_140h);
             writer.WriteUInt32(Unknown_144h);
             writer.WriteUInt32(Unknown_148h);
             writer.WriteUInt32(Unknown_14Ch);
-            VLowVisualDictionary.Write(writer);
-            BoundDictionary.Write(writer);
+            writer.WriteStruct(VLowVisualDictionary);
+            writer.WriteStruct(BoundDictionary);
+            writer.WriteUInt32(Unknown_16Ch);
             writer.WriteUInt32(Unknown_170h);
             writer.WriteSingle(LowLODFade);
-            writer.WriteUInt32(SectorNameLower);
+            writer.WriteUInt32(NameHash);
             writer.WriteArr(Occluders);
             writer.WriteUInt32(LastVisibleMarker);
             writer.WriteUInt32(ResidentStatus);
@@ -263,7 +261,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(RefCount);
             writer.WriteByte(ParentChildIndex);
             writer.WriteUInt32(Flags);
-            writer.WriteBoolean(InnerPropsInstanciated);
+            writer.WriteBoolean(InnerPropsInstantiated);
             writer.WriteByte(InnerPropsAge);
             writer.WriteByte(RawPropsGroup);
             writer.WriteByte(GroupFileFlags);
@@ -278,9 +276,9 @@ namespace CodeX.Games.RDR1.RSC6
             PropsGroup = reader.ReadBool("PropsGroup");
             ScopedNameHash = new JenkHash(reader.ReadString("ScopedNameHash"));
 
-            for (int i = 0; i < Curves.Length; i++)
+            for (int i = 0; i < CurveArrays.Length; i++)
             {
-                Curves[i] = new(reader.ReadNode<Rsc6CurveGroup>($"Curve{i}"));
+                CurveArrays[i] = new(reader.ReadNode<Rsc6CurveGroup>($"Curve{i}"));
             }
 
             MinAndBoundingRadius = Rpf6Crypto.ToXYZ(reader.ReadVector4("MinAndBoundingRadius"));
@@ -288,7 +286,7 @@ namespace CodeX.Games.RDR1.RSC6
             BoundMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMin"));
             BoundMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMax"));
             PlacedLightsGroup = new(reader.ReadNode<Rsc6PlacedLightsGroup>("PlacedLightsGroup"));
-            Entities = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
+            Props = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
             Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
 
             var dAttr = reader.ReadNodeArray<Rsc6MapAttribute>("DoorsAttributes");
@@ -297,11 +295,11 @@ namespace CodeX.Games.RDR1.RSC6
                 DoorsAttributes = new(dAttr, (ushort)dAttr.Where(a => a != null).ToArray().Length, (ushort)dAttr.Length);
             }
 
-            ItemMapChilds = new(reader.ReadNodeArray<Rsc6SectorChild>("ItemMapChilds"));
-            ItemChilds = new(reader.ReadNode<Rsc6ScopedSectors>("ItemChilds"));
+            Children = new(reader.ReadNodeArray<Rsc6SectorChild>("ItemMapChilds"));
+            ChildGroup = new(reader.ReadNode<Rsc6ScopedSectors>("ItemChilds"));
             ChildPtrs = new(reader.ReadNodeArray<Rsc6SectorInfo>("ChildPtrs"));
             DrawableInstances = new(reader.ReadNodeArray<Rsc6DrawableInstanceBase>("DrawableInstances"));
-            SectorNameLower = new JenkHash(reader.ReadString("SectorNameLower"));
+            NameHash = new JenkHash(reader.ReadString("SectorNameLower"));
             Occluders = new(reader.ReadNodeArray<Rsc6Portal>("Occluders"));
             ResidentStatus = reader.ReadUInt32("ResidentStatus");
 
@@ -379,7 +377,7 @@ namespace CodeX.Games.RDR1.RSC6
                 }
                 Portals = new(portals.ToArray());
             }
-            Unknown_104h = new(unk104);
+            DrawableInstances2 = new(unk104);
         }
 
         public void Write(MetaNodeWriter writer)
@@ -388,9 +386,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBool("PropsGroup", PropsGroup);
             if (ScopedNameHash != 0) writer.WriteString("ScopedNameHash", ScopedNameHash.ToString());
 
-            for (int i = 0; i < Curves.Length; i++)
+            for (int i = 0; i < CurveArrays.Length; i++)
             {
-                writer.WriteNode($"Curve{i}", Curves[i].Item);
+                writer.WriteNode($"Curve{i}", CurveArrays[i].Item);
             }
 
             writer.WriteVector4("MinAndBoundingRadius", MinAndBoundingRadius);
@@ -398,15 +396,15 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("BoundMin", BoundMin);
             writer.WriteVector4("BoundMax", BoundMax);
             writer.WriteNode("PlacedLightsGroup", PlacedLightsGroup.Item);
-            if (Entities.Count > 0) writer.WriteNodeArray("Entities", Entities.Items);
+            if (Props.Count > 0) writer.WriteNodeArray("Entities", Props.Items);
             if (Attributes.Capacity > 0) writer.WriteNodeArray("DoorsAttributes", DoorsAttributes.Items);
-            if (ItemMapChilds.Count > 0) writer.WriteNodeArray("ItemMapChilds", ItemMapChilds.Items);
-            writer.WriteNode("ItemChilds", ItemChilds.Item);
+            if (Children.Count > 0) writer.WriteNodeArray("ItemMapChilds", Children.Items);
+            writer.WriteNode("ItemChilds", ChildGroup.Item);
             if (ChildPtrs.Count > 0 && ChildPtrs.Items[0] != null) writer.WriteNodeArray("ChildPtrs", ChildPtrs.Items);
             if (DrawableInstances.Count > 0) writer.WriteNodeArray("DrawableInstances", DrawableInstances.Items);
-            if (Unknown_104h.Count > 0) writer.WriteNodeArray("Unknown_104h", Unknown_104h.Items);
+            if (DrawableInstances2.Count > 0) writer.WriteNodeArray("Unknown_104h", DrawableInstances2.Items);
             if (Attributes.Count > 0) writer.WriteNodeArray("Attributes", Attributes.Items);
-            writer.WriteString("SectorNameLower", SectorNameLower.ToString());
+            writer.WriteString("SectorNameLower", NameHash.ToString());
             if (Occluders.Count > 0) writer.WriteNodeArray("Occluders", Occluders.Items);
             writer.WriteUInt32("ResidentStatus", ResidentStatus);
             if (PropNames.Count > 0) writer.WriteStringArray("PropNames", PropNames.Items.Select(s => s.Value).ToArray());
@@ -422,21 +420,6 @@ namespace CodeX.Games.RDR1.RSC6
             if (NamedNodeMap != 0) writer.WriteUInt64("NamedNodeMap", NamedNodeMap);
         }
 
-        public static Rsc6SectorInfo GetSectorParent(Rsc6SectorInfo[] allSectors, Rsc6SectorInfo sector)
-        {
-            if (allSectors == null || sector == null) return null;
-            if (sector.Scope.ToString() == "NULL") return null; //Top-parent
-
-            foreach (var sec in allSectors)
-            {
-                if (sec.ToString() == sector.Scope.ToString())
-                {
-                    return sec;
-                }
-            }
-            return null;
-        }
-
         public void SetDisabled(bool disable) //sagSectorInfo::SetDisabled
         {
             Flags = (Flags & 0xFEFFFFFFu) | (disable ? 0x01000000u : 0u);
@@ -444,7 +427,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override string ToString()
         {
-            return Name.ToString();
+            return Name.Value ?? Scope.Value;
         }
     }
      
@@ -453,10 +436,8 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => 28;
         public Rsc6PtrArr<Rsc6SectorInfo> Sectors { get; set; } //m_ScopedSectors
         public Rsc6ManagedArr<Rsc6ScopedSectorParent> SectorsParents { get; set; } //m_ScopedSectorsParents
-        public Rsc6RawArr<ushort> SectorsIndices { get; set; } //m_ScopedSectorsIndices
-        public ushort IndicesCount { get; set; }
-        public ushort IndicesCapacity { get; set; }
-        public Rsc6Str Name { get; set; } //m_ScopeName
+        public Rsc6Arr<ushort> SectorsIndices { get; set; } //m_ScopedSectorsIndices
+        public Rsc6Str ScopeName { get; set; } //m_ScopeName
 
         public List<string> ParentsNames; //For writing purposes
 
@@ -464,41 +445,23 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Sectors = reader.ReadPtrArr<Rsc6SectorInfo>();
             SectorsParents = reader.ReadArr<Rsc6ScopedSectorParent>();
-            SectorsIndices = reader.ReadRawArrPtr<ushort>();
-            IndicesCount = reader.ReadUInt16();
-            IndicesCapacity = reader.ReadUInt16();
-            Name = reader.ReadStr();
-            SectorsIndices = reader.ReadRawArrItems(SectorsIndices, IndicesCount);
-
-            for (int i = 0; i < SectorsParents.Count; i++)
-            {
-                var items = Sectors.Items;
-                var parents = SectorsParents.Items;
-
-                if (items[i].FilePosition <= 0 || parents[i].ParentPointer <= 0) continue;
-                for (int i1 = 0; i1 < items.Length; i1++)
-                {
-                    if (items[i1].FilePosition != parents[i].ParentPointer) continue;
-                    parents[i].Parent = items[i1];
-                }
-            }
+            SectorsIndices = reader.ReadArr<ushort>();
+            ScopeName = reader.ReadStr();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
             writer.WritePtrArr(Sectors);
             writer.WriteArr(SectorsParents);
-            writer.WriteRawArr(SectorsIndices);
-            writer.WriteUInt16(IndicesCount);
-            writer.WriteUInt16(IndicesCapacity);
-            writer.WriteStr(Name);
+            writer.WriteArr(SectorsIndices);
+            writer.WriteStr(ScopeName);
         }
 
         public void Read(MetaNodeReader reader)
         {
             Sectors = new(reader.ReadNodeArray<Rsc6SectorInfo>("Sectors"));
             ParentsNames = new(reader.ReadStringArray("SectorsParents").ToList());
-            Name = new Rsc6Str(reader.ReadString("Name"));
+            ScopeName = new Rsc6Str(reader.ReadString("Name"));
 
             if (Sectors.Items != null && Sectors.Items.Length > 1)
             {
@@ -514,9 +477,7 @@ namespace CodeX.Games.RDR1.RSC6
                     indices.Add((ushort)count);
                 }
 
-                SectorsIndices = new Rsc6RawArr<ushort>(indices.ToArray());
-                IndicesCount = (ushort)SectorsIndices.Items.Length;
-                IndicesCapacity = (ushort)SectorsIndices.Items.Length;
+                SectorsIndices = new(indices.ToArray());
 
                 if (ParentsNames != null)
                 {
@@ -531,7 +492,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                         parentsPos[i] = new Rsc6ScopedSectorParent()
                         {
-                            Parent = Sectors.Items.FirstOrDefault(p => p.Name.Value.ToLower() == ParentsNames[i].ToLower())
+                            Parent = new(Sectors.Items.FirstOrDefault(p => p.Name.Value.ToLower() == ParentsNames[i].ToLower()))
                         };
                     }
                     SectorsParents = new Rsc6ManagedArr<Rsc6ScopedSectorParent>(parentsPos);
@@ -542,41 +503,40 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteNodeArray("Sectors", Sectors.Items);
-            writer.WriteStringArray("SectorsParents", SectorsParents.Items.Select(s => s.Parent?.Name.Value)
+            writer.WriteStringArray("SectorsParents", SectorsParents.Items.Select(s => s.Parent.Item?.Name.Value)
                                                                           .Where(value => value != null)
                                                                           .Prepend("root")
                                                                           .ToArray());
-            writer.WriteString("Name", Name.Value);
+            writer.WriteString("Name", ScopeName.Value);
         }
         
         public override string ToString()
         {
-            return Name.Value;
+            return ScopeName.Value;
         }
     }
 
     [TC(typeof(EXP))] public class Rsc6ScopedSectorParent : Rsc6BlockBase
     {
         public override ulong BlockLength => 4;
-        public uint ParentPointer { get; set; }
-        public Rsc6SectorInfo Parent { get; set; }
+        public Rsc6Ptr<Rsc6SectorInfo> Parent { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
-            ParentPointer = reader.ReadUInt32();
+            Parent = reader.ReadPtr<Rsc6SectorInfo>();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            if (Parent == null)
-                writer.WriteUInt32((uint)Rpf6Crypto.VIRTUAL_BASE);
+            if (Parent.Item == null)
+                writer.WriteUInt32((uint)Rsc6DataReader.VIRTUAL_BASE);
             else
-                writer.WritePtrEmbed(Parent, Parent, 0);
+                writer.WritePtr(Parent);
         }
 
         public override string ToString()
         {
-            return Parent?.ToString() ?? "root";
+            return Parent.Item?.ToString() ?? "root";
         }
     }
 
@@ -1107,6 +1067,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4("Unknown_30h", Unknown_30h);
             writer.WriteJenkHash("Unknown_88h", Unknown_88h);
             if (Unknown_8Ch.Item != null) writer.WriteInt32("InstanceNodeUsed", Unknown_8Ch.Item.Node);
+        }
+
+        public override string ToString()
+        {
+            return $"{Unknown_8Ch.Item} : {Unknown_88h}";
         }
     }
 
@@ -1745,16 +1710,18 @@ namespace CodeX.Games.RDR1.RSC6
 
     [TC(typeof(EXP))] public class Rsc6AttributeInstancedProp2 : Rsc6Attribute, MetaNode
     {
-        public override ulong BlockLength => base.BlockLength + 16;
+        public override ulong BlockLength => base.BlockLength + 20; //TODO: confirm this is +20 and not +16
         public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp { get; set; }
         public uint Unknown_10h { get; set; }
         public Vector3 Unknown_14h { get; set; } = new Vector3(-431602080f); //Usually NULL
+        public uint Unknown_20h { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
             Unknown_10h = reader.ReadUInt32();
             Unknown_14h = reader.ReadVector3();
+            Unknown_20h = reader.ReadUInt32();//TODO: check this
 
             TargetProp = new Rsc6Ptr<Rsc6PropInstanceInfo> { Position = TargetPointer };
             TargetProp = reader.ReadPtrItem(TargetProp);
@@ -1781,6 +1748,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(ClassID);
             writer.WriteUInt32(Unknown_10h);
             writer.WriteVector3(Unknown_14h);
+            writer.WriteUInt32(Unknown_20h);//TODO: check this
         }
 
         public new void Read(MetaNodeReader reader)
@@ -1789,6 +1757,7 @@ namespace CodeX.Games.RDR1.RSC6
             TargetedProp = reader.ReadString("TargetProp");
             Unknown_10h = reader.ReadUInt32("Unknown_10h");
             Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
+            Unknown_20h = reader.ReadUInt32("Unknown_20h");
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -1796,11 +1765,11 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
             writer.WriteString("TargetProp", TargetProp.Item?.EntityName.ToString());
             writer.WriteUInt32("Unknown_10h", Unknown_10h);
-
             if (Unknown_14h != new Vector3(-431602080f))
             {
                 writer.WriteVector3("Unknown_14h", Unknown_14h);
             }
+            writer.WriteUInt32("Unknown_20h", Unknown_20h);
         }
 
         public override string ToString()
@@ -2367,7 +2336,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
+    [TC(typeof(EXP))] public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
     {
         public override ulong BlockLength => 80;
         public override uint VFT { get; set; } = 0x01909C20;
@@ -2422,7 +2391,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6InstanceDataMember : Rsc6BlockBase, MetaNode //sagInstDataMember
+    [TC(typeof(EXP))] public class Rsc6InstanceDataMember : Rsc6BlockBase, MetaNode //sagInstDataMember
     {
         public override ulong BlockLength => 36;
         public int Unknown_0h { get; set; } //Always 0
@@ -2485,7 +2454,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6UnknownInstData : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))] public class Rsc6UnknownInstData : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 48;
         public Vector4 Unknown_0h { get; set; }
@@ -2526,280 +2495,509 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6StreamableBase : Rsc6BlockBase //pgStreamableBase
+    [TC(typeof(EXP))] public class Rsc6TerrainWorldResource : Rsc6BlockBaseMap, MetaNode //sagTerrainWorldResource
     {
-        public override ulong BlockLength => 16;
-        public uint Unknown_0h { get; set; } = uint.MaxValue; //Always 0xFFFFFFFF (for #si), 0 for fragments
-        public uint Unknown_4h { get; set; } = 64; //Always 64 (for #si), 0xFFFFFFFF for fragments
-        public uint Unknown_8h { get; set; } //Always 0
-        public uint Unknown_Ch { get; set; } //Always 0
+        public override ulong BlockLength => 144;
+        public override uint VFT { get; set; } = 0x04CACFCC;
+        public Rsc6ManagedArr<Rsc6TerrainVisualDictionary> Visuals { get; set; } //m_Visuals
+        public Rsc6ManagedArr<Rsc6TerrainSectorDictionary> Sectors { get; set; } //m_Sectors
+        public Rsc6ManagedArr<Rsc6TerrainTextureDictionary> TextureDictionaries { get; set; } //m_TextureDictionaries
+        public BoundingBox4 WorldBox { get; set; } //m_WorldBox
+        public Rsc6AtMapArr<Rsc6TerrainTextureEntries> TextureDictionaryLookup { get; set; } //m_TextureDictionaryLookup
+        public Rsc6ManagedArr<Rsc6TerrainTextureSet> TextureSets { get; set; } //m_TextureSets, array size is 101, one for each sector in the game
+        public Rsc6Ptr<Rsc6GridBucket>[] LodGridBuckets { get; set; } = new Rsc6Ptr<Rsc6GridBucket>[9]; //m_LodGridBuckets
+        public short[] GridSize { get; set; } //m_gridSize[5]
+        public short[] GridSubDivs { get; set; } //m_gridSubDivs[5]
+        public int NumLODLevels { get; set; } //m_numLODlevels
+
+        public string[] TextureDicts => Rsc6DataMap.Flatten(TextureDictionaryLookup.Items, e => e.ToString()).ToArray(); //Array size equal to lookup capacity
 
         public override void Read(Rsc6DataReader reader)
         {
-            Unknown_0h = reader.ReadUInt32();
-            Unknown_4h = reader.ReadUInt32();
-            Unknown_8h = reader.ReadUInt32();
-            Unknown_Ch = reader.ReadUInt32();
+            base.Read(reader);
+            Visuals = reader.ReadArr<Rsc6TerrainVisualDictionary>();
+            Sectors = reader.ReadArr<Rsc6TerrainSectorDictionary>();
+            TextureDictionaries = reader.ReadArr<Rsc6TerrainTextureDictionary>();
+            WorldBox = reader.ReadBoundingBox4();
+            TextureDictionaryLookup = reader.ReadAtMapArr<Rsc6TerrainTextureEntries>();
+            TextureSets = reader.ReadArr<Rsc6TerrainTextureSet>();
+
+            for (int i = 0; i < LodGridBuckets.Length; i++)
+            {
+                LodGridBuckets[i] = reader.ReadPtr<Rsc6GridBucket>();
+            }
+
+            GridSize = reader.ReadArray<short>(5, false);
+            GridSubDivs = reader.ReadArray<short>(5, false);
+            NumLODLevels = reader.ReadInt32();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            writer.WriteUInt32(Unknown_0h);
-            writer.WriteUInt32(Unknown_4h);
-            writer.WriteUInt32(Unknown_8h);
-            writer.WriteUInt32(Unknown_Ch);
-        }
-    }
+            base.Write(writer);
+            writer.WriteArr(Visuals);
+            writer.WriteArr(Sectors);
+            writer.WriteArr(TextureDictionaries);
+            writer.WriteBoundingBox4(WorldBox);
+            writer.WriteAtMapArr(TextureDictionaryLookup);
+            writer.WriteArr(TextureSets);
 
-    [TC(typeof(EXP))] public class WsiEntity : Entity
-    {
-        public bool ResetPos = false;
-        public JenkHash ModelName;
-
-        public string ParentName;
-        public Half RotationX;
-        public Half RotationY;
-        public Half RotationZ;
-        public byte Flags;
-        public byte AO;
-        public byte ModMode;
-        public byte NetworkingFlags;
-        public byte RotationType;
-
-        public override string Name => ModelName.ToString();
-        public RDR1MapData Wsi => Level as RDR1MapData;
-
-        public WsiEntity()
-        {
-        }
-
-        public WsiEntity(Rsc6PropInstanceInfo entity) //Fragments, props
-        {
-            var name = entity.EntityName.ToString().ToLowerInvariant();
-            if (name.Contains('/'))
+            for (int i = 0; i < LodGridBuckets.Length; i++)
             {
-                name = name[(name.LastIndexOf("/") + 1)..];
+                writer.WritePtr(LodGridBuckets[i]);
             }
 
-            var yaw = (float)entity.RotationZ; //green
-            var pitch = (float)entity.RotationX; //red
-            var roll = (float)entity.RotationY; //blue
+            writer.WriteStructArray(GridSize);
+            writer.WriteStructArray(GridSubDivs);
+            writer.WriteInt32(NumLODLevels);
+        }
 
-            var rotation = Quaternion.Identity;
-            switch (entity.RotationType)
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteInt32("NumLODLevels", NumLODLevels);
+            writer.WriteVector4("WorldBoxMin", WorldBox.Min);
+            writer.WriteVector4("WorldBoxMax", WorldBox.Max);
+            writer.WriteStringArray("TextureDicts", TextureDicts);
+            writer.WriteInt16Array("GridSize", GridSize);
+            writer.WriteInt16Array("GridSubDivs", GridSubDivs);
+            writer.WriteNodeArray("Visuals", Visuals.Items);
+            writer.WriteNodeArray("Sectors", Sectors.Items);
+            writer.WriteNodeArray("TextureDictionaries", TextureDictionaries.Items);
+            writer.WriteNodeArray("TextureSets", TextureSets.Items);
+
+            for (int i = 0; i < LodGridBuckets.Length; i++)
             {
-                default:
-                case 0: //[-π/2, π/2]
-                    var halfPi = MathF.PI / 2.0f;
-                    var minusHalfPi = -MathF.PI / 2.0f;
-                    if (roll < minusHalfPi || roll > halfPi || pitch < minusHalfPi || pitch > halfPi)
-                        rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI - roll);
-                    else
-                        rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, roll);
-                    break;
-                case 2:
-                    rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI - roll);
-                    break;
-            }
-
-            Position = entity.EntityPosition.XYZ();
-            Orientation = rotation;
-            ModelName = JenkHash.GenHash(name);
-            LodDistMax = 100.0f;
-            RotationX = entity.RotationX;
-            RotationY = entity.RotationY;
-            RotationZ = entity.RotationZ;
-            Flags = entity.Flags;
-            AO = entity.AO;
-            ModMode = entity.ModMode;
-            NetworkingFlags = entity.NetworkingFlags;
-            RotationType = entity.RotationType;
-        }
-
-        public WsiEntity(Rsc6DrawableInstanceBase entity) //Fragments, props
-        {
-            var name = entity.Name.ToString().ToLowerInvariant();
-            entity.Matrix.Decompose(out var scale, out var rot, out var translation);
-            rot = new Quaternion(rot.Z, rot.X, rot.Y, rot.W);
-
-            Position = translation;
-            Orientation = rot;
-            OrientationInv = Quaternion.Inverse(rot);
-            Scale = scale;
-            ModelName = JenkHash.GenHash(name);
-            LodDistMax = 500.0f;
-        }
-
-        public override void SetPiece(Piece p)
-        {
-            var changed = p != Piece;
-            Piece = p;
-
-            if ((p != null) && changed)
-            {
-                if (Batch == null) //Batch bounds are set directly
-                {
-                    var pos = Position;
-                    if (ResetPos)
-                    {
-                        Position = Vector3.Zero;
-                    }
-                    UpdateBounds();
-                    Position = pos;
-                }
-                EnsurePieceLightInstances();
-            }
-        }
-
-        public void SetFieldBatch(Rsc6GrassField field)
-        {
-            var aabb = field.GetAABB();
-            ModelName = new(field.Name.Value);
-            LodDistMax = 100.0f;
-            Position = aabb.Center;
-            BoundingBox = aabb;
-            BoundingSphere = new BoundingSphere(aabb.Center, aabb.Size.Length() * 0.5f);
-            ResetPos = true;
-        }
-    }
-
-    [TC(typeof(EXP))] public class RDR1LightEntity : Entity
-    {
-        public bool ResetPos = false;
-        public string ParentName;
-        public Vector3 ParentPosition;
-        public JenkHash ModelName;
-
-        public override string Name => ModelName.ToString();
-        public RDR1MapData Wsi => Level as RDR1MapData;
-
-        public RDR1LightEntity(Rsc6PlacedLight light, string parent)
-        {
-            Position = light.Position.XYZ();
-            ParentPosition = light.ParentPosition.XYZ();
-            ParentName = parent;
-            ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
-            LodDistMax = 500.0f;
-            ResetPos = true;
-
-            var pos = light.Position.XYZ();
-            var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
-            var ty = dir.GetPerpVec();
-            var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
-            var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
-            var intensity = light.Intensity;
-            var range = light.Range;
-            var innerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-            var outerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-            var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
-            Lights = new Light[] { l };
-        }
-
-        public override void SetPiece(Piece p)
-        {
-            var changed = p != Piece;
-            Piece = p;
-
-            if ((p != null) && changed)
-            {
-                var pos = Position;
-                if (ResetPos)
-                {
-                    Position = Vector3.Zero;
-                }
-                UpdateBounds();
-                Position = pos;
-                EnsurePieceLightInstances();
+                writer.WriteNode(string.Format("LodGridBucket{0}", i), LodGridBuckets[i].Item);
             }
         }
     }
 
-    [TC(typeof(EXP))] public class RDR1GridForestEntity : Entity
+    [TC(typeof(EXP))] public class Rsc6TerrainVisualDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<terTerrainVisual>, 0, unsigned short>
     {
-        public Rsc6TreeForestGridCell GridCell;
-        public JenkHash TreeName;
-        public Vector3 OriginalPosition; //Used so if we're moving a tree in the map viewer, we can find it back from a #sp using its original position.
-        public bool Created = false; //Used to make sure we'll update new trees
-        
-        public override string Name => TreeName.ToString();
-        public RDR1TreeMapData Wsp => Level as RDR1TreeMapData;
+        public override ulong BlockLength => 8;
+        public Rsc6PtrArr<Rsc6TerrainVisual> Elements { get; set; } //m_Elements, capacity is the total size of all pointers (count * 4)
 
-        public RDR1GridForestEntity(BaseCreateArgs args, float dist) //Create
+        public override void Read(Rsc6DataReader reader)
         {
-            TreeName = args.AssetName;
-            LodDistMax = dist;
-            Position = args.Transform.Position;
-            Orientation = args.Transform.Orientation;
-            Scale = args.Transform.Scale;
-            OrientationInv = Orientation.IsIdentity ? Quaternion.Identity : Quaternion.Inverse(Orientation);
-            Created = true;
+            Elements = reader.ReadPtrArr<Rsc6TerrainVisual>();
         }
 
-        public RDR1GridForestEntity(Rsc6PackedInstancePos inst, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist) //Trees
+        public override void Write(Rsc6DataWriter writer)
         {
-            TreeName = name;
-            GridCell = gridCell;
-            LodDistMax = dist;
-            Position = inst.Position;
-            OriginalPosition = Position;
+            writer.WritePtrArr(Elements);
         }
 
-        public RDR1GridForestEntity(Rsc6InstanceMatrix inst, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist) //Debris and foliages around buildings and roads
+        public void Read(MetaNodeReader reader)
         {
-            inst.Transform.Decompose(out var scale, out var rot, out var translation);
-            TreeName = name;
-            GridCell = gridCell;
-            LodDistMax = dist;
-            Position = translation;
-            OriginalPosition = Position;
-            Orientation = new Quaternion(rot.Z, rot.X, rot.Y, rot.W);
-            OrientationInv = Quaternion.Inverse(Orientation);
-            Scale = scale;
         }
 
-        public static RDR1GridForestEntity CreateFromGrid(object instance, Rsc6TreeForestGridCell gridCell, JenkHash name, float dist)
+        public void Write(MetaNodeWriter writer)
         {
-            if (instance is Rsc6PackedInstancePos instPos)
-                return new RDR1GridForestEntity(instPos, gridCell, name, dist);
-            else if (instance is Rsc6InstanceMatrix instMatrix)
-                return new RDR1GridForestEntity(instMatrix, gridCell, name, dist);
-            else
-                return null;
-        }
-
-        public override void SetPiece(Piece p)
-        {
-            var changed = p != Piece;
-            Piece = p;
-
-            if ((p != null) && changed)
-            {
-                UpdateBounds();
-            }
+            writer.WriteNodeArray("Elements", Elements.Items);
         }
     }
 
-    [TC(typeof(EXP))] public class RDR1GrassEntity : Entity
+    [TC(typeof(EXP))] public class Rsc6TerrainSectorDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<sagTerrainSector>, 0, unsigned short>
     {
-        public JenkHash GrassName;
-        public override string Name => GrassName.ToString();
+        public override ulong BlockLength => 8;
+        public Rsc6PtrArr<Rsc6TerrainSector> Elements { get; set; } //m_Elements
 
-        public RDR1GrassEntity(string name, float dist, Vector3 pos)
+        public override void Read(Rsc6DataReader reader)
         {
-            GrassName = new(name);
-            Position = pos;
-            LodDistMax = dist;
+            Elements = reader.ReadPtrArr<Rsc6TerrainSector>();
         }
 
-        public override void SetPiece(Piece p)
+        public override void Write(Rsc6DataWriter writer)
         {
-            var changed = p != Piece;
-            Piece = p;
+            writer.WritePtrArr(Elements);
+        }
 
-            if ((p != null) && changed)
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteNodeArray("Elements", Elements.Items);
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6TerrainVisual : Rsc6BlockBase, MetaNode //terTerrainVisual
+    {
+        public override ulong BlockLength => 52;
+        public Rsc6StreamableBase ClientsHead { get; set; } //m_ClientsHead
+        public Rsc6PtrArr<Rsc6TerrainSector> Sectors { get; set; } //m_Sectors
+        public int[] TextureDictionaries { get; set; } //m_TD[4]
+        public int Count { get; set; } //m_Count
+        public short DrawCounter { get; set; } //m_DrawCounter
+        public short DrawCounterTexSets { get; set; } //m_DrawCounterTexSets
+        public byte LOD { get; set; } //m_LOD
+        public bool IsPagedOut { get; set; } //m_IsPagedOut
+        public byte StreamPriority { get; set; } //m_StreamPriority
+        public byte Unknown_33h { get; set; } //Padding, always 0
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            ClientsHead = reader.ReadStruct<Rsc6StreamableBase>();
+            Sectors = reader.ReadPtrArr<Rsc6TerrainSector>();
+            TextureDictionaries = reader.ReadInt32Arr(4);
+            Count = reader.ReadInt32();
+            DrawCounter = reader.ReadInt16();
+            DrawCounterTexSets = reader.ReadInt16();
+            LOD = reader.ReadByte();
+            IsPagedOut = reader.ReadBoolean();
+            StreamPriority = reader.ReadByte();
+            Unknown_33h = reader.ReadByte();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteStruct(ClientsHead);
+            writer.WritePtrArr(Sectors);
+            writer.WriteInt32Array(TextureDictionaries);
+            writer.WriteInt32(Count);
+            writer.WriteInt16(DrawCounter);
+            writer.WriteInt16(DrawCounterTexSets);
+            writer.WriteByte(LOD);
+            writer.WriteBoolean(IsPagedOut);
+            writer.WriteByte(StreamPriority);
+            writer.WriteByte(Unknown_33h);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteInt32("Count", Count);
+            writer.WriteInt16("DrawCounter", DrawCounter);
+            writer.WriteInt16("DrawCounterTexSets", DrawCounterTexSets);
+            writer.WriteByte("LOD", LOD);
+            writer.WriteBool("IsPagedOut", IsPagedOut);
+            writer.WriteByte("StreamPriority", StreamPriority);
+            writer.WriteInt32Array("TextureDictionaries", TextureDictionaries);
+            writer.WriteNodeArray("Sectors", Sectors.Items);
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6TerrainSector : Rsc6BlockBase, MetaNode //sagTerrainSector
+    {
+        public override ulong BlockLength => 80;
+        public Vector4 AABBMin { get; set; } //m_MinAndBoundingRadius
+        public Vector4 AABBMax { get; set; } //m_MaxAndInscribedRadius
+        public JenkHash InstHashCode { get; set; } //m_InstHashCode
+        public short Row { get; set; } //m_row
+        public short Column { get; set; } //m_column
+        public byte Lod { get; set; } //m_lod
+        public byte TextureSetsRequested { get; set; } //m_TextureSetsRequested
+        public ushort VisualIndex { get; set; } //m_VisualIndex
+        public Rsc6Ptr<Rsc6TerrainVisual> Visual { get; set; } //m_Visual, points to the visual parent...
+        public uint Unknown_30h { get; set; } //Always 0
+        public Rsc6Arr<short> TextureSets { get; set; } //m_TextureSets
+        public Rsc6Arr<short> TextureSetAABBMatch { get; set; } //m_TextureSetAABBMatch
+        public Rsc6Arr<BoundingBox4> TextureSetAABBs { get; set; } //m_TextureSetAABBs
+        public ushort SectorIndex { get; set; } //m_SectorIndex
+        public bool SplitSector { get; set; } //m_SplitSector, always false
+        public byte Unknown_4F { get; set; } //Padding? Always 0
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            AABBMin = reader.ReadVector4();
+            AABBMax = reader.ReadVector4();
+            InstHashCode = reader.ReadUInt32();
+            Row = reader.ReadInt16();
+            Column = reader.ReadInt16();
+            Lod = reader.ReadByte();
+            TextureSetsRequested = reader.ReadByte();
+            VisualIndex = reader.ReadUInt16();
+            _ = reader.ReadUInt32(); //Placeholder to avoid recursively reading sectors & getting a stack overflow (m_Visual)
+            Unknown_30h = reader.ReadUInt32();
+            TextureSets = reader.ReadArr<short>();
+            TextureSetAABBMatch = reader.ReadArr<short>();
+            TextureSetAABBs = reader.ReadArr<BoundingBox4>();
+            SectorIndex = reader.ReadUInt16();
+            SplitSector = reader.ReadBoolean();
+            Unknown_4F = reader.ReadByte();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteVector4(AABBMin);
+            writer.WriteVector4(AABBMax);
+            writer.WriteUInt32(InstHashCode);
+            writer.WriteInt16(Row);
+            writer.WriteInt16(Column);
+            writer.WriteByte(Lod);
+            writer.WriteByte(TextureSetsRequested);
+            writer.WriteUInt16(VisualIndex);
+            writer.WritePtr(Visual);
+            writer.WriteUInt32(Unknown_30h);
+            writer.WriteArr(TextureSets);
+            writer.WriteArr(TextureSetAABBMatch);
+            writer.WriteArr(TextureSetAABBs);
+            writer.WriteUInt16(SectorIndex);
+            writer.WriteBoolean(SplitSector);
+            writer.WriteByte(Unknown_4F);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteVector4("AABBMin", AABBMin);
+            writer.WriteVector4("AABBMax", AABBMax);
+            writer.WriteJenkHash("InstHashCode", InstHashCode);
+            writer.WriteInt16("Row", Row);
+            writer.WriteInt16("Column", Column);
+            writer.WriteByte("Lod", Lod);
+            writer.WriteByte("TextureSetsRequested", TextureSetsRequested);
+            writer.WriteUInt16("VisualIndex", VisualIndex);
+            writer.WriteUInt16("SectorIndex", SectorIndex);
+            writer.WriteBool("SplitSector", SplitSector);
+            writer.WriteInt16Array("TextureSets", TextureSets.Items);
+            writer.WriteInt16Array("TextureSetAABBMatch", TextureSetAABBMatch.Items);
+            //writer.WriteStructArray("TextureSetAABBs", TextureSetAABBs.Items); //TODO: fix this, there's sadly no MetaNode.WriteBoundingBox4
+        }
+
+        public override string ToString()
+        {
+            return InstHashCode.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6TerrainTextureDictionary : Rsc6BlockBase, MetaNode //terTextureDictionary
+    {
+        /*
+         * Reference to a texture dictionary (#td), has to be in the "mapres" folder.
+         * Only the "_dst_x_hilod" dictionaries seem to be referenced.
+         */
+
+        public override ulong BlockLength => 24;
+        public Rsc6Str Name { get; set; } //m_Name
+        public Rsc6StreamableBase TextureDictionary { get; set; } //m_TextureDictionary
+        public uint RefCount { get; set; } //m_RefCount
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            Name = reader.ReadStr();
+            TextureDictionary = reader.ReadStruct<Rsc6StreamableBase>();
+            RefCount = reader.ReadUInt32();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteStr(Name);
+            writer.WriteStruct(TextureDictionary);
+            writer.WriteUInt32(RefCount);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteString("Name", Name.ToString());
+        }
+
+        public override string ToString()
+        {
+            return Name.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6TerrainTextureEntries : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TerrainTextureEntries> //rage::atMapEntry<rage::ConstString, int>
+    {
+        public override ulong BlockLength => 12;
+        public Rsc6Str Name { get; set; } //m_String
+        public int Data { get; set; } //data
+        public Rsc6Ptr<Rsc6TerrainTextureEntries> Next { get; set; } //next
+
+        public uint MapKey { get => (uint)Data; }
+        public Rsc6TerrainTextureEntries MapNext { get => Next.Item; set => Next = new(value); }
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            Name = reader.ReadStr();
+            Data = reader.ReadInt32();
+            Next = reader.ReadPtr<Rsc6TerrainTextureEntries>();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteStr(Name);
+            writer.WriteInt32(Data);
+            writer.WritePtr(Next);
+        }
+
+        public override string ToString()
+        {
+            return Name.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6TerrainTextureSet : Rsc6BlockBase, MetaNode //terTextureSet
+    {
+        public override ulong BlockLength => 736;
+        public byte[] ReferencingSectors { get; set; } //m_ReferencingSectors, zero bytes, seems to be a buffer to dynamically reference sectors that will use this texture asset
+        public int Count { get; set; } //m_Count
+        public Rsc6StreamableBase[] Dictionaries { get; set; } = new Rsc6StreamableBase[(int)Rsc6LodLevel.LOD_COUNT]; //m_Dictionaries[4]
+        public int TextureSet { get; set; } //m_TextureSet, index of this terTextureSet in the array
+        public float TextureSetDistMod { get; set; } //m_TextureSetDistMod
+        public int CurrentLOD { get; set; } //m_CurrentLOD
+        public int LODUsedBySectors { get; set; } //m_LODUsedBySectors
+        public bool[] Requested { get; set; } = new bool[(int)Rsc6LodLevel.LOD_COUNT]; //m_Requested[4]
+        public byte[] RefCount { get; set; } = new byte[(int)Rsc6LodLevel.LOD_COUNT]; //m_RefCount[4]
+        public Rsc6Str TextureSetAssetName { get; set; } //m_TextureSetAssetName
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            ReferencingSectors = reader.ReadBytes(640);
+            Count = reader.ReadInt32();
+
+            for (int i = 0; i < Dictionaries.Length; i++)
             {
-                UpdateBounds();
+                Dictionaries[i] = reader.ReadStruct<Rsc6StreamableBase>();
             }
+
+            TextureSet = reader.ReadInt32();
+            TextureSetDistMod = reader.ReadSingle();
+            CurrentLOD = reader.ReadInt32();
+            LODUsedBySectors = reader.ReadInt32();
+
+            for (int i = 0; i < Requested.Length; i++)
+            {
+                Requested[i] = reader.ReadBoolean();
+            }
+
+            for (int i = 0; i < RefCount.Length; i++)
+            {
+                RefCount[i] = reader.ReadByte();
+            }
+
+            TextureSetAssetName = reader.ReadStr();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteBytes(ReferencingSectors);
+            writer.WriteInt32(Count);
+            writer.WriteStructArray(Dictionaries);
+            writer.WriteInt32(TextureSet);
+            writer.WriteSingle(TextureSetDistMod);
+            writer.WriteInt32(CurrentLOD);
+            writer.WriteInt32(LODUsedBySectors);
+            writer.WriteStructArray(Requested);
+            writer.WriteStructArray(RefCount);
+            writer.WriteStr(TextureSetAssetName);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteString("TextureSetAssetName", TextureSetAssetName.ToString());
+            writer.WriteInt32("Count", Count);
+            writer.WriteInt32("TextureSet", TextureSet);
+            writer.WriteInt32("CurrentLOD", CurrentLOD);
+            writer.WriteInt32("LODUsedBySectors", LODUsedBySectors);
+            writer.WriteSingle("TextureSetDistMod", TextureSetDistMod);
+        }
+
+        public override string ToString()
+        {
+            return TextureSetAssetName.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))] public class Rsc6GridBucket : Rsc6BlockBase, MetaNode //gridBucket
+    {
+        public override ulong BlockLength => 20;
+        public Rsc6Arr<short> BucketArray { get; set; } //m_BucketArray
+        public short RowMin { get; set; } //m_sectorLOD_min_ROW
+        public short ColumnMin { get; set; } //m_sectorLOD_min_COL
+        public short RowMax { get; set; } //m_sectorLOD_max_ROW
+        public short ColumnMax { get; set; } //m_sectorLOD_max_COL
+        public short GridSizeRow { get; set; } //m_grid_size_r
+        public short GridSizeColumn { get; set; } //m_grid_size_c
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            BucketArray = reader.ReadArr<short>();
+            RowMin = reader.ReadInt16();
+            ColumnMin = reader.ReadInt16();
+            RowMax = reader.ReadInt16();
+            ColumnMax = reader.ReadInt16();
+            GridSizeRow = reader.ReadInt16();
+            GridSizeColumn = reader.ReadInt16();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteArr(BucketArray);
+            writer.WriteInt16(RowMin);
+            writer.WriteInt16(ColumnMin);
+            writer.WriteInt16(RowMax);
+            writer.WriteInt16(ColumnMax);
+            writer.WriteInt16(GridSizeRow);
+            writer.WriteInt16(GridSizeColumn);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteInt16("RowMin", RowMin);
+            writer.WriteInt16("RowMax", RowMax);
+            writer.WriteInt16("ColumnMin", ColumnMin);
+            writer.WriteInt16("ColumnMax", ColumnMax);
+            writer.WriteInt16("GridSizeRow", GridSizeRow);
+            writer.WriteInt16("GridSizeColumn", GridSizeColumn);
+            writer.WriteInt16Array("BucketArray", BucketArray.Items);
+        }
+    }
+
+    [TC(typeof(EXP))] public struct Rsc6StreamableBase //rage::pgStreamableBase
+    {
+        /*
+         * A base class in RAGE Engine that seems to be used for handling streamed resources.
+         * Manages assets such as models, textures and map elements that need to be loaded and unloaded dynamically (can track the residency state).
+         * 
+         * Assets are scheduled for loading, a scheduler processes assets every frame, they're managed in priority queues.
+         * They can be evicted when no longer loading using pgStreamableBase::Shutdown()
+         * 
+         * Basic Scheduler (by default) loads assets every frame
+         * pgQueueScheduler ensures assets are loaded only once.
+         */
+
+        public uint VFT { get; set; } //Always 0, seems to be for storing a VFT since this is skipped in the datResourceSkip
+        public int Handle { get; set; } = -1; //Always -1 (pgStreamer::Error), handle of a file
+        public uint Unknown_8h { get; set; } //0 for #ft, 64 for #tl/#si
+        public uint State { get; set; } //Always 0, (State &= 0xCFFFFFFF | _state) -> rage::pgStreamableBase::State
+
+        public Rsc6StreamableBase()
+        {
+        }
+
+        public int GetVirtualSize() //rage::pgStreamableBase::GetVirtualSize
+        {
+            return (Handle == -1) ? -1 : (Handle & 0x7FFF) << 12;
+        }
+
+        public int GetPhysicalSize() //rage::pgStreamableBase::GetPhysicalSize
+        {
+            return (Handle == -1) ? -1 : (Handle >> 4) & 0x7FFF000;
         }
     }
 

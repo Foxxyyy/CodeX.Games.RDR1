@@ -5,36 +5,50 @@ using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
 {
-    public class WsfFile : TexturePack
+    public class WsfFile(Rpf6FileEntry file) : TexturePack(file)
     {
-        public Rsc6ScaleFormFile TexturesScaleForm;
+        public Rsc6ScaleFormContext TexturesScaleForm;
 
-        public WsfFile(Rpf6FileEntry file) : base(file)
-        {
-        }
-
-        public override void Load(byte[] data) //Was made for the Xbox 360 version, I have not changed anything since then
+        public override void Load(byte[] data)
         {
             var e = FileInfo as Rpf6ResourceFileEntry;
             var r = new Rsc6DataReader(e, data);
 
-            TexturesScaleForm = r.ReadBlock<Rsc6ScaleFormFile>();
-            Textures = new Dictionary<string, Texture>();
+            TexturesScaleForm = r.ReadBlock<Rsc6ScaleFormContext>();
+            Textures = [];
 
-            if (TexturesScaleForm?.Textures != null)
+            var swfFile = TexturesScaleForm?.File.Item;
+            if (swfFile != null)
             {
-                foreach (var tex in TexturesScaleForm.Textures)
+                foreach (var obj in swfFile.Directory.Items)
                 {
-                    Textures[tex.Name] = tex;
+                    if (obj is Rsc6ScaleformFont objFont)
+                    {
+                        foreach (var sheet in objFont.Sheets)
+                        {
+                            if (sheet.Item == null) continue;
+                            foreach (var tex in sheet.Item.Textures.Items)
+                            {
+                                if (tex == null) continue;
+                                Textures[tex.Name] = tex;
+                            }
+                        }
+                    }
+                    else if (obj is Rsc6ScaleFormBitmap objBitmap)
+                    {
+                        var bmp = objBitmap.Texture.Item;
+                        Textures[bmp.Name] = bmp;
+                    }
                 }
             }
         }
 
         public override byte[] Save()
         {
-            var w = new Rsc6DataWriter();
-            w.WriteBlock(TexturesScaleForm);
-            byte[] data = null;
+            if (TexturesScaleForm == null) return null;
+            var writer = new Rsc6DataWriter();
+            writer.WriteBlock(TexturesScaleForm);
+            byte[] data = writer.Build(33);
             return data;
         }
 

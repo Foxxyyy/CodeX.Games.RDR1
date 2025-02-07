@@ -32,6 +32,8 @@ namespace CodeX.Games.RDR1.RSC6
             EmitRules = reader.ReadPtr<Rsc6PtxEmitRuleDictionary>();
             EffectRules = reader.ReadPtr<Rsc6PtxEffectRuleDictionary>();
             UseCount = reader.ReadInt32();
+
+            Models.Item?.ApplyTextures(TexturesDict.Item);
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -409,8 +411,8 @@ namespace CodeX.Games.RDR1.RSC6
         public bool Quality { get; set; } //m_Quality
         public ushort Pad { get; set; } = 0xCDCD; //m_PadB
         public uint Unknown_27Ch { get; set; } //Always 0
-        public Vector4 Unknown_280h { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, Rpf6Crypto.NaN()); //0, 0.2, 0, 0
-        public Vector4 Unknown_290h { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, Rpf6Crypto.NaN()); //0, 2, 0, 0
+        public Vector4 Unknown_280h { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, Rpf6Crypto.FNaN); //0, 0.2, 0, 0
+        public Vector4 Unknown_290h { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, Rpf6Crypto.FNaN); //0, 2, 0, 0
 
         public override void Read(Rsc6DataReader reader)
         {

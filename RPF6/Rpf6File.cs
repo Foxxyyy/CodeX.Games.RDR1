@@ -1,16 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
-using System.Linq;
-using ICSharpCode.SharpZipLib.Core;
-using System.ComponentModel;
-using System.Diagnostics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -48,11 +43,11 @@ namespace CodeX.Games.RDR1.RPF6
         private void ReadHeader(BinaryReader br)
         {
             StartPos = br.BaseStream.Position;
-            Version = Swap(br.ReadUInt32());
-            EntryCount = Swap(br.ReadUInt32());
+            Version = BufferUtil.SwapBytes(br.ReadUInt32());
+            EntryCount = BufferUtil.SwapBytes(br.ReadUInt32());
             TOCSize = (uint)((((EntryCount << 2) + EntryCount << 2) + 15) & 4294967280L);
-            StringTableOffset = Swap(br.ReadUInt32());
-            EncFlag = Swap(br.ReadInt32());
+            StringTableOffset = BufferUtil.SwapBytes(br.ReadUInt32());
+            EncFlag = BufferUtil.SwapBytes(br.ReadInt32());
 
             if (Version != 0x52504636)
             {
@@ -64,7 +59,7 @@ namespace CodeX.Games.RDR1.RPF6
             byte[] entriesdata = br.ReadBytes((int)TOCSize);
             if (Encrypted)
             {
-                entriesdata = DecryptAES(entriesdata);
+                entriesdata = Rpf6Crypto.DecryptAES(entriesdata);
             }
 
             var entriesrdr = new BinaryReader(new MemoryStream(entriesdata));
@@ -305,15 +300,15 @@ namespace CodeX.Games.RDR1.RPF6
             var tocdata = GetTOCData();
             if (Encrypted)
             {
-                tocdata = EncryptAES(tocdata);
+                tocdata = Rpf6Crypto.EncryptAES(tocdata);
             }
 
             //Now there's enough space, it's safe to write the header data...
             bw.BaseStream.Position = StartPos;
-            bw.Write(Swap(Version));
-            bw.Write(Swap(EntryCount));
-            bw.Write(Swap(StringTableOffset));
-            bw.Write(Swap(EncFlag));
+            bw.Write(BufferUtil.SwapBytes(Version));
+            bw.Write(BufferUtil.SwapBytes(EntryCount));
+            bw.Write(BufferUtil.SwapBytes(StringTableOffset));
+            bw.Write(BufferUtil.SwapBytes(EncFlag));
             bw.Write(tocdata);
         }
 
@@ -417,6 +412,13 @@ namespace CodeX.Games.RDR1.RPF6
             return (endblock, lastFile);
         }
 
+        private static long RoundUp(long num, long multiple) //TODO: find a better place for this, or remove it completely
+        {
+            if (multiple == 0) return 0;
+            long sign = (multiple > 0) ? 1 : -1; //multiple / Math.Abs(multiple);
+            return ((num + multiple - sign) / multiple) * multiple;
+        }
+
         private void UpdateStartPos(long newpos)
         {
             StartPos = newpos;
@@ -461,13 +463,34 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override byte[] ExtractFile(GameArchiveFileInfo f, bool compressed = false)
         {
+            if (f is not Rpf6FileEntry entry) return null;
             try
             {
                 using var br = new BinaryReader(File.OpenRead(GetPhysicalFilePath()));
-                if (f is Rpf6FileEntry rf)
-                    return ExtractFileResource(rf, br);
+                br.BaseStream.Position = entry.GetOffset();
+                
+                var data = br.ReadBytes((int)entry.Size);
+                if (compressed)
+                {
+                    return data;
+                }
+
+                var compr = entry.FlagInfos.IsCompressed;
+                var res = entry.FlagInfos.IsResource;
+
+                if (res)
+                {
+                    if (compr == false) return data;
+                    var resourceData = GetDataFromResourceBytes(data);
+                    return resourceData;
+                }
                 else
-                    return null;
+                {
+                    if (compr == false) return data;
+                    var deflated = Rpf6Crypto.DecompressZStandard(data);
+                    deflated ??= GetZLibData(data, entry.FlagInfos.GetTotalSize(), true);
+                    return deflated;
+                }
             }
             catch
             {
@@ -475,34 +498,49 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        public static byte[] ExtractFileResource(Rpf6FileEntry entry, BinaryReader br)
+        public static byte[] GetDataFromResourceBytes(byte[] rdata)
         {
-            br.BaseStream.Position = entry.GetOffset();
-            byte[] data = br.ReadBytes((int)entry.Size);
+            //TODO: merge this into ExtractFile
+            using var br = new DataReader(new MemoryStream(rdata));
+            var num1 = br.ReadUInt32();
+            var num2 = br.ReadInt32();
+            FlagInfo flagInfo;
 
-            var compr = entry.FlagInfos.IsCompressed;
-            var res = entry.FlagInfos.IsResource;
-            if (!res && !compr)
+            if (num1 == 0x85435352 || num1 == 0x86435352) //RSC5/6 (+0x80)
             {
-                return data;
+                flagInfo = new FlagInfo(br.ReadInt32(), br.ReadInt32());
+            }
+            else
+            {
+                if (num1 != 0x05435352 && num1 != 0x06435352) //RSC5/6
+                {
+                    return null;
+                }
+                flagInfo = new FlagInfo(br.ReadInt32());
             }
 
-            byte[] resourceData = ResourceInfo.GetDataFromResourceBytes(data);
-            if (entry.Size > 0 && compr && resourceData == null)
+            byte[] numArray = br.ReadBytes((int)(br.Length - br.Position));
+            if (num2 == 2 && flagInfo.IsRSC85)
             {
-                try
-                {
-                    br.BaseStream.Position = entry.GetOffset();
-                    byte[] decr = new byte[entry.Size];
-                    byte[] deflated = DecompressZStandard(br.ReadBytes(decr.Length));
-                    return deflated;
-                }
-                catch //Some files still use zlib (audio dat files)
-                {
-                    return ResourceInfo.GetZLibData(data, entry.FlagInfos.GetTotalSize(), true);
-                }
+                numArray = Rpf6Crypto.DecryptAES(numArray);
             }
-            return resourceData;
+
+            using var dr = new DataReader(new MemoryStream(numArray));
+            int length = (int)dr.Length;
+            byte[] data = dr.ReadBytes(length);
+            
+            var output = Rpf6Crypto.DecompressZStandard(data);
+            output ??= GetZLibData(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
+            return output;
+        }
+
+        public static byte[] GetZLibData(byte[] data, int decompSize, bool noHeader)
+        {
+            try
+            {
+                return BufferUtil.Decompress(data, noHeader ? 0 : 2); //If data includes 2 bytes of zlib header, it needs to be ignored
+            }
+            catch { return null; }
         }
 
         internal void ReadStartupCache(BinaryReader br)
@@ -516,10 +554,12 @@ namespace CodeX.Games.RDR1.RPF6
 
             AllEntries = new List<GameArchiveEntry>();
             var entrydict = new Dictionary<string, GameArchiveFileInfo>();
+
             for (int i = 0; i < EntryCount; i++)
             {
                 var entry = Rpf6Entry.ReadEntry(this, br);
                 AllEntries.Add(entry);
+                
                 if ((entry is GameArchiveFileInfo finfo) && (finfo.IsArchive))
                 {
                     entrydict[finfo.Path.ToLowerInvariant()] = finfo;
@@ -830,11 +870,11 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override void Read(BinaryReader r)
         {
-            NameOffset = Swap(r.ReadUInt32());
-            Flags = Swap(r.ReadUInt32());
-            EntriesIndex = (uint)(Swap(r.ReadInt32()) & int.MaxValue);
-            EntriesCount = (uint)(Swap(r.ReadInt32()) & 268435455);
-            UNK = Swap(r.ReadInt32());
+            NameOffset = BufferUtil.SwapBytes(r.ReadUInt32());
+            Flags = BufferUtil.SwapBytes(r.ReadUInt32());
+            EntriesIndex = (uint)(BufferUtil.SwapBytes(r.ReadInt32()) & int.MaxValue);
+            EntriesCount = (uint)(BufferUtil.SwapBytes(r.ReadInt32()) & 268435455);
+            UNK = BufferUtil.SwapBytes(r.ReadInt32());
             IsDirectory = true;
 
             if (NameOffset == 0U)
@@ -848,11 +888,11 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override void Write(BinaryWriter w)
         {
-            w.Write(Swap(NameOffset));
-            w.Write(Swap(Flags));
-            w.Write(Swap((int)(2147483648L | (EntriesIndex & int.MaxValue))));
-            w.Write(Swap(EntriesCount & 268435455));
-            w.Write(Swap(UNK));
+            w.Write(BufferUtil.SwapBytes(NameOffset));
+            w.Write(BufferUtil.SwapBytes(Flags));
+            w.Write(BufferUtil.SwapBytes((int)(2147483648L | (EntriesIndex & int.MaxValue))));
+            w.Write(BufferUtil.SwapBytes(EntriesCount & 268435455));
+            w.Write(BufferUtil.SwapBytes(UNK));
         }
 
         public override string ToString()
@@ -875,14 +915,14 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override void Read(BinaryReader r)
         {
-            NameOffset = Swap(r.ReadUInt32());
-            Size = Swap(r.ReadInt32()) & 268435455;
+            NameOffset = BufferUtil.SwapBytes(r.ReadUInt32());
+            Size = BufferUtil.SwapBytes(r.ReadInt32()) & 268435455;
         }
 
         public override void Write(BinaryWriter w)
         {
-            w.Write(Swap(NameOffset));
-            w.Write(Swap((int)Size));
+            w.Write(BufferUtil.SwapBytes(NameOffset));
+            w.Write(BufferUtil.SwapBytes((int)Size));
         }
 
         public void SetOffset(long offset)
@@ -930,11 +970,11 @@ namespace CodeX.Games.RDR1.RPF6
         {
             base.Read(r);
 
-            Offset = Swap(r.ReadInt32());
+            Offset = BufferUtil.SwapBytes(r.ReadInt32());
             FlagInfos = new FlagInfo()
             {
-                Flag1 = Swap(r.ReadInt32()),
-                Flag2 = Swap(r.ReadInt32())
+                Flag1 = BufferUtil.SwapBytes(r.ReadInt32()),
+                Flag2 = BufferUtil.SwapBytes(r.ReadInt32())
             };
 
             IsDirectory = false;
@@ -947,9 +987,9 @@ namespace CodeX.Games.RDR1.RPF6
         public override void Write(BinaryWriter w)
         {
             base.Write(w);
-            w.Write(Swap((uint)Offset));
-            w.Write(Swap(FlagInfos.Flag1));
-            w.Write(Swap(FlagInfos.Flag2));
+            w.Write(BufferUtil.SwapBytes((uint)Offset));
+            w.Write(BufferUtil.SwapBytes(FlagInfos.Flag1));
+            w.Write(BufferUtil.SwapBytes(FlagInfos.Flag2));
         }
 
         public override long GetFileSize()
@@ -982,7 +1022,7 @@ namespace CodeX.Games.RDR1.RPF6
                 byte[] numArray = reader.ReadBytes((int)(reader.Length - reader.Position));
                 if (e.ResourceType == Rpf6FileExt.wtd_wtx && e.FlagInfos.IsRSC85)
                 {
-                    numArray = DecryptAES(numArray);
+                    numArray = Rpf6Crypto.DecryptAES(numArray);
                 }
 
                 using var dReader = new DataReader(new MemoryStream(numArray), DataEndianess.BigEndian);
@@ -1021,7 +1061,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
     }
 
-    public class FlagInfo
+    public struct FlagInfo
     {
         public const uint RSC05Magic = 88298322;
         public const uint RSC06Magic = 105075538;
@@ -1032,12 +1072,10 @@ namespace CodeX.Games.RDR1.RPF6
         public int Flag1 { get; set; }
         public int Flag2 { get; set; }
 
-        public FlagInfo()
+        public FlagInfo(int flag)
         {
+            Flag1 = flag;
         }
-
-        public FlagInfo(int flag) => Flag1 = flag;
-
         public FlagInfo(int flag1, int flag2)
         {
             Flag1 = flag1;
@@ -1174,7 +1212,7 @@ namespace CodeX.Games.RDR1.RPF6
         public bool RSC85_bResource
         {
             get => (Flag1 & 2147483648L) == 2147483648L;
-            set => Flag1 = SetBit(Flag1, 31, value);
+            set => Flag1 = BitUtil.UpdateBit(Flag1, 31, value);
         }
 
         public int RSC85_VPage0
@@ -1228,7 +1266,7 @@ namespace CodeX.Games.RDR1.RPF6
         public int RSC85_ObjectStartPageSize
         {
             get => 4096 << RSC85_ObjectStartPage;
-            set => RSC85_ObjectStartPage = TrailingZeroes(value) - 12;
+            set => RSC85_ObjectStartPage = System.Numerics.BitOperations.TrailingZeroCount(value) - 12;
         }
 
         public int RSC85_TotalVSize
@@ -1453,56 +1491,6 @@ namespace CodeX.Games.RDR1.RPF6
         }
     }
 
-    public class ResourceInfo
-    {
-        public static byte[] GetDataFromResourceBytes(byte[] rdata)
-        {
-            using var br = new DataReader(new MemoryStream(rdata));
-            var num1 = br.ReadUInt32();
-            var num2 = br.ReadInt32();
-            FlagInfo flagInfo;
-
-            if (num1 == 2235781970U || num1 == 2252559186U)
-            {
-                flagInfo = new FlagInfo(br.ReadInt32(), br.ReadInt32());
-            }
-            else
-            {
-                if (num1 != 88298322U && num1 != 105075538U)
-                {
-                    return null;
-                }
-                flagInfo = new FlagInfo(br.ReadInt32());
-            }
-
-            byte[] numArray = br.ReadBytes((int)(br.Length - br.Position));
-            if (num2 == 2 && flagInfo.IsRSC85)
-            {
-                numArray = DecryptAES(numArray);
-            }
-
-            using var dr = new DataReader(new MemoryStream(numArray));
-            int length = (int)dr.Length;
-            byte[] data = dr.ReadBytes(length);
-            try
-            {
-                return DecompressZStandard(data);
-            }
-            catch //Some resources still use zlib (.wtx)
-            {
-                return GetZLibData(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
-            }
-        }
-
-        public static byte[] GetZLibData(byte[] data, int decompSize, bool noHeader)
-        {
-            try
-            {
-                return DecompressDeflate(data, decompSize, noHeader);
-            }
-            catch { return null; }
-        }
-    }
 
     public enum Rpf6FileExt : byte
     {
@@ -1510,6 +1498,7 @@ namespace CodeX.Games.RDR1.RPF6
         generic = 1, //wst, wfd, wcs & wprp
         wsc = 2,
         was = 6,
+        wtl = 8,
         wtd_wtx = 10,
         wedt = 11,
         wsg_wgd = 18,
@@ -1520,6 +1509,7 @@ namespace CodeX.Games.RDR1.RPF6
         wtb = 36,
         wpdt = 39,
         wpfl = 50,
+        wnm = 60,
         wsp = 116,
         wvd = 133,
         wsi = 134,

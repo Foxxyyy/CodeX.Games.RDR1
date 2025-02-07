@@ -8,7 +8,7 @@ namespace CodeX.Games.RDR1.Files
     public class WspFile : FilePack
     {
         public Rpf6FileEntry FileEntry;
-        public Rsc6TreeForestGrid Grid;
+        public Rsc6TreeForestGrid Grid { get; set; }
         public string Name;
         public JenkHash Hash;
 
@@ -35,7 +35,7 @@ namespace CodeX.Games.RDR1.Files
 
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
             Grid = r.ReadBlock<Rsc6TreeForestGrid>();
         }

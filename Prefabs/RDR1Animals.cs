@@ -53,20 +53,20 @@ namespace CodeX.Games.RDR1.Prefabs
                 Prefabs[name] = new RDR1AnimalPrefab(this, name);
             }
 
-            var wasEntries = dfm.WasFiles;
-            if (wasEntries != null)
-            {
-                var wasList = new List<string>() { "" };
-                foreach (var kv in wasEntries)
-                {
-                    var was = kv.Value;
-                    if (was == null) continue;
-                    if (!was.HasAnimalAnim) continue;
-                    wasList.Add(kv.Key.ToString());
-                }
-                wasList.Sort();
-                WasNames = wasList.ToArray();
-            }
+            //var wasEntries = dfm.WasFiles; //TODO: load animations on demand
+            //if (wasEntries != null)
+            //{
+            //    var wasList = new List<string>() { "" };
+            //    foreach (var kv in wasEntries)
+            //    {
+            //        var was = kv.Value;
+            //        if (was == null) continue;
+            //        if (!was.HasAnimalAnim) continue;
+            //        wasList.Add(kv.Key.ToString());
+            //    }
+            //    wasList.Sort();
+            //    WasNames = wasList.ToArray();
+            //}
 
             stopwatch.Stop();
             var totaltime = stopwatch.Elapsed.TotalMilliseconds;
@@ -196,7 +196,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             Wft = peds.LoadWft(Prefab.WftEntry);
 
-            var skel = Wft?.Fragment?.Drawable.Item?.Drawable.Skeleton;
+            var skel = Wft?.Fragment?.Drawable.Item?.Skeleton;
             SetSkeleton(skel);
 
             var piece = Wft.Piece;

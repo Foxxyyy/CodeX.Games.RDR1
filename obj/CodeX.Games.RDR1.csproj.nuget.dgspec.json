@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {}
+    "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {}
   },
   "projects": {
-    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+    "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "projectName": "CodeX.Core",
-        "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
         "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-        "outputPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\obj\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -48,11 +48,11 @@
           "dependencies": {
             "BepuPhysics": {
               "target": "Package",
-              "version": "[2.5.0-beta.23, )"
+              "version": "[2.5.0-beta.24, )"
             },
             "BepuUtilities": {
               "target": "Package",
-              "version": "[2.5.0-beta.23, )"
+              "version": "[2.5.0-beta.24, )"
             },
             "SharpDX": {
               "target": "Package",
@@ -77,6 +77,10 @@
             "SharpDX.XInput": {
               "target": "Package",
               "version": "[4.2.0, )"
+            },
+            "System.Diagnostics.EventLog": {
+              "target": "Package",
+              "version": "[9.0.0, )"
             }
           },
           "imports": [
@@ -99,14 +103,14 @@
         }
       }
     },
-    "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {
+    "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
         "projectName": "CodeX.Games.RDR1",
-        "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
         "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
-        "outputPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -124,8 +128,8 @@
           "net8.0-windows7.0": {
             "targetAlias": "net8.0-windows7.0",
             "projectReferences": {
-              "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
-                "projectPath": "C:\\Research\\CodeX\\CodeX-027\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
+              "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+                "projectPath": "C:\\Research\\CodeX\\CodeX-027_backup\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
               }
             }
           }

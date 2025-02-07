@@ -10,7 +10,7 @@ namespace CodeX.Games.RDR1.Files
     public class WsiFile : FilePack
     {
         public Rpf6FileEntry FileEntry;
-        public Rsc6SectorInfo StreamingItems;
+        public Rsc6SectorInfo SectorInfo;
         public JenkHash Hash;
         public string Name;
 
@@ -27,7 +27,7 @@ namespace CodeX.Games.RDR1.Files
 
         public WsiFile(Rsc6SectorInfo si) : base(null)
         {
-            StreamingItems = si;
+            SectorInfo = si;
         }
 
         public override void Load(byte[] data)
@@ -36,39 +36,45 @@ namespace CodeX.Games.RDR1.Files
             var e = (Rpf6ResourceFileEntry)FileEntry;
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
-            StreamingItems = r.ReadBlock<Rsc6SectorInfo>();
+            SectorInfo = r.ReadBlock<Rsc6SectorInfo>();
         }
 
         public override byte[] Save()
         {
-            if (StreamingItems == null) return null;
+            if (SectorInfo == null) return null;
             var writer = new Rsc6DataWriter();
-            writer.WriteBlock(StreamingItems);
+            writer.WriteBlock(SectorInfo);
             byte[] data = writer.Build(134);
             return data;
         }
 
         public override void Read(MetaNodeReader reader)
         {
-            StreamingItems = new();
-            StreamingItems.Read(reader);
+            SectorInfo = new();
+            SectorInfo.Read(reader);
+
+
+
+            /*
+
+            WHY IS THIS HERE?
 
             //Set ChildPtrs count for each subsector, only if sagSectorInfo isn't for horse/terrain curves
-            var si = StreamingItems;
-            if (si?.ChildPtrs.Items == null && si?.ItemChilds.Item != null)
+            var si = SectorInfo;
+            if (si?.ChildPtrs.Items == null && si?.ChildGroup.Item != null)
             {
                 ushort gsChildCount = 0;
-                var secs = si.ItemChilds.Item.Sectors;
-                var parents = si.ItemChilds.Item.SectorsParents;
+                var secs = si.ChildGroup.Item.Sectors;
+                var parents = si.ChildGroup.Item.SectorsParents;
 
                 for (int i = 0; i < secs.Count; i++)
                 {
                     ushort childCount = 0;
                     var sec = secs[i];
 
-                    if (sec.ToString() == sec.Scope.ToString())
+                    if (sec.Name.ToString() == sec.Scope.ToString())
                     {
                         gsChildCount++;
                     }
@@ -76,7 +82,7 @@ namespace CodeX.Games.RDR1.Files
                     for (int p = 0; p < parents.Count; p++)
                     {
                         var par = parents[p];
-                        if (par.Parent?.ToString() != sec.ToString()) continue;
+                        if (par.Parent.Item?.Name.ToString() != sec.Name.ToString()) continue;
                         childCount++;
                     }
 
@@ -87,11 +93,14 @@ namespace CodeX.Games.RDR1.Files
                 var globalChilds = new Rsc6SectorInfo[gsChildCount];
                 si.ChildPtrs = new(globalChilds, gsChildCount, gsChildCount);
             }
+
+            */
+
         }
 
         public override void Write(MetaNodeWriter writer)
         {
-            StreamingItems?.Write(writer);
+            SectorInfo?.Write(writer);
         }
     }
 }

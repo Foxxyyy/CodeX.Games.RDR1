@@ -69,7 +69,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort NameLength2 { get; set; } //Name length + 1 (null terminator)
         public JenkHash NameHash { get; set; } //m_TypeHash
         public uint Unknown_6Ch { get; set; } = 0xCDCDCDCD; //m_Pad1
-        public List<Vector3> GrassPositions { get; set; }
+        //public List<Vector3> GrassPositions { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -90,23 +90,21 @@ namespace CodeX.Games.RDR1.RSC6
             NameHash = reader.ReadUInt32();
             Unknown_6Ch = reader.ReadUInt32();
 
-            if (VertexBuffer.Item != null)
-            {
-                GrassPositions = new List<Vector3>();
-                var data = VertexBuffer.Item.VertexData.Items;
-                var br = new BinaryReader(new MemoryStream(data));
-
-                for (int i = 0; i < data.Length; i += 4)
-                {
-                    var value = br.ReadUInt32();
-                    var color = new Colour(value);
-                    color = new Colour(color.R, color.B, color.G, color.A);
-
-                    var scaledPos = Vector3.Multiply(AABBScale.XYZ(), color.ToVector4().XYZ());
-                    var loc = AABBMin.XYZ() + scaledPos;
-                    GrassPositions.Add(loc);
-                }
-            }
+            //if (VertexBuffer.Item != null)
+            //{
+            //    GrassPositions = new List<Vector3>();
+            //    var data = VertexBuffer.Item.VertexData.Items;
+            //    var br = new BinaryReader(new MemoryStream(data));
+            //    for (int i = 0; i < data.Length; i += 4)
+            //    {
+            //        var value = br.ReadUInt32();
+            //        var color = new Colour(value);
+            //        color = new Colour(color.R, color.B, color.G, color.A);
+            //        var scaledPos = Vector3.Multiply(AABBScale.XYZ(), color.ToVector4().XYZ());
+            //        var loc = AABBMin.XYZ() + scaledPos;
+            //        GrassPositions.Add(loc);
+            //    }
+            //}
         }
 
         public override void Write(Rsc6DataWriter writer)

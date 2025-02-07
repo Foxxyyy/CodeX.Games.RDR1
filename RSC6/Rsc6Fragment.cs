@@ -108,7 +108,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             //Loading textures before drawables
             reader.Position += 0x1E8;
-            Textures = WfdFile.TextureDictionary = reader.ReadPtr<Rsc6TextureDictionary>();
+            Textures = reader.ReadPtr<Rsc6TextureDictionary>();
             PlacedLightsGroup = reader.ReadUInt32();
             TuneNameHash = reader.ReadUInt32();
             Unknown_1FCh = reader.ReadUInt16();
@@ -206,6 +206,17 @@ namespace CodeX.Games.RDR1.RSC6
             SelfCollisionIndicesB = reader.ReadRawArrItems(SelfCollisionIndicesB, NumSelfCollisions);
             ExtraDrawables = reader.ReadRawPtrArrItem(ExtraDrawables, NumExtraDrawables);
             ExtraDrawableNames = reader.ReadItems(ExtraDrawableNames, NumExtraDrawables);
+
+
+            Drawable.Item?.ApplyTextures(Textures.Item);
+            if (ExtraDrawables.Items != null)
+            {
+                foreach (var d in ExtraDrawables.Items)
+                {
+                    d?.ApplyTextures(Textures.Item);
+                }
+            }
+
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -322,12 +333,12 @@ namespace CodeX.Games.RDR1.RSC6
             void applySkelData(Rsc6FragPhysChild[] arr)
             {
                 if (arr == null) return;
-                var skel = Drawable.Item?.Drawable.SkeletonRef.Item;
+                var skel = Drawable.Item?.SkeletonRef.Item;
 
                 foreach (var child in arr)
                 {
                     if (child == null) continue;
-                    child.UndamagedEntity.Item.Drawable.SkeletonRef = new(skel);
+                    child.UndamagedEntity.Item.SkeletonRef = new(skel);
                 }
             }
             void applyBounds(Rsc6FragPhysChild[] arr)
@@ -439,7 +450,6 @@ namespace CodeX.Games.RDR1.RSC6
             Archetype1 = new(archetype);
             applySkel(SkeletonA.Item);
             applySkel(SkeletonB.Item);
-            WfdFile.TextureDictionary = Textures;
 
             VariableMeshCount = (byte)(VariableMeshArray.UsedIndices?.Length ?? 0); //Unsure
             GroupCount = (byte)(Groups.Items?.Length ?? 0);
@@ -652,7 +662,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6FragmentDrawable : Rsc6BlockBase, MetaNode //rage::fragDrawable
+    public class Rsc6FragmentDrawable : Rsc6Drawable //Rsc6BlockBase, MetaNode //rage::fragDrawable
     {
         /*
          * Handles the loading of the drawing and bounds data for each piece of a fragment type
@@ -662,7 +672,7 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 240;
-        public Rsc6Drawable Drawable { get; set; } //rmcDrawable
+        //public Rsc6Drawable Drawable { get; set; } //rmcDrawable
         public uint Unknown_78h { get; set; } //Padding
         public uint Unknown_7Ch { get; set; } //Padding
         public Matrix4x4 BoundMatrix { get; set; } = Matrix4x4.Identity; //m_BoundMatrix
@@ -681,7 +691,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            Drawable = reader.ReadBlock<Rsc6Drawable>();
+            base.Read(reader);
+            //Drawable = reader.ReadBlock<Rsc6Drawable>();
             Unknown_78h = reader.ReadUInt32();
             Unknown_7Ch = reader.ReadUInt32();
             BoundMatrix = reader.ReadMatrix4x4();
@@ -702,7 +713,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            Drawable?.Write(writer);
+            base.Write(writer);
+            //Drawable?.Write(writer);
             writer.WriteUInt32(Unknown_78h);
             writer.WriteUInt32(Unknown_7Ch);
             writer.WriteMatrix4x4(BoundMatrix);
@@ -720,10 +732,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtrArr(Animations);
         }
 
-        public void Read(MetaNodeReader reader)
+        public override void Read(MetaNodeReader reader)
         {
-            Drawable = new Rsc6Drawable();
-            Drawable.Read(reader);
+            base.Read(reader);
+            //Drawable = new Rsc6Drawable();
+            //Drawable.Read(reader);
             BoundMatrix = ToXYZ(reader.ReadMatrix4x4("BoundMatrix"), true);
             ExtraBounds = new(reader.ReadUInt32Array("ExtraBounds"));
             ExtraBoundsMatrices = new(ToXYZ(reader.ReadMatrix4x4Array("ExtraBoundsMatrices"), true));
@@ -752,9 +765,10 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void Write(MetaNodeWriter writer)
+        public override void Write(MetaNodeWriter writer)
         {
-            Drawable.Write(writer);
+            base.Write(writer);
+            //Drawable.Write(writer);
             writer.WriteMatrix4x4("BoundMatrix", BoundMatrix);
             if (ExtraBounds.Items != null) writer.WriteUInt32Array("ExtraBounds", ExtraBounds.Items);
             if (ExtraBoundsMatrices.Items != null) writer.WriteMatrix4x4Array("ExtraBoundsMatrices", ExtraBoundsMatrices.Items);
@@ -1708,6 +1722,7 @@ namespace CodeX.Games.RDR1.RSC6
             LastDirection = (Rsc6EventDirection)reader.ReadInt32();
             StartInstance = reader.ReadInt32();
             LastKnownModification = reader.ReadInt32();
+            if (reader.GetDataOffset() >= reader.Data.Length) return;//hits here in p_gen_cornstalk01x.wft
             Playing = reader.ReadBoolean();
             ControlTimelinePlayhead = reader.ReadBoolean();
             Unknown_1Ah = reader.ReadUInt16();
@@ -1904,7 +1919,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint D3DBaseFlush { get; set; } = 0xCDCDCDCD; //D3DBaseFlush, Xbox 360 only
         public uint D3DBaseAddress { get; set; } = 0xCDCDCDCD; //D3DBaseAddress, Xbox 360 only
         public uint D3DSize { get; set; } = 0xCDCDCDCD; //D3DSize, Xbox 360 only
-        public Vector4 Offset { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, NaN()); //m_Offset, unused
+        public Vector4 Offset { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, FNaN); //m_Offset, unused
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2130,7 +2145,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Name = reader.ReadStringWithLength(64);
+            Name = reader.ReadStringFixedLengthTrimmed(64);
             TargetIndex = reader.ReadInt32();
             Morphables = reader.ReadPtrArr<Rsc6Morphable>();
         }
@@ -2206,7 +2221,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            Name = reader.ReadStringWithLength(128);
+            Name = reader.ReadStringFixedLengthTrimmed(128);
             LodGroup = reader.ReadInt32();
             ModelIndex = reader.ReadInt32();
             Morphs = reader.ReadPtrArr<Rsc6Morphable>();
@@ -2304,7 +2319,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            Name = reader.ReadStringWithLength(64);
+            Name = reader.ReadStringFixedLengthTrimmed(64);
             MaterialIndex = reader.ReadInt32();
             Targets = reader.ReadPtrArr<Rsc6TargetData>();
             Parent = reader.ReadUInt32();
@@ -2468,7 +2483,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override uint VFT { get; set; } = 0x00F22614;
         public uint OwnedDrawable { get; set; } //m_OwnedDrawable, always 0
         public uint RefDrawablePos { get; set; } //m_ReferencedDrawable
-        public uint RagDollType { get; set; } = (uint)Rpf6Crypto.VIRTUAL_BASE; //m_RagDollType
+        public uint RagDollType { get; set; } = (uint)Rsc6DataReader.VIRTUAL_BASE; //m_RagDollType
         public uint RagDoll { get; set; } //m_RagDoll, always 0
         public Rsc6PtrArr<Rsc6CharacterClothController> ClothControllers { get; set; } //m_ClothControllers, capacity always set to 16
         public bool PointersReferenced { get; set; } //m_PointersReferenced, always FALSE
@@ -2609,8 +2624,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < 4; i++)
             {
-                ClientsHead[i] = new Rsc6StreamableBase();
-                ClientsHead[i].Read(reader);
+                ClientsHead[i] = reader.ReadStruct<Rsc6StreamableBase>();
             }
 
             for (int i = 0; i < 4; i++)
@@ -2645,7 +2659,7 @@ namespace CodeX.Games.RDR1.RSC6
             base.Write(writer);
             for (int i = 0; i < ClientsHead.Length; i++)
             {
-                ClientsHead[i].Write(writer);
+                writer.WriteStruct(ClientsHead[i]);
             }
 
             for (int i = 0; i < ClientsHead.Length; i++)
@@ -3046,7 +3060,7 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 56;
-        public Rsc6Arr<IntA> EdgeToVertexIndices { get; set; } //m_EdgeToVertexIndices
+        public Rsc6Arr<Vector2I> EdgeToVertexIndices { get; set; } //m_EdgeToVertexIndices
         public Rsc6Arr<Vector4> VertexInitialPositions { get; set; } //m_VertexInitialPositions
         public Rsc6Arr<Vector4> VertexInitialNormals { get; set; } //m_VertexInitialNormals, needed only for character cloth
         public Rsc6Arr<int> RopeMeshData { get; set; } //m_RopeMeshData, always NULL
@@ -3057,7 +3071,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            EdgeToVertexIndices = reader.ReadArr<IntA>();
+            EdgeToVertexIndices = reader.ReadArr<Vector2I>();
             VertexInitialPositions = reader.ReadArr<Vector4>();
             VertexInitialNormals = reader.ReadArr<Vector4>();
             RopeMeshData = reader.ReadArr<int>();
@@ -3081,7 +3095,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            EdgeToVertexIndices = new(reader.ReadStructArray<IntA>("EdgeToVertexIndices"));
+            EdgeToVertexIndices = new(reader.ReadStructArray<Vector2I>("EdgeToVertexIndices"));
             VertexInitialPositions = new(reader.ReadVector4Array("VertexInitialPositions"));
             VertexInitialNormals = new(reader.ReadVector4Array("VertexInitialNormals"));
         }

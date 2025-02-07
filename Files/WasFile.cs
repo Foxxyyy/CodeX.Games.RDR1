@@ -34,7 +34,7 @@ namespace CodeX.Games.RDR1.Files
 
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
             AnimSet = r.ReadBlock<Rsc6AnimationSet>();
 

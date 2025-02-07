@@ -1,31 +1,34 @@
-﻿using ICSharpCode.SharpZipLib.Zip.Compression;
-using System;
+﻿using System;
 using System.IO.Compression;
 using System.IO;
 using System.Security.Cryptography;
-using Zstandard.Net;
-using System.Collections.Generic;
 using CodeX.Core.Utilities;
 using System.Numerics;
 using CodeX.Core.Numerics;
 using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RSC6;
+using MI = System.Runtime.CompilerServices.MethodImplAttribute;
+using MO = System.Runtime.CompilerServices.MethodImplOptions;
 
 namespace CodeX.Games.RDR1.RPF6
 {
     public static class Rpf6Crypto
     {
-        public const ulong VIRTUAL_BASE  = 0x50000000;
-        public const ulong PHYSICAL_BASE = 0x60000000;
+        public static Aes AesAlg;
+        public static byte[] AES_KEY;
+        public static readonly int[] AES_KEY_OFFSETS = [0x22a2300, 0x2293500]; //TODO: more offsets?
+        public static readonly byte[] AES_KEY_HASH = [0x87, 0x86, 0x24, 0x97, 0xEE, 0x46, 0x85, 0x53, 0x72, 0xB5, 0x1C, 0x7A, 0x32, 0x4A, 0x2B, 0xB5, 0xCD, 0x66, 0xF4, 0xAF];
 
-        static Aes AesAlg;
-        static readonly byte[] AES_KEY = new byte[32]
+        public static bool Init(string folder)
         {
-            0xB7, 0x62, 0xDF, 0xB6, 0xE2, 0xB2, 0xC6, 0xDE, 0xAF, 0x72, 0x2A, 0x32, 0xD2, 0xFB, 0x6F, 0x0C, 0x98, 0xA3, 0x21, 0x74, 0x62, 0xC9, 0xC4, 0xED, 0xAD, 0xAA, 0x2E, 0xD0, 0xDD, 0xF9, 0x2F, 0x10
-        };
+            if (AES_KEY == null)
+            {
+                if (FindKey(folder) == false)
+                {
+                    return false;
+                }
+            }
 
-        public static bool Init()
-        {
             AesAlg = Aes.Create();
             AesAlg.BlockSize = 128;
             AesAlg.KeySize = 256;
@@ -34,6 +37,19 @@ namespace CodeX.Games.RDR1.RPF6
             AesAlg.IV = new byte[16];
             AesAlg.Padding = PaddingMode.None;
             return true;
+        }
+
+        private static bool FindKey(string folder)
+        {
+            byte[] exedata = File.ReadAllBytes(folder + "\\rdr.exe");
+            if (exedata == null) return false;
+
+            AES_KEY = SearchUtil.HashSearch(exedata, AES_KEY_OFFSETS, 32, AES_KEY_HASH);
+            if (AES_KEY != null) return true;
+
+            using var exestr = new MemoryStream(exedata);
+            AES_KEY = SearchUtil.HashSearch(exestr, AES_KEY_HASH, 32, 1048576, 4);
+            return (AES_KEY != null);
         }
 
         public static byte[] DecryptAES(byte[] data)
@@ -78,156 +94,44 @@ namespace CodeX.Games.RDR1.RPF6
             return buffer;
         }
 
-        public static byte[] DecompressDeflate(byte[] data, int decompSize, bool noHeader = true) //ZLIB
-        {
-            byte[] buffer = new byte[decompSize];
-            var inflater = new Inflater(noHeader);
-            inflater.SetInput(data);
-            inflater.Inflate(buffer);
-            return buffer;
-        }
-
         public static byte[] DecompressZStandard(byte[] compressedData) //ZStandard
         {
-            byte[] decompressedData = null;
-
-            using (var memoryStream = new MemoryStream(compressedData))
-            using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
-            using (var temp = new MemoryStream())
+            try
             {
-                compressionStream.CopyTo(temp);
-                decompressedData = temp.ToArray();
+                using (var memoryStream = new MemoryStream(compressedData))
+                using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
+                using (var temp = new MemoryStream())
+                {
+                    compressionStream.CopyTo(temp);
+                    return temp.ToArray();
+                }
             }
-            return decompressedData;
+            catch
+            {
+                return null;
+            }
         }
 
         public static byte[] CompressZStandard(byte[] decompressedData) //ZStandard
         {
-            byte[] compressedData = null;
-
-            using (var memoryStream = new MemoryStream())
-            using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Compress))
+            try
             {
-                compressionStream.Write(decompressedData, 0, decompressedData.Length);
-                compressionStream.Close();
-                compressedData = memoryStream.ToArray();
-            }
-            return compressedData;
-        }
-
-        public static int SetBit(int val, int bit, bool trueORfalse)
-        {
-            bool flag = (uint)(val & 1 << bit) > 0U;
-            if (trueORfalse)
-            {
-                if (!flag)
-                    return val |= 1 << bit;
-            }
-            else if (flag)
-            {
-                return val ^ 1 << bit;
-            }
-            return val;
-        }
-
-        public static int TrailingZeroes(int n)
-        {
-            int num1 = 1;
-            int num2 = 0;
-
-            while (num2 < 32)
-            {
-                if ((uint)(n & num1) > 0U)
+                using (var memoryStream = new MemoryStream())
+                using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Compress))
                 {
-                    return num2;
-                }
-                ++num2;
-                num1 <<= 1;
-            }
-            return 32;
-        }
-
-        public static void RemoveDictValue<TKey, TValue>(Dictionary<TKey, TValue> dictionary, TValue value)
-        {
-            //Find the key associated with the specified value
-            TKey keyToRemove = default;
-            foreach (var kvp in dictionary)
-            {
-                if (EqualityComparer<TValue>.Default.Equals(kvp.Value, value))
-                {
-                    keyToRemove = kvp.Key;
-                    break;
+                    compressionStream.Write(decompressedData, 0, decompressedData.Length);
+                    compressionStream.Close();
+                    return memoryStream.ToArray();
                 }
             }
-
-            //Remove the key-value pair
-            if (!EqualityComparer<TKey>.Default.Equals(keyToRemove, default))
+            catch
             {
-                dictionary.Remove(keyToRemove);
+                return null;
             }
-        }
-
-        public static long RoundUp(long num, long multiple)
-        {
-            if (multiple == 0L)
-            {
-                return 0;
-            }
-            long num1 = multiple / Math.Abs(multiple);
-            return (num + multiple - num1) / multiple * multiple;
-        }
-
-        public static int Swap(int value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToInt32(data, 0);
-        }
-
-        public static uint Swap(uint value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToUInt32(data, 0);
-        }
-
-        public static short Swap(short value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToInt16(data, 0);
-        }
-
-        public static ushort Swap(ushort value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToUInt16(data, 0);
-        }
-
-        public static long Swap(long value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToInt64(data, 0);
-        }
-
-        public static ulong Swap(ulong value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToUInt64(data, 0);
-        }
-
-        public static float Swap(float value)
-        {
-            var data = BitConverter.GetBytes(value);
-            Array.Reverse(data);
-            return BitConverter.ToSingle(data, 0);
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Vector3 ToZXY(Vector3 vec)
+        [MI(MO.AggressiveInlining)] public static Vector3 ToZXY(Vector3 vec)
         {
             var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
             var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
@@ -236,7 +140,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Vector4 ToZXY(Vector4 vec)
+        [MI(MO.AggressiveInlining)] public static Vector4 ToZXY(Vector4 vec)
         {
             var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
             var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
@@ -246,7 +150,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static BoundingBox4 ToZXY(BoundingBox4 bb)
+        [MI(MO.AggressiveInlining)] public static BoundingBox4 ToZXY(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
             {
@@ -257,7 +161,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        public static BoundingBox4 ToXYZ(BoundingBox4 bb)
+        [MI(MO.AggressiveInlining)] public static BoundingBox4 ToXYZ(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
             {
@@ -267,24 +171,15 @@ namespace CodeX.Games.RDR1.RPF6
             return new BoundingBox4(newBB);
         }
 
-        ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static BoundingBox4[] ToXYZ(BoundingBox4[] bb)
-        {
-            for (int i = 0; i < bb.Length; i++)
-            {
-                bb[i] = ToXYZ(bb[i]);
-            }
-            return bb;
-        }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Quaternion ToZXY(Quaternion quat)
+        [MI(MO.AggressiveInlining)] public static Quaternion ToZXY(Quaternion quat)
         {
             return new Quaternion(quat.Z, quat.X, quat.Y, quat.W);
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Matrix3x4 ToZXY(Matrix3x4 m)
+        [MI(MO.AggressiveInlining)] public static Matrix3x4 ToZXY(Matrix3x4 m)
         {
             m.Translation = ToZXY(m.Translation);
             m.Orientation = ToZXY(m.Orientation);
@@ -292,29 +187,19 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        public static Matrix3x4 ToXYZ(Matrix3x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)] public static Matrix3x4 ToXYZ(Matrix3x4 m, bool write = false)
         {
             var r1 = ToXYZ(m.Row1);
             var r2 = ToXYZ(m.Row2);
             var r3 = ToXYZ(m.Row3);
-            r1.W = write ? NaN() : (float.IsNaN(r1.W) ? 0.0f : r1.W);
-            r2.W = write ? NaN() : (float.IsNaN(r2.W) ? 0.0f : r2.W);
-            r3.W = write ? NaN() : (float.IsNaN(r3.W) ? 0.0f : r3.W);
+            r1.W = write ? FNaN : (float.IsNaN(r1.W) ? 0.0f : r1.W);
+            r2.W = write ? FNaN : (float.IsNaN(r2.W) ? 0.0f : r2.W);
+            r3.W = write ? FNaN : (float.IsNaN(r3.W) ? 0.0f : r3.W);
             return new Matrix3x4(r1, r2, r3);
         }
 
-        ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Matrix3x4[] ToZXY(Matrix3x4[] m)
-        {
-            for (int i = 0; i < m.Length; i++)
-            {
-                m[i] = ToZXY(m[i]);
-            }
-            return m;
-        }
-
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        public static Matrix3x4[] ToXYZ(Matrix3x4[] m, bool write = false)
+        [MI(MO.AggressiveInlining)] public static Matrix3x4[] ToXYZ(Matrix3x4[] m, bool write = false)
         {
             if (m == null) return null;
             for (int i = 0; i < m.Length; i++)
@@ -325,12 +210,12 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)] public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
         {
-            var m14 = write ? NaN() : (float.IsNaN(m.M14) ? 0.0f : m.M14);
-            var m24 = write ? NaN() : (float.IsNaN(m.M24) ? 0.0f : m.M24);
-            var m34 = write ? NaN() : (float.IsNaN(m.M34) ? 0.0f : m.M34);
-            var m44 = write ? NaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
+            var m14 = write ? FNaN : (float.IsNaN(m.M14) ? 0.0f : m.M14);
+            var m24 = write ? FNaN : (float.IsNaN(m.M24) ? 0.0f : m.M24);
+            var m34 = write ? FNaN : (float.IsNaN(m.M34) ? 0.0f : m.M34);
+            var m44 = write ? FNaN : (float.IsNaN(m.M44) ? 0.0f : m.M44);
             var translation = m.Translation;
 
             return new Matrix4x4(
@@ -342,12 +227,12 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        public static Matrix4x4 ToXYZ(Matrix4x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)] public static Matrix4x4 ToXYZ(Matrix4x4 m, bool write = false)
         {
-            var m14 = write ? NaN() : (float.IsNaN(m.M14) ? 0.0f : m.M14);
-            var m24 = write ? NaN() : (float.IsNaN(m.M24) ? 0.0f : m.M24);
-            var m34 = write ? NaN() : (float.IsNaN(m.M34) ? 0.0f : m.M34);
-            var m44 = write ? NaN() : (float.IsNaN(m.M44) ? 0.0f : m.M44);
+            var m14 = write ? FNaN : (float.IsNaN(m.M14) ? 0.0f : m.M14);
+            var m24 = write ? FNaN : (float.IsNaN(m.M24) ? 0.0f : m.M24);
+            var m34 = write ? FNaN : (float.IsNaN(m.M34) ? 0.0f : m.M34);
+            var m44 = write ? FNaN : (float.IsNaN(m.M44) ? 0.0f : m.M44);
             var translation = m.Translation;
 
             return new Matrix4x4(
@@ -359,7 +244,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        public static Matrix4x4[] ToZXY(Matrix4x4[] m)
+        [MI(MO.AggressiveInlining)] public static Matrix4x4[] ToZXY(Matrix4x4[] m)
         {
             for (int i = 0; i < m.Length; i++)
             {
@@ -369,7 +254,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        public static Matrix4x4[] ToXYZ(Matrix4x4[] m, bool write = false)
+        [MI(MO.AggressiveInlining)] public static Matrix4x4[] ToXYZ(Matrix4x4[] m, bool write = false)
         {
             if (m == null) return null;
             for (int i = 0; i < m.Length; i++)
@@ -384,7 +269,7 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector3 in ZXY format.</param>
         ///<returns>A new Vector3 in XYZ format.</returns>
-        public static Vector3 ToXYZ(Vector3 vector)
+        [MI(MO.AggressiveInlining)] public static Vector3 ToXYZ(Vector3 vector)
         {
             return new Vector3(vector.Y, vector.Z, vector.X);
         }
@@ -394,17 +279,17 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector4 in ZXYW format.</param>
         ///<returns>A new Vector4 in XYZW format.</returns>
-        public static Vector4 ToXYZ(Vector4 vector)
+        [MI(MO.AggressiveInlining)] public static Vector4 ToXYZ(Vector4 vector)
         {
-            return new Vector4(vector.Y, vector.Z, vector.X, (vector.W == 0.0f) ? NaN() : vector.W);
+            return new Vector4(vector.Y, vector.Z, vector.X, (vector.W == 0.0f) ? FNaN : vector.W);
         }
 
-        public static Vector2 Half2ToVector2(Half2 value)
+        [MI(MO.AggressiveInlining)] public static Vector2 Half2ToVector2(Half2 value)
         {
             return new Vector2((float)value.X, (float)value.Y);
         }
 
-        public static Vector4 Half4ToVector4(Half4 value)
+        [MI(MO.AggressiveInlining)] public static Vector4 Half4ToVector4(Half4 value)
         {
             return new Vector4((float)value.X, (float)value.Y, (float)value.Z, (float)value.W);
         }
@@ -414,7 +299,7 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector4[] in ZXYW format.</param>
         ///<returns>A new Vector4[] in XYZW format.</returns>
-        public static Vector4[] ToXYZ(Vector4[] vector)
+        [MI(MO.AggressiveInlining)] public static Vector4[] ToXYZ(Vector4[] vector)
         {
             if (vector == null) return null;
             for (int i = 0; i < vector.Length; i++)
@@ -431,23 +316,17 @@ namespace CodeX.Games.RDR1.RPF6
         ///<param name="buffer">The buffer to write to.</param>
         ///<param name="offset">The offset in the buffer where writing starts.</param>
         ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
-        public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
+        [MI(MO.AggressiveInlining)] public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
         {
-            var x = BitConverter.GetBytes(vec.X);
-            var y = BitConverter.GetBytes(vec.Y);
-            var z = BitConverter.GetBytes(vec.Z);
-
             if (zxy) //XYZ > ZXY (RDR1 to CX)
             {
-                Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
-                Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
-                Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
+                var vzxy = new Vector3(vec.Z, vec.X, vec.Y);
+                BufferUtil.WriteVector3(buffer, offset, ref vzxy);
             }
             else //XYZ > YZX (CX to RDR1)
             {
-                Buffer.BlockCopy(y, 0, buffer, offset, sizeof(float));
-                Buffer.BlockCopy(z, 0, buffer, offset + 4, sizeof(float));
-                Buffer.BlockCopy(x, 0, buffer, offset + 8, sizeof(float));
+                var vyzx = new Vector3(vec.Y, vec.Z, vec.X);
+                BufferUtil.WriteVector3(buffer, offset, ref vyzx);
             }
         }
 
@@ -458,31 +337,21 @@ namespace CodeX.Games.RDR1.RPF6
         ///<param name="buffer">The buffer to write to.</param>
         ///<param name="offset">The offset in the buffer where writing starts.</param>
         ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
-        public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
+        [MI(MO.AggressiveInlining)] public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
         {
             if (float.IsNaN(vec.W))
             {
                 vec.W = 0.0f;
             }
-
-            var x = BitConverter.GetBytes(vec.X);
-            var y = BitConverter.GetBytes(vec.Y);
-            var z = BitConverter.GetBytes(vec.Z);
-            var w = BitConverter.GetBytes(vec.W);
-
             if (zxy) //XYZ > ZXY (RDR1 to CX)
             {
-                Buffer.BlockCopy(z, 0, buffer, offset, sizeof(float));
-                Buffer.BlockCopy(x, 0, buffer, offset + 4, sizeof(float));
-                Buffer.BlockCopy(y, 0, buffer, offset + 8, sizeof(float));
-                Buffer.BlockCopy(w, 0, buffer, offset + 12, sizeof(float));
+                var vzxyw = new Vector4(vec.Z, vec.X, vec.Y, vec.W);
+                BufferUtil.WriteVector4(buffer, offset, ref vzxyw);
             }
             else //XYZ > YZX (CX to RDR1)
             {
-                Buffer.BlockCopy(y, 0, buffer, offset, sizeof(float));
-                Buffer.BlockCopy(z, 0, buffer, offset + 4, sizeof(float));
-                Buffer.BlockCopy(x, 0, buffer, offset + 8, sizeof(float));
-                Buffer.BlockCopy(w, 0, buffer, offset + 12, sizeof(float));
+                var vyzxw = new Vector4(vec.Y, vec.Z, vec.X, vec.W);
+                BufferUtil.WriteVector4(buffer, offset, ref vyzxw);
             }
         }
 
@@ -492,160 +361,9 @@ namespace CodeX.Games.RDR1.RPF6
         ///<param name="val">The Half2 value to be rescaled.</param>
         ///<param name="scale">The scaling factor.</param>
         ///<returns>A new <see cref="Vector2" /> with the rescaled values.</returns>
-        public static Vector2 RescaleHalf2(Half2 val, float scale)
+        [MI(MO.AggressiveInlining)] public static Vector2 RescaleHalf2(Half2 val, float scale)
         {
             return new Half2((float)val.X * scale, (float)val.Y * scale);
-        }
-
-        ///<summary>
-        ///Reads & rescales UShort2N values
-        ///</summary>
-        ///<param name="buffer">The buffer containing the UShort2N values.</param>
-        ///<param name="offset">The offset in the buffer where the UShort2N values start.</param>
-        public static void ReadRescaleUShort2N(byte[] buffer, int offset)
-        {
-            var xBuf = BufferUtil.ReadArray<byte>(buffer, offset, 2);
-            var yBuf = BufferUtil.ReadArray<byte>(buffer, offset + 2, 2);
-            var xVal = BitConverter.ToUInt16(xBuf, 0) * 3.05185094e-005f;
-            var yVal = BitConverter.ToUInt16(yBuf, 0) * 3.05185094e-005f;
-
-            xVal *= 2.0f;
-            yVal *= 2.0f;
-
-            BufferUtil.WriteArray(buffer, offset, BitConverter.GetBytes((ushort)(xVal / 3.05185094e-005f)));
-            BufferUtil.WriteArray(buffer, offset + 2, BitConverter.GetBytes((ushort)(yVal / 3.05185094e-005f)));
-        }
-
-        public static Vector4 Dec3NToVector4(uint u)
-        {
-            var ux1 = (int)((u & 0x3FF) << 22);
-            var uy1 = (int)(((u >> 10) & 0x3FF) << 22);
-            var uz1 = (int)(((u >> 20) & 0x3FF) << 22);
-            var uw1 = (int)u;
-            var fx = (float)(ux1 >> 22);
-            var fy = (float)(uy1 >> 22);
-            var fz = (float)(uz1 >> 22);
-            var fw = (float)(uw1 >> 30);
-
-            var scale = 0.0019569471624266144814090019569472f;
-            var v = new Vector4(fx * scale, fy * scale, fz * scale, fw);
-
-            return v;
-        }
-
-        public static uint Vector4ToDec3N(in Vector4 v)
-        {
-            var sx = (v.X >= 0.0f);
-            var sy = (v.Y >= 0.0f);
-            var sz = (v.Z >= 0.0f);
-            var sw = (v.W >= 0.0f);
-            var x = Math.Min((uint)(Math.Abs(v.X) * 511.0f), 511);
-            var y = Math.Min((uint)(Math.Abs(v.Y) * 511.0f), 511);
-            var z = Math.Min((uint)(Math.Abs(v.Z) * 511.0f), 511);
-            var w = (v.W == 0.0f) ? 0 : (v.W == 1.0f) ? 1 : (v.W == -1.0f) ? 2 : 3;
-            var ux = ((sx ? x : ~x) & 0x1FF) + (sx ? 0x200 : 0);
-            var uy = ((sy ? y : ~y) & 0x1FF) + (sy ? 0x200 : 0);
-            var uz = ((sz ? z : ~z) & 0x1FF) + (sz ? 0x200 : 0);
-            var uw = ((sw ? w : ~w) & 0x3) + (sw ? 0x200 : 0);
-            var u = ux + (uy << 10) + (uz << 20) + (uw << 30);
-            return (uint)u;
-        }
-
-        ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>
-        public static Colour ParseRGBString(string rgbString)
-        {
-            string[] rgbValues = rgbString.Split(',');
-            if (rgbValues.Length == 3
-                && int.TryParse(rgbValues[0], out int red)
-                && int.TryParse(rgbValues[1], out int green)
-                && int.TryParse(rgbValues[2], out int blue))
-            {
-                return new Colour(red, green, blue);
-            }
-            return Colour.Red;
-        }
-
-        ///<summary>A hacky function to adjust the bounds for fragments, used in the prefabs.</summary>
-        public static void ResizeBoundsForPeds(Piece piece)
-        {
-            if (piece == null) return;
-            var min = ((Rsc6Drawable)piece).BoundingBoxMin.XYZ();
-            var max = ((Rsc6Drawable)piece).BoundingBoxMax.XYZ();
-
-            min = new Vector3(min.X, min.Y, min.Z - 3.0f);
-            max = new Vector3(max.X, max.Y, max.Z - 3.0f);
-
-            piece.BoundingBox = new BoundingBox(min, max);
-            piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
-        }
-
-        ///<summary>Convert a <see cref="System.Numerics.Vector4" /> to a <see cref="System.Byte" />[].</summary>
-        public static byte[] Vector4ToByteArray(Vector4 vector)
-        {
-            var buffer = new byte[16];
-            Buffer.BlockCopy(new float[]
-            {
-                vector.X,
-                vector.Y,
-                vector.Z,
-                vector.W
-            }, 0, buffer, 0, buffer.Length);
-            return buffer;
-        }
-
-        ///<summary>Checks if a specified value is present in an enum.</summary>
-        public static bool IsDefinedInEnumRange<TEnum>(byte value) where TEnum : Enum
-        {
-            foreach (byte enumValue in Enum.GetValues(typeof(TEnum)))
-            {
-                if (enumValue == value)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        ///<summary>Returns NaN as 0x0100807F (float.NaN = 0x0000C0FF).</summary>
-        public static float NaN()
-        {
-            return BitConverter.ToSingle(BitConverter.GetBytes(0x7F800001), 0);
-        }
-
-        ///<summary>Returns a <see cref="System.Numerics.Vector4" /> with NaN values.</summary>
-        public static Vector4 GetVec4NaN()
-        {
-            return new Vector4(NaN(), NaN(), NaN(), NaN());
-        }
-
-        ///<summary>Returns a <see cref="System.Numerics.Matrix4x4" /> with NaN values.</summary>
-        public static Matrix4x4 GetMatrix4x4NaN()
-        {
-            return new Matrix4x4(NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN(), NaN());
-        }
-
-        /// <summary>
-        /// Converts a floating point number into a fixed point number.
-        /// </summary>
-        /// <remarks>
-        /// <format type="text/markdown">
-        /// <![CDATA[It's multiplying the float by a constant value and discarding the extra bits (Vector3::Pack1010102)]]>
-        /// </format>
-        /// </remarks>
-        public static uint PackFixedPoint(float value, uint size, uint shift)
-        {
-            float scale = ((1u << (int)(size - 1)) - 1);
-            return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
-        }
-
-        ///<summary>Converts a <see cref="System.Numerics.Vector4" /> to the Dec3N format.</summary>
-        public static uint GetDec3N(Vector4 val, bool zxy = true)
-        {
-            var wPack = (val.W > 0.5f) ? 1 << 30 : (val.W < -0.5f) ? -1 << 30 : 0;
-            if (zxy) //XYZ > ZXY (RDR1 to CX)
-                return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20) | (uint)wPack;
-            else     //ZXY > XYZ (CX to RDR1)
-                return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20) | (uint)wPack;
         }
 
         /// <summary>
@@ -693,7 +411,6 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-
         /// <summary>
         /// Transforms an array of items of type T from ZXY to XYZ space. This method should be used for unmanaged types only.
         /// </summary>
@@ -739,16 +456,116 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        ///<summary>rage::intA<2></summary>
-        public struct IntA
+        /// <summary>
+        /// Converts a floating point number into a fixed point number.
+        /// </summary>
+        /// <remarks>
+        /// <format type="text/markdown">
+        /// <![CDATA[It's multiplying the float by a constant value and discarding the extra bits (Vector3::Pack1010102)]]>
+        /// </format>
+        /// </remarks>
+        [MI(MO.AggressiveInlining)] public static uint PackFixedPoint(float value, uint size, uint shift)
         {
-            public int Int1; //m_ints[0]
-            public int Int2; //m_ints[1]
-
-            public override readonly string ToString()
-            {
-                return $"Int1: {Int1}, Int2: {Int2}";
-            }
+            float scale = ((1u << (int)(size - 1)) - 1);
+            return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
         }
+
+        ///<summary>Converts a <see cref="System.Numerics.Vector4" /> to the Dec3N format.</summary>
+        [MI(MO.AggressiveInlining)] public static uint GetDec3N(Vector4 val, bool zxy = true)
+        {
+            var wPack = (val.W > 0.5f) ? 1 << 30 : (val.W < -0.5f) ? -1 << 30 : 0;
+            if (zxy) //XYZ > ZXY (RDR1 to CX)
+                return PackFixedPoint(val.Z, 10, 0) | PackFixedPoint(val.X, 10, 10) | PackFixedPoint(val.Y, 10, 20) | (uint)wPack;
+            else     //ZXY > XYZ (CX to RDR1)
+                return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20) | (uint)wPack;
+        }
+
+        [MI(MO.AggressiveInlining)] public static Vector4 Dec3NToVector4(uint u)
+        {
+            var ux = (int)((u & 0x3FF) << 22);
+            var uy = (int)(((u >> 10) & 0x3FF) << 22);
+            var uz = (int)(((u >> 20) & 0x3FF) << 22);
+            var uw = (int)u;
+            var fx = (float)(ux >> 22);
+            var fy = (float)(uy >> 22);
+            var fz = (float)(uz >> 22);
+            var fw = (float)(uw >> 30);
+            var scale = 0.001956947162f;
+            var v = new Vector4(fx * scale, fy * scale, fz * scale, fw);
+            return v;
+        }
+
+        [MI(MO.AggressiveInlining)] public static uint Vector4ToDec3N(in Vector4 v)
+        {
+            var sx = (v.X >= 0.0f);
+            var sy = (v.Y >= 0.0f);
+            var sz = (v.Z >= 0.0f);
+            var sw = (v.W >= 0.0f);
+            var x = Math.Min((uint)(Math.Abs(v.X) * 511.0f), 511);
+            var y = Math.Min((uint)(Math.Abs(v.Y) * 511.0f), 511);
+            var z = Math.Min((uint)(Math.Abs(v.Z) * 511.0f), 511);
+            var w = (v.W == 0.0f) ? 0 : (v.W == 1.0f) ? 1 : (v.W == -1.0f) ? 2 : 3;
+            var ux = ((sx ? x : ~x) & 0x1FF) + (sx ? 0x200 : 0);
+            var uy = ((sy ? y : ~y) & 0x1FF) + (sy ? 0x200 : 0);
+            var uz = ((sz ? z : ~z) & 0x1FF) + (sz ? 0x200 : 0);
+            var uw = ((sw ? w : ~w) & 0x3) + (sw ? 0x200 : 0);
+            var u = ux + (uy << 10) + (uz << 20) + (uw << 30);
+            return (uint)u;
+        }
+
+        ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>
+        public static Colour ParseRGBString(string rgbString)
+        {
+            string[] rgbValues = rgbString.Split(',');
+            if (rgbValues.Length == 3
+                && int.TryParse(rgbValues[0], out int red)
+                && int.TryParse(rgbValues[1], out int green)
+                && int.TryParse(rgbValues[2], out int blue))
+            {
+                return new Colour(red, green, blue);
+            }
+            return Colour.Red;
+        }
+
+        ///<summary>A hacky function to adjust the bounds for fragments, used in the prefabs.</summary>
+        public static void ResizeBoundsForPeds(Piece piece)
+        {
+            if (piece == null) return;
+            var min = ((Rsc6Drawable)piece).BoundingBoxMin.XYZ();
+            var max = ((Rsc6Drawable)piece).BoundingBoxMax.XYZ();
+
+            min = new Vector3(min.X, min.Y, min.Z - 3.0f);
+            max = new Vector3(max.X, max.Y, max.Z - 3.0f);
+
+            piece.BoundingBox = new BoundingBox(min, max);
+            piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
+        }
+
+        ///<summary>Checks if a specified value is present in an enum.</summary>
+        public static bool IsDefinedInEnumRange<TEnum>(byte value) where TEnum : Enum
+        {
+            foreach (byte enumValue in Enum.GetValues(typeof(TEnum)))
+            {
+                if (enumValue == value)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        ///<summary>Returns a <see cref="System.Numerics.Vector4" /> with NaN values.</summary>
+        [MI(MO.AggressiveInlining)] public static Vector4 GetVec4NaN()
+        {
+            return new Vector4(FNaN, FNaN, FNaN, FNaN);
+        }
+
+        ///<summary>Returns a <see cref="System.Numerics.Matrix4x4" /> with NaN values.</summary>
+        [MI(MO.AggressiveInlining)] public static Matrix4x4 GetMatrix4x4NaN()
+        {
+            return new Matrix4x4(FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN);
+        }
+
+        public static readonly float FNaN = BufferUtil.GetUintFloat(0x7F800001); //NaN as 0x0100807F (float.NaN = 0x0000C0FF).
     }
 }

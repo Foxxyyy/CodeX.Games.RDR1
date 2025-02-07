@@ -13,7 +13,6 @@ namespace CodeX.Games.RDR1
         public override string ShortName => "RDR1";
         public override string GameFolder { get => GameFolderSetting.GetString(); set => GameFolderSetting.Set(value); }
         public override string GamePathPrefix => "RDR1\\";
-        public override bool GameFolderOk => Directory.Exists(GameFolder);
         public override bool RequiresGameFolder => true;
         public override bool Enabled { get => GameEnabledSetting.GetBool(); set => GameEnabledSetting.Set(value); }
         public override bool EnableMapView => true;
@@ -61,12 +60,8 @@ namespace CodeX.Games.RDR1
             return new[]
             {
                 RDR1Map.StartPositionSetting,
-                RDR1Map.LoadBoundsSetting,
                 RDR1Map.EnabledSetting,
-                RDR1Map.EnableTreesSetting,
                 RDR1Map.EnableInstancedGrass,
-                RDR1Map.EnablePropsSetting,
-                RDR1Map.EnableLightsSetting,
                 RDR1Map.TreesDistanceSetting,
                 RDR1Map.GrassDistanceSetting
             };

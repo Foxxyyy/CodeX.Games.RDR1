@@ -30,7 +30,7 @@ namespace CodeX.Games.RDR1.Files
 
             var r = new Rsc6DataReader(e, data)
             {
-                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rpf6Crypto.VIRTUAL_BASE
+                Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
 
             Fragment = r.ReadBlock<Rsc6Fragment>();
@@ -41,7 +41,7 @@ namespace CodeX.Games.RDR1.Files
                 var d = Fragment.Drawable.Item;
                 var b = Fragment.Bounds.Item;
 
-                Piece = d.Drawable;
+                Piece = d;
                 Piece.Name = e.Name;
                 Piece.FilePack = this;
                 Piece.Collider = b;
@@ -50,7 +50,7 @@ namespace CodeX.Games.RDR1.Files
                 {
                     Piece.Lods[0].LodDist = 9999.0f;
                 }
-                Pieces[e.ShortNameHash] = d.Drawable;
+                Pieces[e.ShortNameHash] = d;
             }
         }
 
