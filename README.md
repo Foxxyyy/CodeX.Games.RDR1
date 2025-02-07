@@ -20,7 +20,7 @@ So far here are all the resources that can be XML edited (resources ends with th
 * WVD (Visual Dictionary)                                     
 
 Editing will eventually come out for other files.                                     
-I am currently also working on a [ScriptHook ASI trainer](https://www.nexusmods.com/reddeadredemption/mods/184?tab=description) and don't focus much on CodeX:                                                  
+I am currently also working on a [ScriptHook ASI trainer](https://www.youtube.com/watch?v=74zuDQ8vYAs) and don't focus much on CodeX:                                                  
 ![Screenshot](Files/Properties/silent_virtues.png)
 
 # CodeX Contributors
