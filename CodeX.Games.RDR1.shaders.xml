@@ -1,0 +1,1966 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<RDR1Shaders>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_nodistortion_bump_spec_ao_shared</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="reflectionintensity" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="reflectionfalloff" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="reflectiondiffusecontribution" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_skin</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="specsampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="2.95" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="3.844" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="1.075" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="0.67" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="56" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="40" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="blursize" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="epidermiswieght" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="epidermiscolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="dermiswieght" type="CBuffer" value_type="float4" w="0" x="1.2" y="0" z="0" />
+      <Item length="16" name="dermiscolor" type="CBuffer" value_type="float4" w="0" x="0.8705" y="0.7725" z="0.7647" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="specsampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="3.66" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="1.85" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="2.175" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="300" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="130" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_character_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="mainuvmodulate" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_hair</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="specsampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="2.412" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="1.28" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="40" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="20" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="mainuvmodulate" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shared</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ao_cloth</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_nodirt</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_shadowonly</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item length="16" name="useinsunshadow" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>P</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_poster</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="gcameradistanceatmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="gmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_foliage</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_treerock_prototype</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="EotzFHA_0xE8CDEF54" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="detailnormalmapsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_2sided</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="specsampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0.068" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="1.6" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="2.872" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="0.65" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="15.2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="10" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="42" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="96" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint_nodistortion</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="85" y="0" z="0" />
+      <Item length="16" name="amboccsunfactor" type="CBuffer" value_type="float4" w="0" x="0.1" y="0" z="0" />
+      <Item length="16" name="amboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="2.872" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="0.65" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="15.2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="7.2" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="mainuvmodulate" type="CBuffer" value_type="float4" w="-3" x="4" y="4" z="-3" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_reflection_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="clothdiffusecontribution" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="clothsheen" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="clothintensity" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="clothfalloff" type="CBuffer" value_type="float4" w="0" x="5" y="0" z="0" />
+      <Item length="16" name="reflectionintensity" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="reflectionfalloff" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="reflectiondiffusecontribution" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_grass</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="diffusesampler" type="Texture" />
+      <Item name="lXAvBBA_0x6252CA7A" type="Texture" />
+      <Item length="16" name="staticlighting" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="g_grassgustwind" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="g_grasssundirection" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="g_grasssuncolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="fadeoffsetslope" type="CBuffer" value_type="float4" w="0" x="10" y="1" z="0" />
+      <Item length="16" name="g_clipdims" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_cloth</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="amboccsampler" type="Texture" uv="1"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="fresnelterm" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="speculargreenbias" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculargreenscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="texturesampler2" type="Texture" uv="1"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="amboccsampler" type="Texture" uv="2"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmax" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmin" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculardirtmapoffset" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapinfluence" type="CBuffer" value_type="float4" w="0" x="-1" y="0" z="0" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="fresnelterm" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="speculargreenbias" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculargreenscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_cutscene</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="normalmapsampler1" type="Texture" />
+      <Item name="normalmapsampler2" type="Texture" />
+      <Item name="animatednormalmapmask0sampler" type="Texture" />
+      <Item name="animatednormalmapmask1sampler" type="Texture" />
+      <Item name="animatednormalmapmask2sampler" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0.03" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="2.7" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="2.163" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="22.9" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="20" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="39" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="54" y="0" z="0" />
+      <Item length="16" name="animnrmuvmodulate" type="CBuffer" value_type="float4" w="0" x="2" y="2" z="0" />
+      <Item length="16" name="animatednormalmapmod2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="animatednormalmapmod1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="192" name="ganimatednormalmapparams" type="CBuffer" value_type="float12x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="blursize" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="epidermiswieght" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="epidermiscolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="dermiswieght" type="CBuffer" value_type="float4" w="0" x="1.2" y="0" z="0" />
+      <Item length="16" name="dermiscolor" type="CBuffer" value_type="float4" w="0" x="0.8705" y="0.7725" z="0.7647" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_cutscene</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item name="normalmapsampler1" type="Texture" />
+      <Item name="normalmapsampler2" type="Texture" />
+      <Item name="animatednormalmapmask0sampler" type="Texture" />
+      <Item name="animatednormalmapmask1sampler" type="Texture" />
+      <Item name="animatednormalmapmask2sampler" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="2.412" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="1.848" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="1.28" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="40" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="6.475" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="animnrmuvmodulate" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="mainuvmodulate" type="CBuffer" value_type="float4" w="-3" x="4" y="4" z="-3" />
+      <Item length="16" name="animatednormalmapmod2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="animatednormalmapmod1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="192" name="ganimatednormalmapparams" type="CBuffer" value_type="float12x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_weapon</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="wcEbyqA_0x3DACADFB" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_glow</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="glightsourcecolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gglowfuncscale" type="CBuffer" value_type="float4" w="0" x="10" y="0" z="0" />
+      <Item length="16" name="gglowfuncpower" type="CBuffer" value_type="float4" w="0" x="20" y="0" z="0" />
+      <Item length="16" name="gglowfuncshift" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gambientglowscale" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="glightsourcepos" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="glocallightposition" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="goverrideposition" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint_shared</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="amboccsunfactor" type="CBuffer" value_type="float4" w="0" x="0.1" y="0" z="0" />
+      <Item length="16" name="amboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_horsehair</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="normalmapsampler1" type="Texture" />
+      <Item name="animatednormalmapmask0sampler" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="aThUTkA_0x1B71F3E7" type="Texture" />
+      <Item name="detailnormalmapsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="nYAPzJA_0xDE5484EF" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="FBePQKA_0xB08FD2DE" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.7" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="12.5" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="0.325" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="animatednormalmapmod1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="ganimatednormalmapparams" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_fur</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="noisesampler" type="Texture" />
+      <Item length="16" name="gravity" type="CBuffer" value_type="float4" w="0" x="0.002" y="0" z="0" />
+      <Item length="16" name="lowloddist" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="highloddist" type="CBuffer" value_type="float4" w="0" x="10" y="0" z="0" />
+      <Item length="16" name="numfurlayers" type="CBuffer" value_type="float4" w="0" x="6" y="0" z="0" />
+      <Item length="16" name="furlayershadowmin" type="CBuffer" value_type="float4" w="0" x="0.8" y="0" z="0" />
+      <Item length="16" name="furstep" type="CBuffer" value_type="float4" w="0" x="0.011" y="0" z="0" />
+      <Item length="16" name="noisescalev" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="noisescaleu" type="CBuffer" value_type="float4" w="0" x="60" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_debris</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="EotzFHA_0xE8CDEF54" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_cati</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_smooth_shared</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_binoculars_barrel</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_binoculars_lens</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glow</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="heatintensity" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_diffuse</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_hair_a</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="aThUTkA_0x1B71F3E7" type="Texture" />
+      <Item name="detailnormalmapsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="CVrspJA_0x2D759131" type="CBuffer" value_type="float4" w="0" x="2.5" y="0" z="0" />
+      <Item length="16" name="HYoqHOA_0xC526F8E1" type="CBuffer" value_type="float4" w="0" x="0.8" y="0" z="0" />
+      <Item length="16" name="nYAPzJA_0xDE5484EF" type="CBuffer" value_type="float4" w="0" x="0.088" y="0" z="0" />
+      <Item length="16" name="FBePQKA_0xB08FD2DE" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="8.95" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="7" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_shareduv_character_cloth</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="specsampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0.068" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="0.475" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="2.8" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="0.6" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.25" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="10" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="54" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="34" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="reflectionintensity" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="reflectionfalloff" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="reflectiondiffusecontribution" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_beacon</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ambocc_cpv</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc_decal</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="texturesampler3" type="Texture" uv="2"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_character_glow_skin</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="heatintensity" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0.03" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="2.7" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="0.25" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="1.75" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="22.9" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="20" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="39" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="54" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="blursize" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="epidermiswieght" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="epidermiscolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="dermiswieght" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="dermiscolor" type="CBuffer" value_type="float4" w="0" x="0.8705" y="0.7725" z="0.7647" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_character_glow</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="heatintensity" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="rimamount" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="rimpower" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="3.66" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="1.85" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="2.175" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="300" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="130" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="gblooddatax" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_fast</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="densitysampler" type="Texture" />
+      <Item name="normalsampler" type="Texture" />
+      <Item name="lowresdensitysampler" type="Texture" />
+      <Item name="lowresnormalsampler" type="Texture" />
+      <Item length="16" name="grescaleuv3" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv2" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv1" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="guvoffset3" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="guvoffset" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="gwraplighting_msaaref" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gscalediffusefillambient" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gpiercinglightpower_strength_normalstrength_thickness" type="CBuffer" value_type="float4" w="1" x="1" y="1" z="1" />
+      <Item length="16" name="gscatterg_gsquared_phasemult_scale" type="CBuffer" value_type="float4" w="1" x="-0.75" y="0.5625" z="2.1" />
+      <Item length="16" name="gdensityshiftscale" type="CBuffer" value_type="float4" w="0" x="0" y="1" z="0" />
+      <Item length="16" name="gbouncecolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gambientcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gcloudcolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsuncolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsundirection" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="westcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="eastcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="skycolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_animsoft</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="densitysampler" type="Texture" />
+      <Item name="normalsampler" type="Texture" />
+      <Item name="detaildensitysampler" type="Texture" />
+      <Item name="detailnormalsampler" type="Texture" />
+      <Item name="detaildensity2sampler" type="Texture" />
+      <Item name="detailnormal2sampler" type="Texture" />
+      <Item name="lowresdensitysampler" type="Texture" />
+      <Item name="lowresnormalsampler" type="Texture" />
+      <Item length="16" name="gsoftparticlerange" type="CBuffer" value_type="float4" w="0" x="175" y="0" z="0" />
+      <Item length="16" name="grescaleuv3" type="CBuffer" value_type="float4" w="0" x="3" y="0.5" z="0" />
+      <Item length="16" name="grescaleuv2" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv1" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="guvoffset3" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="guvoffset" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="ganimblendweights" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="ganimsculpt" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="ganimcombine" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gnearfarqmult" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gwraplighting_msaaref" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gscalediffusefillambient" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gpiercinglightpower_strength_normalstrength_thickness" type="CBuffer" value_type="float4" w="1" x="1" y="1" z="1" />
+      <Item length="16" name="gscatterg_gsquared_phasemult_scale" type="CBuffer" value_type="float4" w="1" x="-0.75" y="0.5625" z="2.1" />
+      <Item length="16" name="gdensityshiftscale" type="CBuffer" value_type="float4" w="0" x="0" y="1" z="0" />
+      <Item length="16" name="gbouncecolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gambientcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gcloudcolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsuncolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsundirection" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="westcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="eastcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="skycolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_fog</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="densitysampler" type="Texture" />
+      <Item name="normalsampler" type="Texture" />
+      <Item length="16" name="gsoftparticlerange" type="CBuffer" value_type="float4" w="0" x="175" y="0" z="0" />
+      <Item length="16" name="grescaleuv3" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv2" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv1" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="guvoffset3" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="guvoffset" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="gnearfarqmult" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gwraplighting_msaaref" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gscalediffusefillambient" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gpiercinglightpower_strength_normalstrength_thickness" type="CBuffer" value_type="float4" w="1" x="1" y="1" z="1" />
+      <Item length="16" name="gdensityshiftscale" type="CBuffer" value_type="float4" w="0" x="0" y="1" z="0" />
+      <Item length="16" name="gbouncecolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gambientcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gcloudcolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsuncolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsundirection" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="westcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="eastcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="skycolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="texturesampler2" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_nodistortion_bump_spec_ao</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_3_nospec_normal_ambocc</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="texturesampler2" type="Texture" uv="1"/>
+      <Item name="texturesampler3" type="Texture" uv="2"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmax" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmin" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculardirtmapoffset" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapinfluence" type="CBuffer" value_type="float4" w="0" x="-1" y="0" z="0" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="fresnelterm" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="speculargreenbias" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculargreenscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_bspec_ao_shareduv_character_nooff</Name>
+    <DrawBucket>2</DrawBucket>
+    <Params>
+      <Item name="normalmapsampler1" type="Texture" />
+      <Item name="normalmapsampler2" type="Texture" />
+      <Item name="animatednormalmapmask0sampler" type="Texture" />
+      <Item name="animatednormalmapmask1sampler" type="Texture" />
+      <Item name="animatednormalmapmask2sampler" type="Texture" />
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="2.412" y="0" z="0" />
+      <Item length="16" name="specularfresnelmin" type="CBuffer" value_type="float4" w="0" x="1.848" y="0" z="0" />
+      <Item length="16" name="specularfresnelexp" type="CBuffer" value_type="float4" w="0" x="1.28" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="specularfactor2" type="CBuffer" value_type="float4" w="0" x="40" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="6.475" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="animnrmuvmodulate" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="mainuvmodulate" type="CBuffer" value_type="float4" w="-3" x="4" y="4" z="-3" />
+      <Item length="16" name="animatednormalmapmod2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="animatednormalmapmod1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="192" name="ganimatednormalmapparams" type="CBuffer" value_type="float12x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_alpha_foliage_no_fade</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_spec_ao_dirt_cloth</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="texturesampler2" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_pond_water</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item name="diffusesampler" type="Texture" />
+      <Item name="wavesampler" type="Texture" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="waterparams" type="CBuffer" value_type="float4" w="0" x="0.106" y="0.905" z="0" />
+      <Item length="16" name="rippleparams" type="CBuffer" value_type="float4" w="0.441" x="0.884" y="0.051" z="0.15" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_scope_lens</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="16" name="luminance" type="CBuffer" value_type="float4" w="0" x="0.2125" y="0.7154" z="0.0721" />
+      <Item length="16" name="contrast" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="colorcorrect" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="constadd" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="WcFIIDA_0xB98E13F7" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_scope_barrel</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="AvchIEA_0xAE641872" type="Texture" />
+      <Item length="16" name="luminance" type="CBuffer" value_type="float4" w="0" x="0.2125" y="0.7154" z="0.0721" />
+      <Item length="16" name="contrast" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="colorcorrect" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="constadd" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="WcFIIDA_0xB98E13F7" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="lensworldpos" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="mainglow" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="targetpos2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="targeti2" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="targetpos1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="targeti1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="targetpos0" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="targeti0" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_glass_notint</Name>
+    <DrawBucket>6</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="amboccsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="amboccsunfactor" type="CBuffer" value_type="float4" w="0" x="0.1" y="0" z="0" />
+      <Item length="16" name="amboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_shareduv_hair</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="aThUTkA_0x1B71F3E7" type="Texture" />
+      <Item name="detailnormalmapsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="nYAPzJA_0xDE5484EF" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="FBePQKA_0xB08FD2DE" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="specdiffuseamount" type="CBuffer" value_type="float4" w="0" x="0.703" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="8.25" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="detailmapscalev" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailmapscaleu" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="0.325" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PWINTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_clouds_anim</Name>
+    <DrawBucket>5</DrawBucket>
+    <Params>
+      <Item name="densitysampler" type="Texture" />
+      <Item name="normalsampler" type="Texture" />
+      <Item name="detaildensitysampler" type="Texture" />
+      <Item name="detailnormalsampler" type="Texture" />
+      <Item name="detaildensity2sampler" type="Texture" />
+      <Item name="detailnormal2sampler" type="Texture" />
+      <Item name="lowresdensitysampler" type="Texture" />
+      <Item name="lowresnormalsampler" type="Texture" />
+      <Item length="16" name="grescaleuv3" type="CBuffer" value_type="float4" w="0" x="4" y="0.5" z="0" />
+      <Item length="16" name="grescaleuv2" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="grescaleuv1" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="guvoffset3" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="guvoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="48" name="guvoffset" type="CBuffer" value_type="float3x4" value="0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0" />
+      <Item length="16" name="ganimblendweights" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="ganimsculpt" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="ganimcombine" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gwraplighting_msaaref" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gscalediffusefillambient" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gpiercinglightpower_strength_normalstrength_thickness" type="CBuffer" value_type="float4" w="1" x="1" y="1" z="1" />
+      <Item length="16" name="gscatterg_gsquared_phasemult_scale" type="CBuffer" value_type="float4" w="1" x="-0.75" y="0.5625" z="2.1" />
+      <Item length="16" name="gdensityshiftscale" type="CBuffer" value_type="float4" w="0" x="0" y="1" z="0" />
+      <Item length="16" name="gbouncecolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gambientcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="gcloudcolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsuncolor" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="gsundirection" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="westcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="eastcolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="skycolor" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_traintrack</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="terraindiffusesampler1" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler2" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler3" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler4" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler5" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler6" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler1" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler2" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler3" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler4" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler5" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler6" type="Texture" uv="0"/>
+      <Item name="terrainblendmap1" type="Texture" uv="0"/>
+      <Item name="terrainblendmap2" type="Texture" uv="0"/>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="16" name="directstrength" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="terrainamboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.85" y="0" z="0" />
+      <Item length="16" name="terrainamboccsunfactor" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="amboccstrength" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="minbumpselfshadow" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexbump456" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="megatexbump123" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="megatexspecularexponent456" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="megatexspecularexponent123" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensity456" type="CBuffer" value_type="float4" w="0" x="0.05" y="0.05" z="0.05" />
+      <Item length="16" name="megatexspecularintensity123" type="CBuffer" value_type="float4" w="0" x="0.05" y="0.05" z="0.05" />
+      <Item length="16" name="megatexspecularintensityscale2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="blendmapoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="-1.804687" z="0" />
+      <Item length="16" name="blendmapscale2" type="CBuffer" value_type="float4" w="0" x="3.640625" y="3.640625" z="0" />
+      <Item length="16" name="blendmapoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="-1.804687" z="0" />
+      <Item length="16" name="blendmapscale1" type="CBuffer" value_type="float4" w="0" x="3.640625" y="3.640625" z="0" />
+      <Item length="16" name="megatileoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatilerepetitions" type="CBuffer" value_type="float4" w="0" x="192" y="192" z="0" />
+      <Item length="16" name="bumpiness_terrain456" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="bumpiness_terrain123" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain_blend</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler1" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler2" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler3" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler4" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler5" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler6" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler1" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler2" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler3" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler4" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler5" type="Texture" uv="0"/>
+      <Item name="terrainnormalsampler6" type="Texture" uv="0"/>
+      <Item name="terrainblendmap1" type="Texture" uv="0"/>
+      <Item name="terrainblendmap2" type="Texture" uv="0"/>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="directstrength" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="terrainamboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.85" y="0" z="0" />
+      <Item length="16" name="terrainamboccsunfactor" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="amboccstrength" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="minbumpselfshadow" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexbump456" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="megatexbump123" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="megatexspecularexponent456" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="megatexspecularexponent123" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensity456" type="CBuffer" value_type="float4" w="0" x="0.05" y="0.05" z="0.05" />
+      <Item length="16" name="megatexspecularintensity123" type="CBuffer" value_type="float4" w="0" x="0.05" y="0.05" z="0.05" />
+      <Item length="16" name="megatexspecularintensityscale2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="blendmapoffset2" type="CBuffer" value_type="float4" w="0" x="0" y="-1.804687" z="0" />
+      <Item length="16" name="blendmapscale2" type="CBuffer" value_type="float4" w="0" x="3.640625" y="3.640625" z="0" />
+      <Item length="16" name="blendmapoffset1" type="CBuffer" value_type="float4" w="0" x="0" y="-1.804687" z="0" />
+      <Item length="16" name="blendmapscale1" type="CBuffer" value_type="float4" w="0" x="3.640625" y="3.640625" z="0" />
+      <Item length="16" name="megatileoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatilerepetitions" type="CBuffer" value_type="float4" w="0" x="192" y="192" z="0" />
+      <Item length="16" name="bumpiness_terrain456" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="bumpiness_terrain123" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="1" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="bumpselfshadowamount" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_ao</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="terrainblendmap1" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="1"/>
+      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.05" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="blendmapoffsetcliff" type="CBuffer" value_type="float4" w="0" x="0" y="-1.804687" z="0" />
+      <Item length="16" name="blendmapscalecliff" type="CBuffer" value_type="float4" w="0" x="3.640625" y="3.640625" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="bumpselfshadowamount" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_river_water</Name>
+    <DrawBucket>4</DrawBucket>
+    <Params>
+      <Item name="flowsampler" type="Texture" />
+      <Item name="riverfoamsampler" type="Texture" />
+      <Item name="foamanimsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="reflectionsampler" type="Texture" />
+      <Item name="wcEbyqA_0x3DACADFB" type="Texture" />
+      <Item length="16" name="dwavedistancefalloffj" type="CBuffer" value_type="float4" w="0" x="50" y="50" z="0" />
+      <Item length="16" name="dwavedistancefalloff" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="dwavenoisemagnitudej" type="CBuffer" value_type="float4" w="0" x="0.002" y="0.002" z="0" />
+      <Item length="16" name="dwavenoisemagnitude" type="CBuffer" value_type="float4" w="0" x="0.002" y="0" z="0" />
+      <Item length="16" name="dwavenoisedtj" type="CBuffer" value_type="float4" w="0" x="0.008" y="0.008" z="0" />
+      <Item length="16" name="dwavenoisedt" type="CBuffer" value_type="float4" w="0" x="0.008" y="0" z="0" />
+      <Item length="16" name="dwavenoisescalej" type="CBuffer" value_type="float4" w="0" x="0.003" y="0.003" z="0" />
+      <Item length="16" name="dwavenoisescale" type="CBuffer" value_type="float4" w="0" x="0.003" y="0" z="0" />
+      <Item length="16" name="dwavedirection2" type="CBuffer" value_type="float4" w="0" x="-1" y="1.1" z="0" />
+      <Item length="16" name="dwaveamp2" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="dwaveperiod2" type="CBuffer" value_type="float4" w="0" x="2.1" y="0" z="0" />
+      <Item length="16" name="dwavedirection1" type="CBuffer" value_type="float4" w="0" x="-1" y="1" z="0" />
+      <Item length="16" name="dwaveamp1" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="dwaveperiod1" type="CBuffer" value_type="float4" w="0" x="3" y="0" z="0" />
+      <Item length="16" name="jELjlNA_0x66224BDC" type="CBuffer" value_type="float4" w="0" x="0.02037" y="0" z="0" />
+      <Item length="16" name="refractionindex" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="refractiondepthscalar" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="waterloduvscalesfoam" type="CBuffer" value_type="float4" w="0" x="7" y="3.5" z="0" />
+      <Item length="16" name="waterloduvoffsetsfoam" type="CBuffer" value_type="float4" w="0" x="-0.9375" y="-0.84375" z="0" />
+      <Item length="16" name="waterloduvscalesflow" type="CBuffer" value_type="float4" w="0" x="7" y="3.5" z="0" />
+      <Item length="16" name="waterloduvoffsetsflow" type="CBuffer" value_type="float4" w="0" x="-0.9375" y="-0.84375" z="0" />
+      <Item length="16" name="waterloduvscalesfog" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="waterloduvoffsetsfog" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="ripplespeed" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="ripplescale" type="CBuffer" value_type="float4" w="0" x="2.3" y="0" z="0" />
+      <Item length="16" name="rippleflowamplitude" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="rippleamplitude" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="foamspecularexponent" type="CBuffer" value_type="float4" w="0" x="60" y="0" z="0" />
+      <Item length="16" name="foamspecularintensity" type="CBuffer" value_type="float4" w="0" x="0.05" y="0" z="0" />
+      <Item length="16" name="foamambientintensity" type="CBuffer" value_type="float4" w="0" x="0.05" y="0" z="0" />
+      <Item length="16" name="foambumpamplitude" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="foamflowexponent" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="foamcutoffwidth" type="CBuffer" value_type="float4" w="0" x="0.6" y="0" z="0" />
+      <Item length="16" name="foamcutoff" type="CBuffer" value_type="float4" w="0" x="0.42" y="0" z="0" />
+      <Item length="16" name="foamspeed" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="foamscale" type="CBuffer" value_type="float4" w="0" x="5" y="0" z="0" />
+      <Item length="16" name="foamwraplight" type="CBuffer" value_type="float4" w="0" x="0.7" y="0" z="0" />
+      <Item length="16" name="depthblendbias" type="CBuffer" value_type="float4" w="0" x="1.94" y="0" z="0" />
+      <Item length="16" name="specularskyworldblend" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="specexponent" type="CBuffer" value_type="float4" w="0" x="123.952" y="0" z="0" />
+      <Item length="16" name="specularintensity" type="CBuffer" value_type="float4" w="0" x="5.1" y="0" z="0" />
+      <Item length="16" name="reflectionintensity" type="CBuffer" value_type="float4" w="0" x="0.84" y="0" z="0" />
+      <Item length="16" name="reflectiondistortion" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="fresnelfalloff" type="CBuffer" value_type="float4" w="0" x="6" y="0" z="0" />
+      <Item length="16" name="fresnelstrength" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="waterfogclarity" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="waterfogdensity" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="currenttime" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="256" name="g" type="CBuffer" value_type="float16x4" value="0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 0, 1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 1, 1, 0, 0, 0, -1, 1, 0, -1, 1, 0, 0, 0, -1, -1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PCTT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_alpha</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="1"/>
+      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.05" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="bumpselfshadowamount" type="CBuffer" value_type="float4" w="0" x="0.25" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_river_water_joint</Name>
+    <DrawBucket>4</DrawBucket>
+    <Params>
+      <Item name="flowsampler" type="Texture" />
+      <Item name="riverfoamsampler" type="Texture" />
+      <Item name="foamanimsampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="reflectionsampler" type="Texture" />
+      <Item name="wcEbyqA_0x3DACADFB" type="Texture" />
+      <Item length="16" name="dwavedistancefalloffj" type="CBuffer" value_type="float4" w="0" x="50" y="50" z="0" />
+      <Item length="16" name="dwavedistancefalloff" type="CBuffer" value_type="float4" w="0" x="50" y="0" z="0" />
+      <Item length="16" name="dwavenoisemagnitudej" type="CBuffer" value_type="float4" w="0" x="0.002" y="0" z="0" />
+      <Item length="16" name="dwavenoisemagnitude" type="CBuffer" value_type="float4" w="0" x="0.002" y="0" z="0" />
+      <Item length="16" name="dwavenoisedtj" type="CBuffer" value_type="float4" w="0" x="0.008" y="0" z="0" />
+      <Item length="16" name="dwavenoisedt" type="CBuffer" value_type="float4" w="0" x="0.008" y="0" z="0" />
+      <Item length="16" name="dwavenoisescalej" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="dwavenoisescale" type="CBuffer" value_type="float4" w="0" x="0.003" y="0" z="0" />
+      <Item length="16" name="dwavedirection2" type="CBuffer" value_type="float4" w="0" x="-1" y="0" z="0" />
+      <Item length="16" name="dwaveamp2" type="CBuffer" value_type="float4" w="0" x="0.08" y="0" z="0" />
+      <Item length="16" name="dwaveperiod2" type="CBuffer" value_type="float4" w="0" x="5" y="0" z="0" />
+      <Item length="16" name="dwavedirection1" type="CBuffer" value_type="float4" w="0" x="-1" y="0.5" z="0" />
+      <Item length="16" name="dwaveamp1" type="CBuffer" value_type="float4" w="0" x="0.2" y="0" z="0" />
+      <Item length="16" name="dwaveperiod1" type="CBuffer" value_type="float4" w="0" x="3.5" y="0" z="0" />
+      <Item length="16" name="jELjlNA_0x66224BDC" type="CBuffer" value_type="float4" w="0" x="0.02037" y="0" z="0" />
+      <Item length="16" name="refractionindex" type="CBuffer" value_type="float4" w="0" x="0.75" y="0" z="0" />
+      <Item length="16" name="refractiondepthscalar" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="waterloduvscalesfoam" type="CBuffer" value_type="float4" w="0" x="3.5" y="3.5" z="0" />
+      <Item length="16" name="waterloduvoffsetsfoam" type="CBuffer" value_type="float4" w="0" x="-1.71875" y="-2.5" z="0" />
+      <Item length="16" name="waterloduvscalesflow" type="CBuffer" value_type="float4" w="0" x="3.5" y="3.5" z="0" />
+      <Item length="16" name="waterloduvoffsetsflow" type="CBuffer" value_type="float4" w="0" x="-1.71875" y="-2.5" z="0" />
+      <Item length="16" name="waterloduvscalesfog" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="waterloduvoffsetsfog" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="ripplespeedj" type="CBuffer" value_type="float4" w="0" x="0.38" y="0.07" z="0" />
+      <Item length="16" name="ripplescalej" type="CBuffer" value_type="float4" w="0" x="10" y="3.4" z="0" />
+      <Item length="16" name="rippleflowamplitudej" type="CBuffer" value_type="float4" w="0" x="0.5" y="0.5" z="0" />
+      <Item length="16" name="rippleamplitudej" type="CBuffer" value_type="float4" w="0" x="0.55" y="5" z="0" />
+      <Item length="16" name="foamspecularexponentj" type="CBuffer" value_type="float4" w="0" x="15" y="10" z="0" />
+      <Item length="16" name="foamspecularintensityj" type="CBuffer" value_type="float4" w="0" x="2" y="2" z="0" />
+      <Item length="16" name="foamambientintensityj" type="CBuffer" value_type="float4" w="0" x="0.1" y="0.1" z="0" />
+      <Item length="16" name="foambumpamplitudej" type="CBuffer" value_type="float4" w="0" x="0.1" y="0.05" z="0" />
+      <Item length="16" name="foamflowexponentj" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="foamcutoffwidthj" type="CBuffer" value_type="float4" w="0" x="0.6" y="1" z="0" />
+      <Item length="16" name="foamcutoffj" type="CBuffer" value_type="float4" w="0" x="0.4" y="0.4" z="0" />
+      <Item length="16" name="foamspeedj" type="CBuffer" value_type="float4" w="0" x="2.5" y="1" z="0" />
+      <Item length="16" name="foamscalej" type="CBuffer" value_type="float4" w="0" x="20" y="10" z="0" />
+      <Item length="16" name="foamwraplight" type="CBuffer" value_type="float4" w="0" x="0.7" y="0" z="0" />
+      <Item length="16" name="depthblendbiasj" type="CBuffer" value_type="float4" w="0" x="3.27" y="1.79" z="0" />
+      <Item length="16" name="specularskyworldblend" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="specexponentj" type="CBuffer" value_type="float4" w="0" x="256" y="256" z="0" />
+      <Item length="16" name="specularintensityj" type="CBuffer" value_type="float4" w="0" x="8" y="15.2" z="0" />
+      <Item length="16" name="reflectionintensityj" type="CBuffer" value_type="float4" w="0" x="0.605" y="0.355" z="0" />
+      <Item length="16" name="reflectiondistortionj" type="CBuffer" value_type="float4" w="0" x="0.255" y="0.231" z="0" />
+      <Item length="16" name="fresnelfalloffj" type="CBuffer" value_type="float4" w="0" x="1.4" y="3" z="0" />
+      <Item length="16" name="fresnelstrength" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="waterfogclarityj" type="CBuffer" value_type="float4" w="0" x="1.172" y="1" z="0" />
+      <Item length="16" name="waterfogdensityj" type="CBuffer" value_type="float4" w="0" x="0.12" y="0.4" z="0" />
+      <Item length="16" name="_ambientcutoffv" type="CBuffer" value_type="float4" w="0" x="0.35" y="0.2" z="0" />
+      <Item length="16" name="currenttime" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="256" name="g" type="CBuffer" value_type="float16x4" value="0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 0, 1, 0, 1, 0, -1, 0, 1, 0, 1, 0, -1, 0, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 1, 0, 0, 1, -1, 0, 0, -1, -1, 0, 1, 1, 0, 0, 0, -1, 1, 0, -1, 1, 0, 0, 0, -1, -1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PCTT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_flattenterrain</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="detailsampler" type="Texture" />
+      <Item name="detailnormalmapsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="192" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="192" y="0" z="0" />
+      <Item length="16" name="detailmapscale" type="CBuffer" value_type="float4" w="0" x="0.65" y="0" z="0" />
+      <Item length="16" name="detailmapuvscale" type="CBuffer" value_type="float4" w="0" x="192" y="192" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="cutflattenbumpoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="cutflattenbumpscale" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="cutflattendiffuseoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="cutflattendiffusescale" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall_ao_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="flattenbumpsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="1" />
+      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale2" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="megatexspecularintensityscale1" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.05" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="blendmapoffsetcliffflatten" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="blendmapscalecliffflatten" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="bumpselfshadowamount" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_flattenterrain_blend</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="flattentexturesampler" type="Texture" />
+      <Item name="flattenbumpsampler" type="Texture" />
+      <Item name="flattendetailsampler" type="Texture" />
+      <Item name="flattendetailnormalmapsampler" type="Texture" />
+      <Item name="FSEDaeA_0xB2065800" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalev" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleu" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleflatten" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscalevflatten" type="CBuffer" value_type="float4" w="0" x="192" y="0" z="0" />
+      <Item length="16" name="detailnormalmapscaleuflatten" type="CBuffer" value_type="float4" w="0" x="192" y="0" z="0" />
+      <Item length="16" name="detailmapscaleflatten" type="CBuffer" value_type="float4" w="0" x="0.65" y="0" z="0" />
+      <Item length="16" name="detailmapuvscaleflatten" type="CBuffer" value_type="float4" w="0" x="192" y="192" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="18" y="0" z="0" />
+      <Item length="16" name="bumpinessflatten" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="cutflattenblendbumpoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="cutflattenblendbumpscale" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="cutflattenblenddiffuseoffset" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="cutflattenblenddiffusescale" type="CBuffer" value_type="float4" w="0" x="1" y="1" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_traintrack_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_cliffwall</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.1" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="65" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTXX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_terrain_low_lod</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item length="16" name="tilecenterpos" type="CBuffer" value_type="float4" w="528" x="-2559.7893" y="314.60107" z="511.83228" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNC</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_lod4_water</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item length="16" name="tilecenterpos" type="CBuffer" value_type="float4" w="528" x="1498.9248" y="76.27783" z="512.0005" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNC</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_window_glow</Name>
+    <DrawBucket>8</DrawBucket>
+    <Params>
+      <Item length="16" name="gcameradistanceatmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="gmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="0.3" y="0" z="0" />
+      <Item length="16" name="keyframeindex" type="CBuffer" value_type="float4" w="0" x="3" y="0" z="0" />
+      <Item length="16" name="endfadedist" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="beginfadedist" type="CBuffer" value_type="float4" w="0" x="15" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNC</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_door_glow</Name>
+    <DrawBucket>8</DrawBucket>
+    <Params>
+      <Item length="16" name="gsoftparticlerange" type="CBuffer" value_type="float4" w="0" x="1.5" y="0" z="0" />
+      <Item length="16" name="gcameradistanceatmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="gmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="keyframeindex" type="CBuffer" value_type="float4" w="0" x="4" y="0" z="0" />
+      <Item length="16" name="endfadedist" type="CBuffer" value_type="float4" w="0" x="15" y="0" z="0" />
+      <Item length="16" name="beginfadedist" type="CBuffer" value_type="float4" w="0" x="8" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNC</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_nodirt_singlesided</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_decal</Name>
+    <DrawBucket>1</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="texturesampler2" type="Texture" />
+      <Item name="texturesampler3" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_mirror</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item name="specsampler" type="Texture" />
+      <Item name="reflectionsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="reflectionintensity" type="CBuffer" value_type="float4" w="0" x="0.6" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_low_lod_singlesided</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="texturesampler2" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_bump_ambocc_cpv</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item name="bumpsampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.15" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNTTX</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_graffiti</Name>
+    <DrawBucket>3</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" />
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="gcameradistanceatmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="100" y="0" z="0" />
+      <Item length="16" name="gmaxdisplacement" type="CBuffer" value_type="float4" w="0" x="0.4" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCT</Item>
+    </Semantics>
+  </Item>
+  <Item>
+    <Name>rdr2_layer_2_nospec_ambocc_bridge</Name>
+    <DrawBucket>0</DrawBucket>
+    <Params>
+      <Item name="texturesampler" type="Texture" uv="0"/>
+      <Item name="texturesampler2" type="Texture" uv="1"/>
+      <Item name="bumpsampler" type="Texture" uv="0"/>
+      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
+      <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
+      <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
+      <Item length="16" name="specularfactor" type="CBuffer" value_type="float4" w="0" x="30" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmax" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapmin" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculardirtmapoffset" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="speculardirtmapinfluence" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="dirtmapfactor" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="fresnelterm" type="CBuffer" value_type="float4" w="0" x="0.9" y="0" z="0" />
+      <Item length="16" name="speculargreenbias" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+      <Item length="16" name="speculargreenscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
+      <Item length="16" name="physicsmaterial" type="CBuffer" value_type="float4" w="0" x="0" y="0" z="0" />
+    </Params>
+    <Semantics>
+      <Item>PNCTTTX</Item>
+    </Semantics>
+  </Item>
+</RDR1Shaders>

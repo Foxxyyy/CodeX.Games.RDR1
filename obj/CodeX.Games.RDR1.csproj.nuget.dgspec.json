@@ -1,0 +1,178 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {}
+  },
+  "projects": {
+    "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "projectName": "CodeX.Core",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj",
+        "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0-windows"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
+          "dependencies": {
+            "BepuPhysics": {
+              "target": "Package",
+              "version": "[2.5.0-beta.24, )"
+            },
+            "BepuUtilities": {
+              "target": "Package",
+              "version": "[2.5.0-beta.24, )"
+            },
+            "SharpDX": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpDX.D3DCompiler": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpDX.Direct2D1": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpDX.Direct3D11": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpDX.XAudio2": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpDX.XInput": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "System.Diagnostics.EventLog": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "projectName": "CodeX.Games.RDR1",
+        "projectPath": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Games.RDR1\\CodeX.Games.RDR1.csproj",
+        "packagesPath": "C:\\Users\\fumol\\.nuget\\packages\\",
+        "outputPath": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Games.RDR1\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\fumol\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0-windows"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
+            "projectReferences": {
+              "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj": {
+                "projectPath": "C:\\Research\\CodeX\\CodeX-028\\CodeX-main\\CodeX.Core\\CodeX.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
+          "dependencies": {
+            "Microsoft.Win32.Registry": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
