@@ -1,22 +1,21 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Shaders;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
-using System.Diagnostics;
-using System.Xml.Linq;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6VisualDictionary : Rsc6BlockBaseMap, MetaNode //rdrVisualDictionary
+    [TC(typeof(EXP))]
+    public class Rsc6VisualDictionary : Rsc6BlockBaseMap, MetaNode //rdrVisualDictionary
     {
         public override ulong BlockLength => 60;
         public override uint VFT { get; set; } = 0x01908FF8;
@@ -138,7 +137,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6FragDrawable : Rsc6BlockBaseMap, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6FragDrawable : Rsc6BlockBaseMap, MetaNode //rdrFragLod
     {
         //WFD file root object
 
@@ -176,7 +176,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableLod : PieceLod, IRsc6Block
+    [TC(typeof(EXP))]
+    public class Rsc6DrawableLod : PieceLod, IRsc6Block
     {
         public ulong BlockLength => 8;
         public ulong FilePosition { get; set; }
@@ -201,15 +202,17 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 ModelsData = new(models);
                 Models = ModelsData.Items;
-            } 
+            }
         }
+
         public override void Write(MetaNodeWriter writer)
         {
             writer.WriteNodeArray("Models", Models);
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableGeometry : Mesh, IRsc6Block //rage::grmGeometry + rage::grmGeometryQB
+    [TC(typeof(EXP))]
+    public class Rsc6DrawableGeometry : Mesh, IRsc6Block //rage::grmGeometry + rage::grmGeometryQB
     {
         /*
          * grmGeometryQB represents a "packet" of vertex data, which is the data sent down to the hardware for rendering.
@@ -274,7 +277,6 @@ namespace CodeX.Games.RDR1.RSC6
             OffsetBuffer = reader.ReadUInt32();
             IndexOffset = reader.ReadUInt32();
             Unknown_3Ch = reader.ReadUInt32();
-
             BoneIds = reader.ReadRawArrItems(BoneIds, BoneIdsCount);
 
             if (VertexBuffer.Item != null) //hack to fix stupid "locked" things
@@ -298,7 +300,7 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i = 0; i < elemcount; i++)
                 {
                     var elem = elems[i];
-                    int elemoffset = elem.Offset;
+                    var elemoffset = elem.Offset;
 
                     switch (elem.Format)
                     {
@@ -331,7 +333,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (PrimitiveType == 3)
                 Indices = IndexBuffer.Item?.Indices.Items;
             else
-                Indices = ConvertStripToTriangles(IndexBuffer.Item?.Indices.Items).ToArray();
+                Indices = [.. ConvertStripToTriangles(IndexBuffer.Item?.Indices.Items)];
 
             VertexData = numArray;
         }
@@ -524,11 +526,18 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x227C5611: //rdr2_cliffwall_alpha
                         SetupClifwallTerrainShader(shader);
                         break;
-                    case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal
+                    case 0x707EF967: //rdr2_flattenterrain_blend
+                        SetFlatTerrainBlending(shader);
+                        break;
+                    case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal, verify
                     case 0x5A170205: //rdr2_layer_2_nospec_ambocc
+                    case 0x2e1239a8: //rdr2_low_lod
+                    case 0xd70c66e0: //rdr2_low_lod_singlesided
+                    case 0x2EE5E6BB: //rdr2_bump_spec_ao_dirt_cloth
                         SetDiffuse2Shader(shader);
                         break;
                     case 0x24982D70: //rdr2_layer_3_nospec_normal_ambocc
+                    case 0x24c91669: //rdr2_low_lod_decal
                         SetDiffuse3Shader(shader);
                         break;
                     case 0x173D5F9D: //rdr2_grass
@@ -541,18 +550,16 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0xA1100B4E: //rdr2_river_water
                     case 0x372E2B02: //rdr2_river_water_joint
                         SetupWaterShader(shader, model);
-                        return;//don't mess with buckets or other params below
-                    #endregion
+                        return; //Don't mess with buckets or other params below
+                    #endregion specific shaders
+
                     #region default shaders
-                    case 0x707EF967: //rdr2_flattenterrain_blend //(PNCCTTXX) TODO: terrain lods have "bands" - needs 2 layers and tinting?
                     case 0xb71272ea: //rdr2_flattenterrain
                     case 0x387e0fde: //rdr2_low_lod_nodirt
                     case 0xa042c1ce: //rdr2_diffuse
-                    case 0x2e1239a8: //rdr2_low_lod
                     case 0x2e9c4c9e: //rdr2_bump_ambocc
                     case 0x32a4918e: //rdr2_alpha
                     case 0xaa95cd3f: //rdr2_poster
-                    case 0x24c91669: //rdr2_low_lod_decal
                     case 0x6c25115d: //rdr2_window_glow
                     case 0xed7cd8d7: //rdr2_low_lod_nodirt_singlesided
                     case 0x2fe0f698: //rdr2_bump_spec_ambocc_shared
@@ -560,7 +567,6 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x949ec19c: //rdr2_alpha_bspec_ao_shared
                     case 0x6b8805b0: //rdr2_pond_water
                     case 0x25a07a25: //rdr2_door_glow
-                    case 0xd70c66e0: //rdr2_low_lod_singlesided
                     case 0x0018e2b6: //rdr2_glass_notint_shared
                     case 0x72a21ffe: //rdr2_glass_nodistortion_bump_spec_ao
                     case 0xc47e1378: //rdr2_alpha_bspec_ao_cloth
@@ -574,16 +580,13 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x34454dee: //rdr2_bump_spec_ambocc_smooth_shared
                     case 0xf8a043a1: //rdr2_bump_spec_ao_cloth
                     case 0x4bc61b93: //rdr2_glass_notint
-                    case 0x2ee5e6bb: //rdr2_bump_spec_ao_dirt_cloth
                     case 0x66e8f6a0: //rdr2_alpha_blend
                     case 0xe3915961: //rdr2_cliffwall
                     case 0x27f82c88: //rdr2_cati
-                        SetupDefaultShader(shader);
-                        break;
-                    #endregion
                     default:
                         SetupDefaultShader(shader);
                         break;
+                    #endregion default shaders
                 }
 
                 switch (bucket)
@@ -621,7 +624,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x7668B157: //rdr2_glass_nodistortion_bump_spec_ao_shared
                     case 0x72A21FFE: //rdr2_glass_nodistortion_bump_spec_ao
-                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 0, 0)); //DecalMasks           
+                        ShaderInputs.SetFloat4(0x5C3AB6E9, new Vector4(1, 0, 0, 0)); //DecalMasks
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                     case 0xB71272EA: //rdr2_flattenterrain
@@ -680,13 +683,13 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0xF6712B81: //bumpiness
                             ShaderInputs.SetFloat(0xDF918855, parm.Vector.X * 0.5f); //BumpScale
                             break;
-                        case 0xBBEED254: //fresnelterm         //~0.3-1, low for metals, ~0.96 for nonmetals
+                        case 0xBBEED254: //fresnelterm //~0.3-1, low for metals, ~0.96 for nonmetals
                             sfresnel = parm.Vector.X;
                             break;
-                        case 0x484A5EBD: //specularcolorfactor   //0-1, final multiplier?
+                        case 0x484A5EBD: //specularcolorfactor //0-1, final multiplier?
                             sintensitymult = parm.Vector.X;
                             break;
-                        case 0x166E0FD1: //specularfactor    //10-150+?, higher is shinier
+                        case 0x166E0FD1: //specularfactor //10-150+?, higher is shinier
                             sfalloffmult = parm.Vector.X;
                             break;
                         case 0xE1322212: //mainuvmodulate
@@ -705,7 +708,7 @@ namespace CodeX.Games.RDR1.RSC6
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0x9B920BD, 25); //BlendMode
-            ShaderInputs.SetFloat4(0x7CB163F5, Vector4.One);//"BumpScales"
+            ShaderInputs.SetFloat4(0x7CB163F5, Vector4.One); //BumpScales
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
@@ -779,22 +782,73 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (prm.Hash)
                     {
                         case 0x66C79BD6: //megatilerepetitions, how many times, across the 0-1 of the UV channel map, do the tiles repeat
-                            ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector); //"UVLookupIndex"
+                            ShaderInputs.SetFloat4(0x401BDDBB, prm.Vector); //UVLookupIndex
                             break;
                         case 0x4385A0D2: //megatileoffset - offset of the UV for the tile when at (0,0) in the channel map
-                            ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector); //"UVScaleOffset"      float4
+                            ShaderInputs.SetFloat4(0xAD966CCC, prm.Vector); //UVScaleOffset
                             break;
                         case 0x9FBAB08B: //blendmapscale1
-                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector); //LODColourLevels    float4
+                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector); //LODColourLevels
                             break;
                         case 0xAC181AA0: //blendmapoffset1
-                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector); //LODColourBlends    float4
+                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector); //LODColourBlends
                             break;
                         case 0x62503593: //blendmapscale2
-                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector); //HBBScales          float4
+                            ShaderInputs.SetFloat4(0xB0379AA1, prm.Vector); //HBBScales
                             break;
                         case 0xBDDEBE2D: //blendmapoffset2
-                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector); //HBBOffsets         float4
+                            ShaderInputs.SetFloat4(0xFF6E0669, prm.Vector); //HBBOffsets
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void SetFlatTerrainBlending(Rsc6ShaderFX s)
+        {
+            SetCoreShader<BlendShader>(ShaderBucket.Solid);
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0x9B920BD, 26); //BlendMode
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+            Textures = new Texture[3];
+
+            for (int k = 0; k < parms.Length; k++)
+            {
+                var prm = parms[k];
+                if (prm.DataType == 0)
+                {
+                    switch (prm.Hash)
+                    {
+                        case 0x2B5170FD: //texturesampler
+                            Textures[0] = prm.Texture;
+                            break;
+                        case 0x46B7C64F: //bumpsampler
+                            Textures[1] = prm.Texture;
+                            break;
+                        case 0x8B3111A3: //flattentexturesampler
+                            Textures[2] = prm.Texture;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (prm.Hash)
+                    {
+                        case 0xF6712B81: //bumpiness
+                            ShaderInputs.SetFloat4(0x7CB163F5, prm.Vector * 0.5f); //BumpScales
+                            break;
+                        case 0xDCBE6337: //cutflattenblenddiffusescale
+                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector); //LODColourLevels
+                            break;
+                        case 0xE9ECAFA5: //cutflattenblenddiffuseoffset
+                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector); //LODColourBlends
                             break;
                         default:
                             break;
@@ -824,12 +878,15 @@ namespace CodeX.Games.RDR1.RSC6
                         case 0x2B5170FD: //texturesampler
                             Textures[0] = prm.Texture;
                             break;
+
                         case 0x46B7C64F: //bumpsampler
                             Textures[1] = prm.Texture;
                             break;
+
                         case 0x0ED966D5: //terrainblendmap1
                             Textures[2] = prm.Texture;
                             break;
+
                         default:
                             break;
                     }
@@ -843,11 +900,11 @@ namespace CodeX.Games.RDR1.RSC6
                             break;
                         case 0xE55CF27C: //blendmapscalecliffflatten
                         case 0x606B83EE: //blendmapscalecliff
-                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector); //LODColourLevels    float4
+                            ShaderInputs.SetFloat4(0xA83AA336, prm.Vector); //LODColourLevels
                             break;
                         case 0x92165D5E: //blendmapoffsetcliffflatten
                         case 0x99276EAE: //blendmapoffsetcliff
-                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector); //LODColourBlends    float4
+                            ShaderInputs.SetFloat4(0x8D01D9A3, prm.Vector); //LODColourBlends
                             break;
                         default:
                             break;
@@ -999,7 +1056,6 @@ namespace CodeX.Games.RDR1.RSC6
                 }
                 else
                 {
-
                     switch (parm.Hash)
                     {
                         case 0xB33E5862: //gsuncolor
@@ -1020,7 +1076,9 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
             ShaderInputs.SetUInt32(0x65DD2E63, 1); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 1); //MeshWindAmount
+            ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode
             ShaderInputs.SetFloat(0xB52CC88F, BoundingBox.Size.Z); //MeshWindHeight
+            ShaderInputs.SetUInt32(0x2905BED7, 1); //ColourTintMode
             ShaderState = ShaderState.Alpha;
 
             if (s == null) return;
@@ -1132,7 +1190,10 @@ namespace CodeX.Games.RDR1.RSC6
             if (parms == null) return;
 
             Textures = new Texture[3];
-            //Textures[2] = new Rsc6TextureBase() { Name = "waterfoam" }; //placeholder to signal load the actual texture here
+            Textures[2] = new Rsc6TextureBase() //Placeholder to signal load the actual texture here
+            {
+                Name = "waterfoam"
+            };
 
             var rippleSize = new Vector3(1.0f, 1.0f, 0.25f * rippleSign);
             var rippleSpeed = 1.0f;
@@ -1210,7 +1271,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableModel : Model, IRsc6Block //rage::grmModel
+    [TC(typeof(EXP))]
+    public class Rsc6DrawableModel : Model, IRsc6Block //rage::grmModel
     {
         /*
          * Base class for all new model code rendered by RAGE.
@@ -1364,7 +1426,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6VertexBuffer : Rsc6BlockBase, MetaNode //rage::grcVertexBuffer
+    [TC(typeof(EXP))]
+    public class Rsc6VertexBuffer : Rsc6BlockBase, MetaNode //rage::grcVertexBuffer
     {
         public override ulong BlockLength => 64;
         public uint VFT { get; set; } = 0x01858684;
@@ -1484,7 +1547,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6IndexBuffer : Rsc6BlockBase //rage::grcIndexBuffer
+    [TC(typeof(EXP))]
+    public class Rsc6IndexBuffer : Rsc6BlockBase //rage::grcIndexBuffer
     {
         public override ulong BlockLength => 48;
         public uint VFT { get; set; } = 0x01858D60;
@@ -1534,7 +1598,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Drawable : Piece, IRsc6Block //rmcDrawable (grmShaderGroup + crSkeletonData + rmcLodGroup)
+    [TC(typeof(EXP))]
+    public class Rsc6Drawable : Piece, IRsc6Block //rmcDrawable (grmShaderGroup + crSkeletonData + rmcLodGroup)
     {
         /*
          * An rmcDrawable contains up to four levels of detail; each level of detail
@@ -1813,45 +1878,35 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public void ApplyTextures(Rsc6TextureDictionary txd)
+        public void ApplyTextures(Dictionary<JenkHash, Rsc6Texture> dict)
         {
-            //if(txd!=null)return;
-            var dict = txd?.DictStr;
-            var dict2 = txd?.Dict;
-            if (dict == null) return;
-            if (dict2 == null) return;
-            if (AllModels == null) return;
-            for (int m = 0; m < AllModels.Length; m++)
+            if (AllModels == null || dict == null) return;
+            foreach (var model in AllModels)
             {
-                var model = AllModels[m];
-                if (model == null) continue;
-                if (model.Meshes == null) continue;
-                for (int n = 0; n < model.Meshes.Length; n++)
+                if (model?.Meshes == null) continue;
+                foreach (var mesh in model.Meshes)
                 {
-                    var mesh = model.Meshes[n];
-                    if (mesh == null) continue;
-                    if (mesh.Textures == null) continue;
+                    if (mesh?.Textures == null) continue;
                     for (int i = 0; i < mesh.Textures.Length; i++)
                     {
                         var texture = mesh.Textures[i];
-                        if (texture == null) continue;
-                        //if (texture.Data != null) continue;//it's already loaded - need to replace or not? TODO
-                        var texnamel = texture.Name?.ToLowerInvariant() ?? "";
-                        if (dict.TryGetValue(texnamel, out var packtex))
+                        if (texture?.Name == null) continue;
+
+                        var hash = JenkHash.GenHash(texture.Name.ToLowerInvariant().Replace(".dds", ""));
+                        if (dict.TryGetValue(hash, out var newTexture))
                         {
-                            mesh.Textures[i] = packtex;
+                            mesh.Textures[i] = newTexture;
                         }
-                        else if (dict2.TryGetValue(texnamel, out packtex))
-                        {
-                            mesh.Textures[i] = packtex;
-                        }
-                        else
-                        { }
                     }
                 }
             }
         }
 
+        public void ApplyTextures(Rsc6TextureDictionary txd)
+        {
+            if (txd?.Dict == null) return;
+            ApplyTextures(txd.Dict);
+        }
 
         private void CreateTexturePack(GameArchiveFileInfo e)
         {
@@ -1890,7 +1945,7 @@ namespace CodeX.Games.RDR1.RSC6
             DrawBucketMaskVlow = vmask;
         }
 
-        private byte BuildMask(Rsc6DrawableModel[] models) //TODO: make sure this works
+        private static byte BuildMask(Rsc6DrawableModel[] models) //TODO: make sure this works
         {
             byte mask = 0;
             if (models != null)
@@ -1909,7 +1964,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Skeleton : IRsc6Block, MetaNode //rage::crSkeleton
+    [TC(typeof(EXP))]
+    public class Rsc6Skeleton : IRsc6Block, MetaNode //rage::crSkeleton
     {
         /*
          * Instance of a particular skeleton.
@@ -1985,7 +2041,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Bone : IRsc6Block, MetaNode //rage::crBone
+    [TC(typeof(EXP))]
+    public class Rsc6Bone : IRsc6Block, MetaNode //rage::crBone
     {
         public ulong BlockLength => 80;
         public ulong FilePosition { get; set; }
@@ -2030,7 +2087,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SkeletonData : Skeleton, IRsc6Block //rage::crSkeletonData
+    [TC(typeof(EXP))]
+    public class Rsc6SkeletonData : Skeleton, IRsc6Block //rage::crSkeletonData
     {
         /*
          * Holds data that applies to all crSkeleton's of a particular type.
@@ -2391,14 +2449,15 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoneData : Bone, IRsc6Block //rage::crBoneData
+    [TC(typeof(EXP))]
+    public class Rsc6BoneData : Bone, IRsc6Block //rage::crBoneData
     {
         /*
          * The crBoneData holds data that is general to all instances of a particular matrix that belongs
          * to skeletons of the type of described by a particular crSkeletonData.
-         * 
+         *
          * Several crBoneData are owned by a crSkeletonData, the connections between them determine the structure of the skeleton.
-         * 
+         *
          * RDR1 Dofs :
          *     525310       root           (no min/max but pi x 2)            3 translations and 3 rotations (6DoF)
          *     524303                      (no min/max)                       0 translations and 3 rotations (3DoF)
@@ -2710,7 +2769,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SkeletonBoneTag : Rsc6BlockBase, MetaNode //rage::crSkeletonData::BoneIdData
+    [TC(typeof(EXP))]
+    public class Rsc6SkeletonBoneTag : Rsc6BlockBase, MetaNode //rage::crSkeletonData::BoneIdData
     {
         public override ulong BlockLength => 4;
         public Rsc6BoneIdEnum BoneTag { get; set; } //m_Id
@@ -2746,7 +2806,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SkeletonBoneData : Rsc6BlockBase
+    [TC(typeof(EXP))]
+    public class Rsc6SkeletonBoneData : Rsc6BlockBase
     {
         public override ulong BlockLength => BonesCount * 224;
         public uint BonesCount { get; set; }
@@ -2779,7 +2840,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6MatrixBuffer : IRsc6Block, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6MatrixBuffer : IRsc6Block, MetaNode
     {
         public ulong BlockLength => 8;
         public ulong FilePosition { get; set; }
@@ -2807,7 +2869,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderGroup : Rsc6BlockBase, MetaNode //rage::grmShaderGroup
+    [TC(typeof(EXP))]
+    public class Rsc6ShaderGroup : Rsc6BlockBase, MetaNode //rage::grmShaderGroup
     {
         public override ulong BlockLength => 32;
         public uint VFT { get; set; } = 0x00EEB23C;
@@ -2915,7 +2978,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderParameter : MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ShaderParameter : MetaNode
     {
         public byte RegisterCount { get; set; }
         public byte RegisterIndex { get; set; }
@@ -3005,6 +3069,7 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                     DataType = (Rsc6ShaderParamType)length;
                     break;
+
                 default:
                     break;
             }
@@ -3051,7 +3116,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderParametersBlock : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ShaderParametersBlock : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength
         {
@@ -3128,7 +3194,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6ShaderParametersBlock()
         {
-
         }
 
         public Rsc6ShaderParametersBlock(Rsc6ShaderFX owner)
@@ -3163,8 +3228,6 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     case Rsc6ShaderParamType.Texture:
                         var block = reader.ReadBlock<Rsc6TextureBase>(p.DataPointer);
-                        if (block is Rsc6Texture tex)
-                        { }
                         p.Texture = block;
                         ///////////p.Hash = new JenkHash(block?.Name);
                         //var tex = WfdFile.TextureDictionary.Item;
@@ -3329,7 +3392,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ShaderFX : Rsc6BlockBase, MetaNode //rage::grmShader + rage::grcInstanceData
+    [TC(typeof(EXP))]
+    public class Rsc6ShaderFX : Rsc6BlockBase, MetaNode //rage::grmShader + rage::grcInstanceData
     {
         public override ulong BlockLength => 32;
         public Rsc6Ptr<Rsc6ShaderParametersBlock> ParametersList { get; set; } //Data
@@ -3432,7 +3496,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6VertexDeclaration : Rsc6BlockBase, MetaNode //rage::grcFvf
+    [TC(typeof(EXP))]
+    public class Rsc6VertexDeclaration : Rsc6BlockBase, MetaNode //rage::grcFvf
     {
         /*
          * FVF - Flexible Vertex Format
@@ -3594,7 +3659,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public static class Rsc6VertexComponentTypes
+    [TC(typeof(EXP))]
+    public static class Rsc6VertexComponentTypes
     {
         public static int GetSizeInBytes(Rsc6VertexComponentType type)
         {
@@ -3781,14 +3847,16 @@ namespace CodeX.Games.RDR1.RSC6
         LOD_COUNT = 4
     }
 
-    [Flags] public enum Rsc6VertexBufferFlags : byte
+    [Flags]
+    public enum Rsc6VertexBufferFlags : byte
     {
         DYNAMIC = 1 << 0,
         PREALLOCATED_MEMORY = 1 << 1,
         READ_WRITE = 1 << 2
     }
 
-    [Flags] public enum Rsc6DoFs : uint //Degrees of freedom ({rotate,translate,scale} X {x,y,z}) and limits
+    [Flags]
+    public enum Rsc6DoFs : uint //Degrees of freedom ({rotate,translate,scale} X {x,y,z}) and limits
     {
         ROTATE_X = 1, //Can rotate on x-axis
         ROTATE_Y = 2, // Can rotate on y-axis

@@ -1,21 +1,19 @@
-﻿using System;
-using System.Linq;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using CodeX.Games.RDR1.Files;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1
 {
     public class RDR1Map : StreamingLevel<RDR1Game, RDR1MapFileCache, Rpf6FileManager>
     {
-
         public Dictionary<JenkHash, WsiFile> WsiFiles;
         public Dictionary<JenkHash, RDR1MapNode> MapNodes;
         public Dictionary<JenkHash, RDR1MapSector> MapSectors;
@@ -25,24 +23,19 @@ namespace CodeX.Games.RDR1
         public RDR1Grid TreeGrid;
         public RDR1Grid GrassGrid;
         public RDR1Grid BoundsGrid;
-
-
         public RDR1MapStatesFile MapStatesFile;
-
 
         public static string[] GetAreas()
         {
-            return new[] { "Armadillo", "Blackwater", "Beecher's Hope", "Chuparosa", "Cochinay", "El Presidio", "El Matadero", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Manzanita Post", "Nosalida", "Pacific Union RR Camp", "Plainview", "Rathskeller Fork", "Ridgewood Farm", "Tesoro Azul", "Thieve's Landing", "Torquemada", "Tumbleweed", "Twin Rocks" };
+            return ["Armadillo", "Blackwater", "Beecher's Hope", "Chuparosa", "Cochinay", "El Presidio", "El Matadero", "Escalera", "Fort Mercer", "Gaptooth Breach", "Las Hermanas", "MacFarlane's Ranch", "Manzanita Post", "Nosalida", "Pacific Union RR Camp", "Plainview", "Rathskeller Fork", "Ridgewood Farm", "Tesoro Azul", "Thieve's Landing", "Torquemada", "Tumbleweed", "Twin Rocks"];
         }
+
         public static readonly Setting StartPositionSetting = Settings.Register("RDR1Map.Area", SettingType.String, "Blackwater", "Change position", false, false, GetAreas());
         public static readonly Setting EnabledSetting = Settings.Register("RDR1Map.Enabled", SettingType.Bool, true, true);
         public static readonly Setting EnableInstancedGrass = Settings.Register("RDR1Map.EnableInstancedGrass", SettingType.Bool, true);
         public static readonly Setting TreesDistanceSetting = Settings.Register("RDR1Map.TreesDistance", SettingType.Float, 200.0f, false);
         public static readonly Setting GrassDistanceSetting = Settings.Register("RDR1Map.GrassDistance", SettingType.Float, 50.0f, false);
-        
-        //public Statistic NodeCountStat = Statistics.Register("RDR1Map.NodeCount", StatisticType.Counter);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
-
 
         public override BaseField[] GetFields()
         {
@@ -56,7 +49,7 @@ namespace CodeX.Games.RDR1
 
         public RDR1Map(RDR1Game game) : base(game, "RDR1 Map Level")
         {
-            SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f));//make the sun go from east to west instead of north to south (+Y is east!)
+            SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f)); //Make the sun go from east to west instead of north to south (+Y is east!)
 
             var position = StartPositionSetting.GetString() switch
             {
@@ -82,8 +75,7 @@ namespace CodeX.Games.RDR1
                 "Torquemada" => new Vector3(3456.4f, 370.5f, 80.7f),
                 "Tumbleweed" => new Vector3(2950.4f, -3941.5f, 32.6f),
                 "Twin Rocks" => new Vector3(2141.6f, -2430.9f, 28.0f),
-                //_ => new Vector3(1234.6f, 736.2f, 84.7f) //Blackwater by default
-                _ => new Vector3(0.0f, 0.0f, 0.0f) //Blackwater by default
+                _ => new Vector3(1234.6f, 736.2f, 84.7f) //Blackwater by default
             };
 
             Rsc6DataWriter.UseProjectExplorer = true;
@@ -115,16 +107,15 @@ namespace CodeX.Games.RDR1
             }
 
             var dfm = FileManager.DataFileMgr;
-
             Cache = new RDR1MapFileCache(this, FileManager);
             StreamPosition = DefaultSpawnPoint;
-            MapSectors = new Dictionary<JenkHash, RDR1MapSector>();
-            MapNodes = new Dictionary<JenkHash, RDR1MapNode>();
-
+            MapSectors = [];
+            MapNodes = [];
 
             Core.Engine.Console.Write("RDR1Map", "Loading sector info...");
-            WsiFiles = new Dictionary<JenkHash, WsiFile>();
+            WsiFiles = [];
             var wsientries = dfm.StreamEntries[Rpf6FileExt.wsi];
+
             foreach (var kvp in wsientries)
             {
                 var fe = kvp.Value;
@@ -135,6 +126,7 @@ namespace CodeX.Games.RDR1
 
                 var node = new RDR1MapNode(this, wsi);
                 MapNodes[fe.ShortNameHash] = node;
+
                 if (node.Sectors != null)
                 {
                     foreach (var sector in node.Sectors)
@@ -142,34 +134,23 @@ namespace CodeX.Games.RDR1
                         MapSectors[sector.NameHash] = sector;
                     }
                 }
-
             }
-
-
-
 
             Core.Engine.Console.Write("RDR1Map", "Loading terrain tiles...");
             InitTerrainTiles();
 
-
-
             Core.Engine.Console.Write("RDR1Map", "Loading grids...");
             SmicGrid = new RDR1Grid(FileManager, 0x100, "game\\tune_d11generic.rpf\\tune\\smicgrid", "rdr2", "XXXXYYYY.txt");
-            TreeGrid = new RDR1Grid(FileManager, 0x100, "game\\treeres.rpf\\treeres", "rdr2", "XXXXYYYY_spd.wsp");//TODO: also tree_instancefile_YYYYXXXX.txt ?
+            TreeGrid = new RDR1Grid(FileManager, 0x100, "game\\treeres.rpf\\treeres", "rdr2", "XXXXYYYY_spd.wsp"); //TODO: also tree_instancefile_YYYYXXXX.txt ?
             GrassGrid = new RDR1Grid(FileManager, 0x80, "game\\grassres.rpf\\grassres", "rdr2", "grass_instancefile_XXXXYYYY.wsg");
             BoundsGrid = new RDR1Grid(FileManager, 0x40, "game\\terrainboundres.rpf\\terrainboundres\\territory_swall_noid", "rdr2", "XXXXYYYY_bnd.wtb");
-
-
 
             Core.Engine.Console.Write("RDR1Map", "Loading map states...");
             LoadMapStates();
 
-
             Core.Engine.Console.Write("RDR1Map", FileManager.Game.Name + " map initialised.");
             return true;
         }
-
-
 
         protected override bool StreamingUpdate()
         {
@@ -179,18 +160,13 @@ namespace CodeX.Games.RDR1
             var spos = StreamPosition;
             var needsAnotherUpdate = false;
 
-
             AddWsiEntities(ref spos, ents);
             AddTerrainBoundsTiles(ref spos);
             AddTerrainTiles(ref spos, ents);
             AddTreeTiles(ref spos, ents);
             AddGrassTiles(ref spos, ents);
 
-
-
             /*
-
-
             var scale = new Vector3(10.0f);
             foreach (var ent in ents) //Update lights
             {
@@ -205,16 +181,10 @@ namespace CodeX.Games.RDR1
                     }
                 }
             }
-
-
             */
 
-
-            //NodeCountStat.SetCounter(nodes.Count);
             EntityCountStat.SetCounter(ents.Count);
-
             if (needsAnotherUpdate) StreamUpdateRequest = true;
-
             return true;
         }
 
@@ -225,8 +195,10 @@ namespace CodeX.Games.RDR1
             {
                 var node = kvp.Value;
                 if (node == null) continue;
+
                 var roots = node.RootSectors;
                 if (roots == null) continue;
+
                 foreach (var root in roots)
                 {
                     RecurseAddWsiEntities(ref spos, ents, root, root);
@@ -239,13 +211,16 @@ namespace CodeX.Games.RDR1
             {
                 var node = kvp.Value;
                 if (node == null) continue;
+
                 var sectors = node.Sectors;
                 if (sectors == null) continue;
+
                 foreach (var sector in sectors)
                 {
                     if (sector.IsScopedSector == false) continue;
                     if (sector.ChildSectors != null) continue;
                     if (sector.BoundingBox.Intersects(collsbox) == false) continue;
+
                     var bndents = Cache.GetSectorBounds(sector.NameHash);
                     if (bndents != null)
                     {
@@ -258,8 +233,8 @@ namespace CodeX.Games.RDR1
                     { }
                 }
             }
-
         }
+
         private void RecurseAddWsiEntities(ref Vector3 spos, HashSet<Entity> ents, RDR1MapSector sector, RDR1MapSector root)
         {
             if (sector == null) return;
@@ -393,10 +368,8 @@ namespace CodeX.Games.RDR1
                         }
                     }
 
-
                     wsient.SetPiece(piece);
                     ents.Add(wsient);
-
 
                     ents.Add(ent);
                 }
@@ -406,7 +379,6 @@ namespace CodeX.Games.RDR1
                 //    ents.Add(sector.LightsEntity);
                 //}
             }
-
         }
 
         private void InitTerrainTiles()
@@ -493,13 +465,11 @@ namespace CodeX.Games.RDR1
                         ent.UpdateBounds();
 
                         TerrainTiles[coord] = ent;
-
                     }
                 }
-
             }
-
         }
+
         private void AddTerrainTiles(ref Vector3 spos, HashSet<Entity> ents)
         {
             var lod = 3;//start terrain at lod3, since lod4 currently can't be drawn
@@ -522,6 +492,7 @@ namespace CodeX.Games.RDR1
                 }
             }
         }
+
         private bool RecurseAddTerrainTile(in Vector3I coord, ref Vector3 spos, HashSet<Entity> ents)
         {
             TerrainTiles.TryGetValue(coord, out var tile);
@@ -583,9 +554,7 @@ namespace CodeX.Games.RDR1
                 }
             }
 
-
             ents.Add(tile);
-
 
             return true;
         }
@@ -605,9 +574,7 @@ namespace CodeX.Games.RDR1
                 {
                     StreamPhysics.Add(ent);
                 }
-
             }
-
         }
 
         private void AddTreeTiles(ref Vector3 spos, HashSet<Entity> ents)
@@ -637,10 +604,7 @@ namespace CodeX.Games.RDR1
                     batch.Batch?.StreamingUpdate(spos);
                     ents.Add(batch);
                 }
-
             }
-
-
         }
 
         private void AddGrassTiles(ref Vector3 spos, HashSet<Entity> ents)
@@ -681,14 +645,8 @@ namespace CodeX.Games.RDR1
                     batch.Batch?.StreamingUpdate(spos);
                     ents.Add(batch);
                 }
-
             }
         }
-
-
-
-
-
 
         public override void GetAssets(uint typeHash, List<Asset> assets)
         {
@@ -820,6 +778,7 @@ namespace CodeX.Games.RDR1
                 var map = obj as RDR1Map;
                 value = map?.MapStatesFile?.CurrentGroups;
             }
+
             public override void SetValue(BaseObject obj, object value)
             {
             }
@@ -840,6 +799,7 @@ namespace CodeX.Games.RDR1
         {
             this.Map = map;
         }
+
         public override void SetEnabled(bool enabled)
         {
             Map.StreamInvoke(() =>
@@ -847,6 +807,7 @@ namespace CodeX.Games.RDR1
                 Map.EnableMapStateGroup(this, enabled);
             });
         }
+
         public bool IsStateActive(string name, string val)
         {
             if (!this.Enabled || string.IsNullOrEmpty(name)) return true;
@@ -1066,9 +1027,6 @@ namespace CodeX.Games.RDR1
         }
     }
 
-
-
-
     public class RDR1MapNode
     {
         public RDR1Map Map;
@@ -1138,10 +1096,7 @@ namespace CodeX.Games.RDR1
 
             Sectors = sectors.ToArray();
             RootSectors = roots.ToArray();
-
-
         }
-
     }
 
     public class RDR1MapSector : Level
@@ -1157,7 +1112,6 @@ namespace CodeX.Games.RDR1
         public WsiEntity ScopedEntityMed { get; set; }
         public WsiEntity ScopedEntityVlow { get; set; }
         public Entity LightsEntity { get; set; }
-
 
         public RDR1MapSector(RDR1MapNode mapNode, WsiFile wsi, Rsc6SectorInfo currentSector, Rsc6SectorInfo parentSector, bool scoped)
         {
@@ -1175,7 +1129,6 @@ namespace CodeX.Games.RDR1
             var width = BoundingBox.Width;
             var dist = new Vector3(BoundingBox.Size.Length());//(width > 700.0f) ? width : 700.0f);
             StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
-
 
             if (scoped)
             {
@@ -1215,7 +1168,6 @@ namespace CodeX.Games.RDR1
                 else
                 { }
             }
-
 
             GetEntities();
         }
@@ -1364,7 +1316,8 @@ namespace CodeX.Games.RDR1
         }
     }
 
-    [TC(typeof(EXP))] public class WsiEntity : Entity
+    [TC(typeof(EXP))]
+    public class WsiEntity : Entity
     {
         public bool ResetPos = false;
         public JenkHash ModelName { get; set; }
@@ -1415,6 +1368,7 @@ namespace CodeX.Games.RDR1
                     else
                         rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, roll);
                     break;
+
                 case 2:
                     rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI - roll);
                     break;
@@ -1477,14 +1431,12 @@ namespace CodeX.Games.RDR1
                 LodDistMax = Math.Min(size * 20.0f, 500.0f);
             }
         }
-
     }
 
-    [TC(typeof(EXP))] public class WsiLightEntity : WsiEntity
+    [TC(typeof(EXP))]
+    public class WsiLightEntity : WsiEntity
     {
-
         //TODO: delete this and add lights directly to the sector scoped entity
-
 
         public Vector3 ParentPosition;
 
@@ -1510,14 +1462,7 @@ namespace CodeX.Games.RDR1
             var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
             Lights = new Light[] { l };
         }
-
     }
-
-
-
-
-
-
 
     public class RDR1Grid
     {
@@ -1581,7 +1526,6 @@ namespace CodeX.Games.RDR1
             if ((ValidInstCount != 0) && (ValidInstCount != CellEntries.Count))
             { }
 
-
             //in validinstance file:
             //Dir: $\treeRes
             //MasterObjectFile: $\treeRes\masterObject_RDR2.txt
@@ -1593,10 +1537,6 @@ namespace CodeX.Games.RDR1
             //grassres: grass_instancefile_YYYYXXXX.wsg
             //terrainboundres: YYYYXXXX_bnd.wtb
 
-
-
-
-
             //For grids:
             //+X is SOUTH (using "converted" coords)
             //+Y is EAST
@@ -1607,10 +1547,7 @@ namespace CodeX.Games.RDR1
             //world X = -6144 + XXXX
             //YYYY = world Y + 6144  (as hex digits, round as necessary for grid cell size)
             //XXXX = world X + 6144
-
-
         }
-
 
         public void UpdateVisibleCells(Vector3 spos, float range)
         {
@@ -1634,9 +1571,7 @@ namespace CodeX.Games.RDR1
                     VisibleCells.Add((coord, cellEntry));
                 }
             }
-
         }
-
 
         public BoundingBox GetVisibleBox(Vector3 spos, float range)
         {
@@ -1644,9 +1579,7 @@ namespace CodeX.Games.RDR1
             var sbox = new BoundingBox(spos - srng, spos + srng);
             return sbox;
         }
-
     }
-
 
     public class RDR1TerrainTile : Entity
     {
@@ -1663,7 +1596,7 @@ namespace CodeX.Games.RDR1
         public override void UpdateBounds()
         {
             //meshes have position baked in, so use custom bounds
-            //since this entity's position is (0,0,0) it needs a custom box 
+            //since this entity's position is (0,0,0) it needs a custom box
             //base.UpdateBounds();
             UpdateWorldTransform();
             if (Sector != null)
@@ -1672,10 +1605,8 @@ namespace CodeX.Games.RDR1
                 BoundingSphere = new BoundingSphere(BoundingBox.Center, Sector.AABBMin.W);
             }
         }
-
-
-
     }
+
     public class RDR1TerrainBoundsTile : Level
     {
         public WtbFile Wtb { get; set; }
@@ -1753,12 +1684,8 @@ namespace CodeX.Games.RDR1
                     ent.SetPiece(piece);
 
                     Add(ent);
-
                 }
-
             }
-
-
         }
 
         public override void PreSaveUpdate()
@@ -1766,7 +1693,6 @@ namespace CodeX.Games.RDR1
             base.PreSaveUpdate();
             //TODO: editing
         }
-
     }
 
     public class RDR1TreeGridTile : Level
@@ -1803,7 +1729,6 @@ namespace CodeX.Games.RDR1
                 hashes[i] = new JenkHash(name.ToLowerInvariant() + "x");
             }
 
-
             var currentcell = (Rsc6TreeForestGridCell)null;
             var currentbatches = new Dictionary<int, RDR1TreeGridBatch>();
             var batchlist = new List<RDR1TreeGridBatch>();
@@ -1828,7 +1753,7 @@ namespace CodeX.Games.RDR1
                 if (cell == null) continue;
                 currentbatches.Clear();
                 currentcell = cell;
-                
+
                 var positions = cell.CombinedInstanceListPos.Items;
                 if (positions != null)
                 {
@@ -1862,9 +1787,7 @@ namespace CodeX.Games.RDR1
                         batch.Instances.Add(inst);
                     }
                 }
-
             }
-
 
             foreach (var gridbatch in batchlist)
             {
@@ -1874,18 +1797,15 @@ namespace CodeX.Games.RDR1
             }
 
             Batches = batchlist.ToArray();
-
         }
-
 
         public override void PreSaveUpdate()
         {
             base.PreSaveUpdate();
             //TODO: move editing code from RDR1TreeMapData
         }
-
-
     }
+
     public class RDR1TreeGridBatch : Entity
     {
         public RDR1TreeGridTile Tile { get; set; }
@@ -1894,7 +1814,6 @@ namespace CodeX.Games.RDR1
         public BoundingBox PointsBox { get; set; }
         public BoundingBox PieceBox { get; set; }
         public List<EntityBatchInstance1> Instances = new();
-
 
         public bool BuildFromInstances()
         {
@@ -1939,6 +1858,7 @@ namespace CodeX.Games.RDR1
             BoundingSphere.Center = BoundingBox.Center;
             BoundingSphere.Radius = BoundingBox.Size.Length() * 0.5f;
         }
+
         public override void SetPiece(Piece p)
         {
             var changed = (p != Piece);
@@ -1953,19 +1873,16 @@ namespace CodeX.Games.RDR1
             Batch.InitLods(hdist, mdist);
             Batch.Lods[0].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[0], p, 0);
             //Batch.Lods[1].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[1], p, 1);
-            
+
             ////lod1 of RDR1 trees is missing the trunk for some reason.
             ////TODO: use a proper billboarding/impostor system for these
-
         }
-
 
         public override void ApplyTransforms()
         {
             //base.ApplyTransforms();
             //TODO: handle moving instances and updating bounds
         }
-
     }
 
     public class RDR1GrassGridTile : Level
@@ -2006,7 +1923,7 @@ namespace CodeX.Games.RDR1
                 batch.GrassField = gitem;
                 batch.Name = mname;
                 batch.ModelHash = new JenkHash(mname);
-                
+
                 var ok = batch.BuildFromGrassField();
                 if (ok == false) continue;
 
@@ -2015,9 +1932,9 @@ namespace CodeX.Games.RDR1
             }
 
             Batches = batchlist.ToArray();
-
         }
     }
+
     public class RDR1GrassGridBatch : Entity
     {
         public RDR1GrassGridTile Tile { get; set; }
@@ -2065,7 +1982,6 @@ namespace CodeX.Games.RDR1
                 inst.ColourR = 0x7F;
                 inst.ColourG = 0x7F;
                 inst.ColourB = 0x7F;
-
             }
             BufferUtil.WriteArray(batch.Data, 0, insts);
             var gridscale = 0.5;//inverse of min cell size
@@ -2089,6 +2005,7 @@ namespace CodeX.Games.RDR1
             BoundingSphere.Center = BoundingBox.Center;
             BoundingSphere.Radius = BoundingBox.Size.Length() * 0.5f;
         }
+
         public override void SetPiece(Piece p)
         {
             var changed = (p != Piece);
@@ -2102,19 +2019,16 @@ namespace CodeX.Games.RDR1
             var mdist = d.LodDistMed;
             Batch.InitLods(hdist, mdist);
             Batch.Lods[0].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[0], p, 0);
-            
+
             //RDR1 grass only has one lod..
             //TODO: use a billboarding impostor system for this
-
         }
-
 
         public override void ApplyTransforms()
         {
             //base.ApplyTransforms();
             //TODO: handle moving instances and updating bounds
         }
-
     }
 
     public class RDR1BatchLodEntity : Entity
@@ -2139,18 +2053,18 @@ namespace CodeX.Games.RDR1
             SetBatchLod(lod);
             UpdateWorldTransform();
         }
+
         public override void UpdateBounds()
         {
             //base.UpdateBounds();
         }
+
         public override void ApplyTransforms()
         {
             //base.ApplyTransforms();
             ParentBatch.ApplyTransforms();//need to bounce this because we're actually rendering/editing this object
         }
     }
-
-
 
     /*
     TODO: use this old code to help rebuild editing code in RDR1TreeGridTile/RDR1TreeGridBatch
@@ -2358,7 +2272,7 @@ namespace CodeX.Games.RDR1
                     var total = grid.CellsHeight * grid.CellsWidth;
                     var newTotal = (grid.CellsHeight + 1) * (grid.CellsWidth + 1);
                     var gap = newTotal - total;
-                    
+
                     grid.CellsHeight += 1;
                     grid.CellsWidth += 1;
                     cells.Add(newCell);
@@ -2512,7 +2426,7 @@ namespace CodeX.Games.RDR1
         public JenkHash TreeName;
         public Vector3 OriginalPosition; //Used so if we're moving a tree in the map viewer, we can find it back from a #sp using its original position.
         public bool Created = false; //Used to make sure we'll update new trees
-        
+
         public override string Name => TreeName.ToString();
         public RDR1TreeMapData Wsp => Level as RDR1TreeMapData;
 
@@ -2549,7 +2463,6 @@ namespace CodeX.Games.RDR1
             Scale = scale;
         }
 
-
         public override void SetPiece(Piece p)
         {
             var changed = p != Piece;
@@ -2562,13 +2475,7 @@ namespace CodeX.Games.RDR1
         }
     }
 
-
     */
-
-
-
-
-
 
     public class RDR1MapAsset : Asset
     {
@@ -2612,7 +2519,6 @@ namespace CodeX.Games.RDR1
         private StreamingCacheDict<Rpf6FileEntry> GrassGridTileCache;
         private StreamingCacheDict<JenkHash> SectorBoundsCache;
 
-
         public RDR1MapFileCache(RDR1Map map, Rpf6FileManager fman)
         {
             Map = map;
@@ -2648,7 +2554,6 @@ namespace CodeX.Games.RDR1
             SectorBoundsCache.RemoveOldItems();
         }
 
-
         public TexturePack GetTexturePack(JenkHash hash)
         {
             var ext = Rpf6FileExt.wtd_wtx;
@@ -2671,6 +2576,7 @@ namespace CodeX.Games.RDR1
             cache[hash] = cacheItem;
             return cacheItem.Object as TexturePack;
         }
+
         public PiecePack GetPiecePack(JenkHash hash, Rpf6FileExt ext)
         {
             var cache = GetCache(ext);
@@ -2685,12 +2591,13 @@ namespace CodeX.Games.RDR1
                     try
                     {
 #endif
-                        var pack = FileManager.LoadPiecePack(entry);//, null, true);
-                        cacheItem.Object = pack;
-                        if (pack != null)
-                        {
-                            LoadDependencies(pack);
-                        }
+                    var pack = FileManager.LoadPiecePack(entry);//, null, true);
+                    cacheItem.Object = pack;
+
+                    if (pack != null)
+                    {
+                        LoadDependencies(pack);
+                    }
 #if !DEBUG
                     }
                     catch { }
@@ -2701,7 +2608,7 @@ namespace CodeX.Games.RDR1
             cache[hash] = cacheItem;
             return cacheItem.Object as PiecePack;
         }
-       
+
         public WvdFile GetTerrainTileWvd(Rpf6FileEntry entry)
         {
             if (entry == null) return null;
@@ -2721,6 +2628,7 @@ namespace CodeX.Games.RDR1
             cache[entry] = cacheItem;
             return cacheItem.Object as WvdFile;
         }
+
         public Piece GetTerrainTileWvdPiece(Rpf6FileEntry entry, JenkHash hash)
         {
             var wvd = GetTerrainTileWvd(entry);
@@ -2818,8 +2726,6 @@ namespace CodeX.Games.RDR1
             return cacheItem.Object as Entity[];
         }
 
-
-
         private void LoadDependencies(PiecePack pack)
         {
             if (pack?.Pieces == null) return;
@@ -2858,10 +2764,7 @@ namespace CodeX.Games.RDR1
                     }
                 }
             }
-
-
         }
-
 
         public Piece GetPiece(JenkHash modelHash)
         {
@@ -2872,10 +2775,6 @@ namespace CodeX.Games.RDR1
             }
             return pack?.Piece;
         }
-
-
-
-
 
         public override void Invalidate(string gamepath)
         {
@@ -2895,8 +2794,8 @@ namespace CodeX.Games.RDR1
             //TerrainTileWtbCache.Remove(entry);
             //TreeGridTileCache.Remove(entry);
             //GrassGridTileCache.Remove(entry);
-
         }
+
         public override void SetPinned(string gamepath, bool pinned)
         {
             if (string.IsNullOrEmpty(gamepath)) return;
@@ -2915,7 +2814,6 @@ namespace CodeX.Games.RDR1
             //TerrainTileWtbCache.SetPinned(entry, pinned);
             //TreeGridTileCache.SetPinned(entry, pinned);
             //GrassGridTileCache.SetPinned(entry, pinned);
-
         }
     }
 }

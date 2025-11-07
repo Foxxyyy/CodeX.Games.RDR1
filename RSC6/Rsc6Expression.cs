@@ -1,14 +1,15 @@
-﻿using System;
-using System.Numerics;
-using CodeX.Core.Utilities;
-using System.Collections.Generic;
+﻿using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6ExpressionDictionary : Rsc6BlockBaseMapRef, MetaNode //pgDictionary<crExpressions>
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionDictionary : Rsc6BlockBaseMapRef, MetaNode //pgDictionary<crExpressions>
     {
         /*
          * Dictionary of expressions
@@ -49,7 +50,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Expressions : Rsc6FileBase, MetaNode //rage::crExpressions
+    [TC(typeof(EXP))]
+    public class Rsc6Expressions : Rsc6FileBase, MetaNode //rage::crExpressions
     {
         /*
          * Contains a series of expressions
@@ -104,7 +106,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Expression : Rsc6BlockBase, MetaNode //rage::crExpression
+    [TC(typeof(EXP))]
+    public class Rsc6Expression : Rsc6BlockBase, MetaNode //rage::crExpression
     {
         /*
          * An individual expression, describes the calculation or modification of a degree of freedom.
@@ -169,7 +172,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionIODof : Rsc6BlockBase, MetaNode //rage::crExpression::InputOutputDof
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionIODof : Rsc6BlockBase, MetaNode //rage::crExpression::InputOutputDof
     {
         public override ulong BlockLength => 12;
         public Rsc6BoneIdEnum OutputTrackID { get; set; } //m_OutputTrackId
@@ -222,7 +226,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOp : Rsc6FileBase, MetaNode //rage::crExpressionOp (expression operations)
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOp : Rsc6FileBase, MetaNode //rage::crExpressionOp (expression operations)
     {
         public override ulong BlockLength => 8;
         public override uint VFT { get; set; }
@@ -293,7 +298,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpConstant : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpConstant : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 24;
         public byte[] Padding { get; set; } //m_Padding[8]
@@ -326,7 +332,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpFloat : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpFloat : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 4;
         public float Value { get; set; } //m_Float
@@ -356,7 +363,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpGetSet : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpGetSet : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 4;
         public byte Track { get; set; } //m_Track
@@ -396,7 +404,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpSet : Rsc6ExpressionOpGetSet, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpSet : Rsc6ExpressionOpGetSet, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 4;
         public Rsc6Ptr<Rsc6ExpressionOp> Source { get; set; } //m_Sources
@@ -426,7 +435,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpFastBlendVector : Rsc6ExpressionOp, MetaNode //rage::crExpressionOpFastBlendVector
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpFastBlendVector : Rsc6ExpressionOp, MetaNode //rage::crExpressionOpFastBlendVector
     {
         public override ulong BlockLength => base.BlockLength + 8;
         public Rsc6ManagedArr<Rsc6ExpressionOpFastBlendVectorBlock> SourceWeights { get; set; } //m_SourceWeights
@@ -456,7 +466,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpFastBlendVectorBlock : Rsc6BlockBase, MetaNode //rage::crExpressionOpFastBlendVector::SourceWeight
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpFastBlendVectorBlock : Rsc6BlockBase, MetaNode //rage::crExpressionOpFastBlendVector::SourceWeight
     {
         public override ulong BlockLength => 64;
         public Vector4 Weight { get; set; } //m_Weight
@@ -525,7 +536,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpNullary : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpNullary : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 8;
         public uint Padding1 { get; set; } = 0xCDCDCDCD;
@@ -570,7 +582,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpUnary : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpUnary : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 8;
         public Rsc6Ptr<Rsc6ExpressionOp> Source { get; set; } //m_Source
@@ -635,7 +648,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpBinary : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpBinary : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 8;
         public Rsc6Ptr<Rsc6ExpressionOp> Source1 { get; set; } //m_Sources[0]
@@ -698,7 +712,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpTernary : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpTernary : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 12;
         public Rsc6Ptr<Rsc6ExpressionOp> Source1 { get; set; } //m_Sources[0]
@@ -752,7 +767,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpNary : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpNary : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 8;
         public Rsc6PtrArr<Rsc6ExpressionOp> Sources { get; set; } //m_Sources
@@ -792,7 +808,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ExpressionOpSpecialCurve : Rsc6ExpressionOp, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6ExpressionOpSpecialCurve : Rsc6ExpressionOp, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 12;
         public Rsc6Ptr<Rsc6ExpressionOp> Source { get; set; } //m_Source

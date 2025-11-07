@@ -1,20 +1,21 @@
-﻿using System;
-using System.Text;
-using System.Linq;
-using System.Numerics;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using CodeX.Core.Engine;
-using CodeX.Core.Physics;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
+using CodeX.Core.Physics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Text.RegularExpressions;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6TerrainBound : Rsc6BlockBaseMap, MetaNode //terrainBoundTile
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainBound : Rsc6BlockBaseMap, MetaNode //terrainBoundTile
     {
         public override ulong BlockLength => 40; //terrainBoundTile + terrainTileScanData
         public override uint VFT { get; set; } = 0x04A007B8;
@@ -71,7 +72,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundResource : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundResource>
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainDictBoundResource : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundResource>
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x04A007D0;
@@ -113,7 +115,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainBoundResource : Rsc6BlockBase, MetaNode //terrainBoundResource
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainBoundResource : Rsc6BlockBase, MetaNode //terrainBoundResource
     {
         public override ulong BlockLength => 12;
         public Rsc6Ptr<Rsc6Bounds> Bounds { get; set; } //m_Bound, same as m_Archetype.Bounds
@@ -155,7 +158,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainDictBoundInstance : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundInstance>
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainDictBoundInstance : Rsc6BlockBaseMap, MetaNode //pgDictionary<terrainBoundInstance>
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x04A007D0;
@@ -197,7 +201,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainBoundInstance : Rsc6BlockBase, MetaNode //terrainBoundInstance
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainBoundInstance : Rsc6BlockBase, MetaNode //terrainBoundInstance
     {
         public override ulong BlockLength => 4;
         public Rsc6Ptr<Rsc6PhysicsInstance> Instance { get; set; } //m_phInst
@@ -223,7 +228,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ScanData : IRsc6Block, MetaNode //terrainTileScanData
+    [TC(typeof(EXP))]
+    public class Rsc6ScanData : IRsc6Block, MetaNode //terrainTileScanData
     {
         public ulong BlockLength => 8;
         public bool IsPhysical => false;
@@ -256,7 +262,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundsDictionary : Rsc6BlockBaseMap, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6BoundsDictionary : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x01830BC0;
@@ -316,7 +323,8 @@ namespace CodeX.Games.RDR1.RSC6
         Triangle = 13
     }
 
-    [TC(typeof(EXP))] public class Rsc6Bounds : Collider, IRsc6Block
+    [TC(typeof(EXP))]
+    public class Rsc6Bounds : Collider, IRsc6Block
     {
         public virtual ulong BlockLength => 144;
         public ulong FilePosition { get; set; }
@@ -501,7 +509,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundSphere : Rsc6Bounds
+    [TC(typeof(EXP))]
+    public class Rsc6BoundSphere : Rsc6Bounds
     {
         public override ulong BlockLength => base.BlockLength + 24;
         public Vector4 Radius { get; set; }
@@ -554,7 +563,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCapsule : Rsc6Bounds
+    [TC(typeof(EXP))]
+    public class Rsc6BoundCapsule : Rsc6Bounds
     {
         public override ulong BlockLength => 240; //144 + 96
         public Vector4 CapsuleRadius { get; set; } //m_CapsuleRadius
@@ -630,7 +640,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundBox : Rsc6BoundPolyhedron
+    [TC(typeof(EXP))]
+    public class Rsc6BoundBox : Rsc6BoundPolyhedron
     {
         //A class to represent a physics bound in the shape of a rectangular prism.
         //A phBoundBox is specified by its length, width and height.
@@ -701,7 +712,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundGeometry : Rsc6BoundPolyhedron //rage::phBoundGeometry
+    [TC(typeof(EXP))]
+    public class Rsc6BoundGeometry : Rsc6BoundPolyhedron //rage::phBoundGeometry
     {
         /*
          * Represents a physics bound with generalized vertex locations and edge/polygon topology.
@@ -787,7 +799,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedGeometry : Rsc6BoundGeometry //rage::phBoundCurvedGeometry
+    [TC(typeof(EXP))]
+    public class Rsc6BoundCurvedGeometry : Rsc6BoundGeometry //rage::phBoundCurvedGeometry
     {
         //Represents a physics bound with generalized vertex locations and polygons, including curved polygons and curved edges
 
@@ -821,7 +834,7 @@ namespace CodeX.Games.RDR1.RSC6
             CurvedEdges = reader.ReadRawLstItems(CurvedEdges, (uint)NumCurvedEdges);
             CurvedFaceMatIndexList = reader.ReadRawArrItems(CurvedFaceMatIndexList, 6);
         }
-        
+
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer); //phBoundGeometry
@@ -854,7 +867,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedFace : IRsc6Block, MetaNode //phCurvedFace
+    [TC(typeof(EXP))]
+    public class Rsc6BoundCurvedFace : IRsc6Block, MetaNode //phCurvedFace
     {
         //Curved face for a curved geometry bound
 
@@ -946,7 +960,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundCurvedEdge : IRsc6Block, MetaNode //phCurvedEdge
+    [TC(typeof(EXP))]
+    public class Rsc6BoundCurvedEdge : IRsc6Block, MetaNode //phCurvedEdge
     {
         public ulong FilePosition { get; set; }
         public ulong BlockLength => 48;
@@ -993,7 +1008,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundPolyhedron : Rsc6Bounds //rage::phBoundPolyhedron
+    [TC(typeof(EXP))]
+    public class Rsc6BoundPolyhedron : Rsc6Bounds //rage::phBoundPolyhedron
     {
         public override ulong BlockLength => base.BlockLength + 80;
         public uint VerticesPad { get; set; } //m_VerticesPad, always 0
@@ -1448,7 +1464,6 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         edgedict[e3] = new Rsc6BoundEdge(poly, 3);
                     }
-
                 }
             }
 
@@ -1467,7 +1482,6 @@ namespace CodeX.Games.RDR1.RSC6
                     edge.Triangle2.SetEdgeIndex(edge.EdgeID2, (short)edge.Triangle1.Index);
                 }
             }
-
 
             foreach (var poly in Polygons)
             {
@@ -1649,7 +1663,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundGeometryBVH : Rsc6BoundGeometry //phBoundBVH
+    [TC(typeof(EXP))]
+    public class Rsc6BoundGeometryBVH : Rsc6BoundGeometry //phBoundBVH
     {
         public override ulong BlockLength => base.BlockLength + 16;
         public Rsc6Ptr<Rsc6BoundGeometryBVHRoot> BVH { get; set; } //m_BVH
@@ -1692,7 +1707,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundSurface : Rsc6Bounds, MetaNode //rage::phBoundSurface
+    [TC(typeof(EXP))]
+    public class Rsc6BoundSurface : Rsc6Bounds, MetaNode //rage::phBoundSurface
     {
         public override ulong BlockLength => base.BlockLength + 14384;
         public Vector2[] VelocityGrid { get; set; } //m_VelocityGrid
@@ -1798,7 +1814,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundComposite : Rsc6Bounds //rage::phBoundComposite
+    [TC(typeof(EXP))]
+    public class Rsc6BoundComposite : Rsc6Bounds //rage::phBoundComposite
     {
         //Represents a physics bound that is an aggregate of multiple other physics bounds
 
@@ -1870,7 +1887,6 @@ namespace CodeX.Games.RDR1.RSC6
                         }
                         c.PartTransform = m;
                     }
-
                 }
             }
             PartChildren = Childrens.Items;
@@ -1931,7 +1947,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundGeometryBVHRoot : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6BoundGeometryBVHRoot : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 104;
         public Rsc6Arr<Rsc6BoundGeometryBVHNode> Nodes { get; set; }
@@ -1991,7 +2008,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundsMaterialData
+    [TC(typeof(EXP))]
+    public class Rsc6BoundsMaterialData
     {
         public string Elasticity { get; set; } = "0.400f";
         public string Friction { get; set; } = "0.699f";
@@ -2024,7 +2042,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public static class Rsc6BoundsMaterialTypes
+    [TC(typeof(EXP))]
+    public static class Rsc6BoundsMaterialTypes
     {
         public static List<Rsc6BoundsMaterialData> Materials;
 
@@ -2170,7 +2189,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundPolygon //phPrimitive, convenience class for doing operations on polygons
+    [TC(typeof(EXP))]
+    public class Rsc6BoundPolygon //phPrimitive, convenience class for doing operations on polygons
     {
         //Simple wrapper around a phPolygon
 
@@ -2330,7 +2350,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundEdgeRef //Convenience struct for updating edge indices
+    [TC(typeof(EXP))]
+    public struct Rsc6BoundEdgeRef //Convenience struct for updating edge indices
     {
         public int Vertex1 { get; set; }
         public int Vertex2 { get; set; }
@@ -2342,18 +2363,13 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundEdge //Convenience class for updating edge indices
+    [TC(typeof(EXP))]
+    public class Rsc6BoundEdge(Rsc6BoundPolygon t1, int e1) //Convenience class for updating edge indices
     {
-        public Rsc6BoundPolygon Triangle1 { get; set; }
+        public Rsc6BoundPolygon Triangle1 { get; set; } = t1;
         public Rsc6BoundPolygon Triangle2 { get; set; }
-        public int EdgeID1 { get; set; }
+        public int EdgeID1 { get; set; } = e1;
         public int EdgeID2 { get; set; }
-
-        public Rsc6BoundEdge(Rsc6BoundPolygon t1, int e1)
-        {
-            Triangle1 = t1;
-            EdgeID1 = e1;
-        }
     }
 
     public class Rsc6BVHBuilder
@@ -2536,9 +2552,10 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6BoundPolygon Polygon;
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundsMaterialType
+    [TC(typeof(EXP))]
+    public struct Rsc6BoundsMaterialType(byte index)
     {
-        public byte Index;
+        public byte Index = index;
 
         public readonly Rsc6BoundsMaterialData MaterialData
         {
@@ -2561,11 +2578,6 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
-        public Rsc6BoundsMaterialType(byte index)
-        {
-            this.Index = index;
-        }
-
         public override readonly string ToString()
         {
             return Rsc6BoundsMaterialTypes.GetMaterialName(this);
@@ -2582,7 +2594,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundGeometryBVHNode
+    [TC(typeof(EXP))]
+    public struct Rsc6BoundGeometryBVHNode
     {
         public short MinX;
         public short MinY;
@@ -2622,7 +2635,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundGeometryBVHTree
+    [TC(typeof(EXP))]
+    public struct Rsc6BoundGeometryBVHTree
     {
         public short MinX;
         public short MinY;
@@ -2661,7 +2675,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6BoundMaterial(uint value)
+    [TC(typeof(EXP))]
+    public struct Rsc6BoundMaterial(uint value)
     {
         public uint Data = value;
 
@@ -2758,7 +2773,8 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Pad1_2;
     }
 
-    [Flags] public enum Rsc6BoundCompositeFlags : uint
+    [Flags]
+    public enum Rsc6BoundCompositeFlags : uint
     {
         NONE = 0u,
         UNKNOWN = 1u,

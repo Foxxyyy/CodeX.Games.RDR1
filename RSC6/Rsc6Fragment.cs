@@ -1,12 +1,11 @@
-﻿using System;
+﻿using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
-using System.Collections.Generic;
-using CodeX.Core.Numerics;
-using CodeX.Core.Utilities;
-using CodeX.Games.RDR1.RPF6;
-using CodeX.Games.RDR1.Files;
 using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
 
 namespace CodeX.Games.RDR1.RSC6
@@ -42,7 +41,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawArr<Vector4> UndamagedAngInertia { get; set; } //m_UndamagedAngInertia, precomputed angular inertia values for complex fragments
         public Rsc6RawArr<Vector4> DamagedAngInertia { get; set; } //m_DamagedAngInertia, precomputed angular inertia values for complex fragments
         public Rsc6RawArr<Matrix4x4> LinkAttachments { get; set; } //m_LinkAttachments, the initial position of the center of gravity of the top-most fragment part that is part of the link of which that fragment part is a part, the orientation part will always be identity
-        public Rsc6RawArr<float> MinBreakingImpulses { get; set; } //m_MinBreakingImpulses, 
+        public Rsc6RawArr<float> MinBreakingImpulses { get; set; } //m_MinBreakingImpulses,
         public Rsc6RawArr<byte> SelfCollisionIndicesA { get; set; } //m_SelfCollisionA, group indices for collision detection (max=255), to index all m_Groups's child groups consecutively
         public Rsc6RawArr<byte> SelfCollisionIndicesB { get; set; } //m_SelfCollisionB, group indices for collision detection (max=255), to index all m_Groups's child groups consecutively
         public uint UserData { get; set; } //m_UserData
@@ -147,7 +146,7 @@ namespace CodeX.Games.RDR1.RSC6
             EstimatedArticulatedCacheSize = reader.ReadUInt32();
             NumSelfCollisions = reader.ReadByte();
             MaxNumSelfCollisions = reader.ReadByte();
-            GroupCount = reader.ReadByte(); 
+            GroupCount = reader.ReadByte();
             ChildCount = reader.ReadByte();
             FragTypeGroupCount = reader.ReadByte();
             NumRootDamageRegions = reader.ReadByte();
@@ -421,7 +420,7 @@ namespace CodeX.Games.RDR1.RSC6
             GlassPaneModelInfos = reader.ReadUInt32("GlassPaneModelInfos");
             GravityFactor = reader.ReadSingle("GravityFactor");
             AssociatedFragments = new(reader.ReadNode<Rsc6AssociationGroup>("AssociatedFragments"));
-            ChildDataSet = new(reader.ReadNode<Rsc6FragChildDataSet>("ChildDataSet"));
+            //ChildDataSet = new(reader.ReadNode<Rsc6FragChildDataSet>("ChildDataSet")); //TODO: Investigate if this works, had a crash for John's hat
             HasTextureLOD = reader.ReadBool("HasTextureLOD");
             HasFragLOD = reader.ReadBool("HasFragLOD");
             HasAnimNormalMap = reader.ReadBool("HasAnimNormalMap");
@@ -951,12 +950,12 @@ namespace CodeX.Games.RDR1.RSC6
          * Each phArchetype contains a bound and flags for culling collision tests
          * Each phArchetypePhys also contains mass and angular inertia and their inverses
          * Each phArchetypeDamp also contains damping constants for active objects
-         * 
+         *
          * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
          * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
          * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
          * using this archetype, and a name for sharing, debugging and loading from resources
-         * 
+         *
          * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
          */
 
@@ -1000,12 +999,12 @@ namespace CodeX.Games.RDR1.RSC6
          * Each phArchetype contains a bound and flags for culling collision tests
          * Each phArchetypePhys also contains mass and angular inertia and their inverses
          * Each phArchetypeDamp also contains damping constants for active objects
-         * 
+         *
          * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
          * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
          * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
          * using this archetype, and a name for sharing, debugging and loading from resources
-         * 
+         *
          * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
          */
 
@@ -1087,12 +1086,12 @@ namespace CodeX.Games.RDR1.RSC6
          * Each phArchetype contains a bound and flags for culling collision tests
          * Each phArchetypePhys also contains mass and angular inertia and their inverses
          * Each phArchetypeDamp also contains damping constants for active objects
-         * 
+         *
          * Holds the physical properties for any physical object. It contains a pointer to a phBound (the physical
          * boundary of the object), type flags to specify the kind of object it is for collisions, include flags to specify
          * the kinds of objects it can collide with, a reference count to keep track of the number of physics instances
          * using this archetype, and a name for sharing, debugging and loading from resources
-         * 
+         *
          * phArchetype is only for physical objects that do not move, the derived class phArchetypePhys contains physical properties used for motion
          */
 
@@ -2217,7 +2216,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
 
         public Rsc6BlendShape()
-        {         
+        {
         }
 
         public Rsc6BlendShape(Rsc6TargetManager manager)
@@ -3238,7 +3237,7 @@ namespace CodeX.Games.RDR1.RSC6
         /*
          * Used by scripts for enabling various ped components.
          * Native function: ACTOR_ENABLE_VARIABLE_MESH(Actor actor, byte component, bool enable)
-         * 
+         *
          * VMB2 and VMB3 are always the same.
          * Both are also equal to VMB1 most of the time.
          * VMB1 can be different for a couple of fragments (doors, horses and also important story models like John/Jack/Uncle) for specific mesh components
@@ -4635,7 +4634,8 @@ namespace CodeX.Games.RDR1.RSC6
         RIDEABLE_ANIMAL_EVIL_Horse_Famine = 1271 //Apocalypse Famine Horse
     }
 
-    [Flags] public enum Rsc6EventInstanceFlags : short
+    [Flags]
+    public enum Rsc6EventInstanceFlags : short
     {
         PLAY_FORWARD = 0,
         PLAY_BACKWARD = 1,
@@ -4643,7 +4643,8 @@ namespace CodeX.Games.RDR1.RSC6
         PLAY_BLENDING_OUT = 3
     }
 
-    [Flags] public enum Rsc6FragTypeFlags : ushort
+    [Flags]
+    public enum Rsc6FragTypeFlags : ushort
     {
         NEEDS_CACHE_ENTRY_TO_ACTIVATE = 1 << 0,
         HAS_ANY_ARTICULATED_PARTS = 1 << 1,
@@ -4656,7 +4657,8 @@ namespace CodeX.Games.RDR1.RSC6
         DISABLE_BREAKING = 1 << 13 //Disables activation on instances until the user enables
     };
 
-    [Flags] public enum Rsc6ObjectTypeFlags : uint
+    [Flags]
+    public enum Rsc6ObjectTypeFlags : uint
     {
         /*DEFAULT = 1, //Always set
         BROKEN = 2,
@@ -4688,7 +4690,8 @@ namespace CodeX.Games.RDR1.RSC6
         MISC3 = 3670023 //p_gen_milkcan02x, p_gen_trunk01x
     }
 
-    [Flags] public enum Rsc6FragTypeGroupFlag : byte
+    [Flags]
+    public enum Rsc6FragTypeGroupFlag : byte
     {
         DISAPPEARS_WHEN_DEAD = 1 << 0, //When health reaches zero, this group disappears
         MADE_OF_GLASS = 1 << 1, //This group is made out of glass and will shatter when broken
@@ -4698,7 +4701,8 @@ namespace CodeX.Games.RDR1.RSC6
         HAS_CLOTH = 1 << 5, //This group has the cloth (can't have more than one cloth per fragment)
     }
 
-    [Flags] public enum Rsc6ExcludeFlag : byte
+    [Flags]
+    public enum Rsc6ExcludeFlag : byte
     {
         EXCLUDE_VEHICLE = 0,
         EXCLUDE_MOUNT,
@@ -4712,7 +4716,8 @@ namespace CodeX.Games.RDR1.RSC6
         EXCLUDE_DUEL_HOSTAGE
     }
 
-    [Flags] public enum Rsc6CharacterClothFlags
+    [Flags]
+    public enum Rsc6CharacterClothFlags
     {
         IS_FORCE_SKIN = 1 << 0,
         IS_FALLING = 1 << 1,

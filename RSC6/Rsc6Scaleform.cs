@@ -1,9 +1,6 @@
 ﻿using CodeX.Core.Numerics;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -11,7 +8,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         /*
          * FLASH is the default tool that is used for the UI.
-         * 
+         *
          * UIComponent    : base class for all components, must be put top-level container such as UILayer and UIScene.
          * UILayer        : a generic lightweight container, all childrens are managed by this component.
          * UIScene        : a container that groups any number of components except other UIScenes.
@@ -29,18 +26,18 @@ namespace CodeX.Games.RDR1.RSC6
          * UIInput        : a class to manages the creation of UI elements.
          * UINavigator    : a class to manages the navigation/transitions between various UI components.
          * UIManager      : a class used for various subsystem that manages a UI system.
-         * 
+         *
          * Visibility dictates if a state is shown or hidden.
          * Ideally the textures/meshes associated with the state should not be rendered at all.
-         * 
+         *
          * Enabled/Disabled describes how input, events, and transitions are processed on a state.
          * Input and events are processed if this flag is true, otherwise input and events are not processed.
          * A disabled state should never be transitioned to.
-         * 
+         *
          * Focused describes if a component is selected or not.
          * All states for a focused component that are on a path from that focused component to its root component should also be focused.
          * The only way for a component to receive input is if it is focused.
-         * 
+         *
          * Active describes if a component is running.
          * Siblings and children of this active component may or may not be active.
          */
@@ -125,7 +122,6 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                     catch
                     {
-
                     }
                 }
             }
@@ -373,7 +369,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-
         }
     }
 
@@ -540,5 +535,4 @@ namespace CodeX.Games.RDR1.RSC6
         DPAD_UP,
         DPAD_DOWN
     };
-
 }

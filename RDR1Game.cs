@@ -1,6 +1,5 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Games.RDR1.RPF6;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;

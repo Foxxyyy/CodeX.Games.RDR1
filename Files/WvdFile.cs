@@ -20,7 +20,6 @@ namespace CodeX.Games.RDR1.Files
 
         public WvdFile(Rpf6FileEntry file) : base(file)
         {
-            
         }
 
         public WvdFile(Rsc6VisualDictionary visualDict) : base(null)
@@ -39,7 +38,7 @@ namespace CodeX.Games.RDR1.Files
             };
 
             VisualDictionary = r.ReadBlock<Rsc6VisualDictionary>();
-            Pieces = new Dictionary<JenkHash, Piece>();
+            Pieces = [];
 
             if ((VisualDictionary?.Drawables.Items != null) && (VisualDictionary?.Hashes.Items != null))
             {

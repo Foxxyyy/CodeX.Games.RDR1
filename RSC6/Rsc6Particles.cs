@@ -1,10 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Numerics;
+﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -1318,7 +1318,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-
         }
 
         public void Read(MetaNodeReader reader)
@@ -1388,7 +1387,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-
         }
 
         public void Read(MetaNodeReader reader)
@@ -1420,7 +1418,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-
         }
 
         public void Read(MetaNodeReader reader)
@@ -1484,7 +1481,8 @@ namespace CodeX.Games.RDR1.RSC6
         COMPOSITE_ALPHA_SUBTRACT //Dest * (1 - srcAlpha) - src
     };
 
-    [Flags] public enum Rsc6PtxEffectScalarFlags : uint
+    [Flags]
+    public enum Rsc6PtxEffectScalarFlags : uint
     {
         NONE_ACTIVE = 0 << 0,
         ACTIVE_DURATION = 1 << 0,

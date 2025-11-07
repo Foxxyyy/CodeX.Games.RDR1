@@ -41,10 +41,10 @@
     <Name>rdr2_bump_spec_ambocc_shareduv_character_skin</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="specsampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="specsampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="detailmapsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -77,10 +77,10 @@
     <Name>rdr2_bump_spec_ambocc_shareduv_character</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="specsampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="specsampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="detailmapsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -122,10 +122,10 @@
     <Name>rdr2_alpha_bspec_ao_shareduv_character_hair</Name>
     <DrawBucket>2</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="specsampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="specsampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="detailmapsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularfresnelmax" type="CBuffer" value_type="float4" w="0" x="2.412" y="0" z="0" />
@@ -260,10 +260,10 @@
     <Name>rdr2_bump_spec_ambocc_shareduv_character_2sided</Name>
     <DrawBucket>1</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="specsampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="specsampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="detailmapsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -418,9 +418,9 @@
     <Name>rdr2_bump_ambocc</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="amboccsampler" type="Texture" uv="1"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="amboccsampler" type="Texture" uv="1" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
@@ -438,10 +438,10 @@
     <Name>rdr2_layer_2_nospec_ambocc</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="texturesampler2" type="Texture" uv="1"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="amboccsampler" type="Texture" uv="2"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="texturesampler2" type="Texture" uv="1" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="amboccsampler" type="Texture" uv="2" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
@@ -823,11 +823,11 @@
     <Name>rdr2_bump_spec_ambocc_shareduv_character_cloth</Name>
     <DrawBucket>3</DrawBucket>
     <Params>
-      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" uv="0"/>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="specsampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="detailmapsampler" type="Texture" uv="0"/>
+      <Item name="KyFdeDA_0xBE24F3ED" type="Texture" uv="0" />
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="specsampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="detailmapsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="rimglowscale" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -886,10 +886,10 @@
     <Name>rdr2_layer_2_nospec_ambocc_decal</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="texturesampler3" type="Texture" uv="2"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="texturesampler3" type="Texture" uv="2" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="amboccsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
@@ -1114,11 +1114,11 @@
     <Name>rdr2_layer_3_nospec_normal_ambocc</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="texturesampler2" type="Texture" uv="1"/>
-      <Item name="texturesampler3" type="Texture" uv="2"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="texturesampler2" type="Texture" uv="1" />
+      <Item name="texturesampler3" type="Texture" uv="2" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="amboccsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />
@@ -1409,20 +1409,20 @@
     <Name>rdr2_terrain</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="terraindiffusesampler1" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler2" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler3" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler4" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler5" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler6" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler1" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler2" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler3" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler4" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler5" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler6" type="Texture" uv="0"/>
-      <Item name="terrainblendmap1" type="Texture" uv="0"/>
-      <Item name="terrainblendmap2" type="Texture" uv="0"/>
+      <Item name="terraindiffusesampler1" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler2" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler3" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler4" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler5" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler6" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler1" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler2" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler3" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler4" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler5" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler6" type="Texture" uv="0" />
+      <Item name="terrainblendmap1" type="Texture" uv="0" />
+      <Item name="terrainblendmap2" type="Texture" uv="0" />
       <Item name="FSEDaeA_0xB2065800" type="Texture" />
       <Item length="16" name="directstrength" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
       <Item length="16" name="terrainamboccfillfactor" type="CBuffer" value_type="float4" w="0" x="0.85" y="0" z="0" />
@@ -1455,22 +1455,22 @@
     <Name>rdr2_terrain_blend</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler1" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler2" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler3" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler4" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler5" type="Texture" uv="0"/>
-      <Item name="terraindiffusesampler6" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler1" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler2" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler3" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler4" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler5" type="Texture" uv="0"/>
-      <Item name="terrainnormalsampler6" type="Texture" uv="0"/>
-      <Item name="terrainblendmap1" type="Texture" uv="0"/>
-      <Item name="terrainblendmap2" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler1" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler2" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler3" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler4" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler5" type="Texture" uv="0" />
+      <Item name="terraindiffusesampler6" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler1" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler2" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler3" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler4" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler5" type="Texture" uv="0" />
+      <Item name="terrainnormalsampler6" type="Texture" uv="0" />
+      <Item name="terrainblendmap1" type="Texture" uv="0" />
+      <Item name="terrainblendmap2" type="Texture" uv="0" />
       <Item name="FSEDaeA_0xB2065800" type="Texture" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -1509,9 +1509,9 @@
     <Name>rdr2_cliffwall_ao</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="terrainblendmap1" type="Texture" uv="0"/>
-      <Item name="texturesampler" type="Texture" uv="1"/>
-      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="terrainblendmap1" type="Texture" uv="0" />
+      <Item name="texturesampler" type="Texture" uv="1" />
+      <Item name="bumpsampler" type="Texture" uv="1" />
       <Item name="FSEDaeA_0xB2065800" type="Texture" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -1600,8 +1600,8 @@
     <Name>rdr2_cliffwall_alpha</Name>
     <DrawBucket>3</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="1"/>
-      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="texturesampler" type="Texture" uv="1" />
+      <Item name="bumpsampler" type="Texture" uv="1" />
       <Item name="FSEDaeA_0xB2065800" type="Texture" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -1710,9 +1710,9 @@
     <Name>rdr2_cliffwall_ao_low_lod</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="flattenbumpsampler" type="Texture" uv="0"/>
+      <Item name="flattenbumpsampler" type="Texture" uv="0" />
       <Item name="texturesampler" type="Texture" uv="1" />
-      <Item name="bumpsampler" type="Texture" uv="1"/>
+      <Item name="bumpsampler" type="Texture" uv="1" />
       <Item name="FSEDaeA_0xB2065800" type="Texture" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="1" y="0" z="0" />
@@ -1941,10 +1941,10 @@
     <Name>rdr2_layer_2_nospec_ambocc_bridge</Name>
     <DrawBucket>0</DrawBucket>
     <Params>
-      <Item name="texturesampler" type="Texture" uv="0"/>
-      <Item name="texturesampler2" type="Texture" uv="1"/>
-      <Item name="bumpsampler" type="Texture" uv="0"/>
-      <Item name="amboccsampler" type="Texture" uv="0"/>
+      <Item name="texturesampler" type="Texture" uv="0" />
+      <Item name="texturesampler2" type="Texture" uv="1" />
+      <Item name="bumpsampler" type="Texture" uv="0" />
+      <Item name="amboccsampler" type="Texture" uv="0" />
       <Item length="144" name="colors" type="CBuffer" value_type="float9x4" value="1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0.5, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1" />
       <Item length="16" name="bumpiness" type="CBuffer" value_type="float4" w="0" x="2" y="0" z="0" />
       <Item length="16" name="specularcolorfactor" type="CBuffer" value_type="float4" w="0" x="0.5" y="0" z="0" />

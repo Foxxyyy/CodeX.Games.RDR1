@@ -1,13 +1,14 @@
-﻿using System;
-using System.Numerics;
-using CodeX.Core.Numerics;
+﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6TreeForestGrid : Rsc6TreeForest //rage::TreeForestGrid
+    [TC(typeof(EXP))]
+    public class Rsc6TreeForestGrid : Rsc6TreeForest //rage::TreeForestGrid
     {
         //Manages a forest using a grid culling system.
         //Each instance is put into a grid cell based on its position.
@@ -120,7 +121,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeForestGridCell : Rsc6BlockBase //rage::speedTreeForestGridCell
+    [TC(typeof(EXP))]
+    public class Rsc6TreeForestGridCell : Rsc6BlockBase //rage::speedTreeForestGridCell
     {
         public override ulong BlockLength => 48;
         public BoundingSphere BoundSphere { get; set; } //m_BoundSphere, W is the max distance from the center to any instance (radius)
@@ -157,7 +159,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeForest : Rsc6BlockBaseMap //rage::TreeForest
+    [TC(typeof(EXP))]
+    public class Rsc6TreeForest : Rsc6BlockBaseMap //rage::TreeForest
     {
         public override ulong BlockLength => 96;
         public override uint VFT { get; set; } = 0x04CA9264;
@@ -224,7 +227,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PackedInstancePos : Rsc6BlockBase //rage::speedTreePackedInstancePos
+    [TC(typeof(EXP))]
+    public class Rsc6PackedInstancePos : Rsc6BlockBase //rage::speedTreePackedInstancePos
     {
         public override ulong BlockLength => 8;
         public ushort X { get; set; } //x
@@ -271,7 +275,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase //rage::speedTreeInstanceMtx
+    [TC(typeof(EXP))]
+    public class Rsc6InstanceMatrix : Rsc6TreeInstanceBase //rage::speedTreeInstanceMtx
     {
         public override ulong BlockLength => base.BlockLength + 64;
         public Matrix4x4 Transform { get; set; } //m_mTransform
@@ -294,7 +299,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeInstanceBase : Rsc6BlockBase //rage::speedTreeInstanceBase
+    [TC(typeof(EXP))]
+    public class Rsc6TreeInstanceBase : Rsc6BlockBase //rage::speedTreeInstanceBase
     {
         //This is the data needed to exist an instance of a speedtree in the world
 
@@ -392,7 +398,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TreeInstancePos : Rsc6BlockBase //rage::speedTreeInstancePos
+    [TC(typeof(EXP))]
+    public class Rsc6TreeInstancePos : Rsc6BlockBase //rage::speedTreeInstancePos
     {
         public override ulong BlockLength => 48;
         public Rsc6TreeInstanceBase InstanceBase { get; set; }
@@ -432,7 +439,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct TreeItem
+    [TC(typeof(EXP))]
+    public struct TreeItem
     {
         public object Instance;
         public Vector3 Position;
@@ -444,7 +452,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [Flags] public enum Rsc6TreeInstanceFlags
+    [Flags]
+    public enum Rsc6TreeInstanceFlags
     {
         FLAG_VISIBLE = 1 << 4,
         FLAG_BILLBOARD_ONLY = 1 << 5,

@@ -104,21 +104,27 @@ namespace CodeX.Games.RDR1.Prefabs
                     case Rsc6TrackID.BONE_TRANSLATION:
                         bone.AnimTranslation = v.XYZ();
                         break;
+
                     case Rsc6TrackID.BONE_ROTATION:
                         bone.AnimRotation = v.ToQuaternion();
                         break;
+
                     case Rsc6TrackID.BONE_SCALE:
                         bone.AnimScale = v.XYZ();
                         break;
+
                     case Rsc6TrackID.MOVER_TRANSLATION:
                         if (EnableRootMotion) bone.AnimTranslation += v.XYZ();
                         break;
+
                     case Rsc6TrackID.MOVER_ROTATION:
                         if (EnableRootMotion) bone.AnimRotation = v.ToQuaternion() * bone.AnimRotation;
                         break;
+
                     case Rsc6TrackID.MOVER_SCALE:
                         if (EnableRootMotion) bone.AnimScale += v.XYZ();
                         break;
+
                     default:
                         break;
                 }

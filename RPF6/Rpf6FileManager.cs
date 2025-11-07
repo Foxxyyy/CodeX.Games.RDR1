@@ -4,7 +4,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RSC6;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,10 +27,9 @@ namespace CodeX.Games.RDR1.RPF6
         public override void InitFileTypes()
         {
             InitGenericFileTypes();
-
             InitFileType(".rpf", "Rage Package File", FileTypeIcon.Archive);
             InitFileType(".bk2", "Bink Video 2", FileTypeIcon.Movie);
-            InitFileType(".dat", "Data File", FileTypeIcon.SystemFile);
+            InitFileType(".dat", "Data File", FileTypeIcon.AudioPlayback, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".nvn", "Compiled Shaders", FileTypeIcon.SystemFile, FileTypeAction.ViewHex);
             InitFileType(".wnm", "Nav Mesh", FileTypeIcon.SystemFile, FileTypeAction.ViewModels, false, false, true);
             InitFileType(".wfd", "Frag Drawable", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
@@ -39,18 +37,18 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wvd", "Visual Dictionary", FileTypeIcon.Piece, FileTypeAction.ViewModels, true, true, true);
             InitFileType(".wbd", "Bounds Dictionary", FileTypeIcon.Collisions, FileTypeAction.ViewModels, false, false, true);
             InitFileType(".was", "Animation Set", FileTypeIcon.Animation, FileTypeAction.ViewXml, false, false, true);
-            InitFileType(".wat", "Action Tree", FileTypeIcon.SystemFile);
+            InitFileType(".wat", "Action Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
             InitFileType(".wsc", "Script", FileTypeIcon.Script);
             InitFileType(".sco", "Unused Script", FileTypeIcon.Script);
             InitFileType(".wsg", "Sector Grass", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
-            InitFileType(".wsi", "Sector Info", FileTypeIcon.Process, FileTypeAction.ViewXml, false, false, true);
+            InitFileType(".wsi", "Sector Info", FileTypeIcon.Process, FileTypeAction.ViewXml, true, false, true);
             InitFileType(".wcs", "Cover Set", FileTypeIcon.SystemFile);
             InitFileType(".wcg", "Cover Grid", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
             InitFileType(".wgd", "Gringo Dictionary", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
             InitFileType(".wsf", "Flash UI", FileTypeIcon.Image, FileTypeAction.ViewTextures, false, false, true);
             InitFileType(".wsp", "Speed Tree", FileTypeIcon.SystemFile, FileTypeAction.ViewHex, false, false, true);
             InitFileType(".sst", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml, true, false, true);
-            InitFileType(".wst", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewXml, true, false, true);
+            InitFileType(".wst", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".wtb", "Terrain Bounds", FileTypeIcon.Collisions, FileTypeAction.ViewModels, false, false, true);
             InitFileType(".wtd", "Texture Dictionary", FileTypeIcon.Image, FileTypeAction.ViewTextures, true, true, true);
             InitFileType(".wtl", "Terrain World", FileTypeIcon.SystemFile, FileTypeAction.ViewXml, false, false, true);
@@ -62,10 +60,8 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".wedt", "Expressions Dictionary", FileTypeIcon.TextFile, FileTypeAction.ViewXml, false, false, true);
             InitFileType(".wpdt", "Parametized Motion Dictionary", FileTypeIcon.TextFile);
             InitFileType(".awc", "Audio Wave Container", FileTypeIcon.Audio, FileTypeAction.ViewAudio);
-            
-            
             InitFileType(".cutbin", "Cutscene Binary", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true);
-            InitFileType(".strtbl", "String Table", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true, true, false);
+            InitFileType(".strtbl", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".fonttex", "Font Data", FileTypeIcon.Canvas, FileTypeAction.ViewXml, true);
             InitFileType(".tr", "AI Programs", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".csv", "Comma-Separated Values File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
@@ -99,6 +95,7 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".tune", "Game Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".textune", "Texture Data", FileTypeIcon.TextFile, FileTypeAction.ViewText);
         }
+
         public override void InitCreateInfos()
         {
             InitCreateInfo(".wtd", "WTD", CreateNewWtd);
@@ -156,6 +153,7 @@ namespace CodeX.Games.RDR1.RPF6
                 }
             }
         }
+
         public override void InitArchivesComplete()
         {
             foreach (var archive in AllArchives)
@@ -163,7 +161,7 @@ namespace CodeX.Games.RDR1.RPF6
                 if (archive.AllEntries != null)
                 {
                     ArchiveDict[archive.Path] = archive;
-                    foreach (Rpf6Entry entry in archive.AllEntries.Cast<Rpf6Entry>())
+                    foreach (var entry in archive.AllEntries.Cast<Rpf6Entry>())
                     {
                         if (string.IsNullOrEmpty(entry.ShortNameLower)) continue;
                         JenkIndex.Ensure(entry.ShortNameLower, "RDR1");
@@ -342,7 +340,7 @@ namespace CodeX.Games.RDR1.RPF6
             Rpf6File.DeleteEntry(entry as Rpf6Entry);
         }
 
-        public override void Defragment(GameArchive file, Action<string, float> progress = null, bool recursive = true) //TODO: Add defragmentation
+        public override void Defragment(GameArchive file, Action<string, float> progress = null, bool recursive = true)
         {
             return;
         }
@@ -358,26 +356,14 @@ namespace CodeX.Games.RDR1.RPF6
                 case ".meta":
                     newfilename = file.Name;
                     return TextUtil.GetUTF8Text(data);
-
-                case ".strtbl": return ConvertToXml<StrtblFile>(file, data, out newfilename, "RDR1StringTable", GetXmlFileFolder(file, folder));
                 case ".fonttex": return ConvertToXml<FonttexFile>(file, data, out newfilename, "RDR1Fonttex", GetXmlFileFolder(file, folder));
-                case ".wft": return ConvertToXml<WftFile>(file, data, out newfilename, "RDR1Fragment", GetXmlFileFolder(file, folder)); //DEV ONLY
+                case ".wft": return ConvertToXml<WftFile>(file, data, out newfilename, "RDR1Fragment", GetXmlFileFolder(file, folder));
                 case ".wfd": return ConvertToXml<WfdFile>(file, data, out newfilename, "RDR1FragDrawable", GetXmlFileFolder(file, folder));
                 case ".wvd": return ConvertToXml<WvdFile>(file, data, out newfilename, "RDR1VisualDictionary", GetXmlFileFolder(file, folder));
-                //case ".wsi": return ConvertToXml<WsiFile>(file, data, out newfilename, "RDR1SectorInfo");
+                case ".wsi": return ConvertToXml<WsiFile>(file, data, out newfilename, "RDR1SectorInfo");
                 case ".wtl": return ConvertToXml<WtlFile>(file, data, out newfilename, "RDR1TerrainWorld", GetXmlFileFolder(file, folder));
-                //case ".wcdt": return ConvertToXml<WcdtFile>(file, data, out newfilename, "RDR1ClipDictionary");
-                //case ".wedt": return ConvertToXml<WedtFile>(file, data, out newfilename, "RDR1ExpressionsDictionary");
                 case ".wtd": return ConvertToXml<WtdFile>(file, data, out newfilename, "RDR1TextureDictionary", GetXmlFileFolder(file, folder));
-                //case ".was": return ConvertToXml<WasFile>(file, data, out newfilename, "RDR1AnimationSet");
-                //case ".wsg": return ConvertToXml<WsgFile>(file, data, out newfilename, "RDR1SectorGrass");
-                //case ".wcg": return ConvertToXml<WcgFile>(file, data, out newfilename, "RDR1CoverGrid");
-                //case ".wbd": return ConvertToXml<WbdFile>(file, data, out newfilename, "RDR1BoundsDictionary");
-                //case ".wtb": return ConvertToXml<WtbFile>(file, data, out newfilename, "RDR1TerritoryBounds");
-                case ".wgd": return ConvertToXml<WgdFile>(file, data, out newfilename, "RDR1GringoDictionary"); //DEV ONLY
-                //case ".wpfl": return ConvertToXml<WpflFile>(file, data, out newfilename, "RDR1ParticleEffectsLibrary", GetXmlFileFolder(file, folder));
-                case ".wst":
-                case ".sst": return ConvertToXml<SstFile>(file, data, out newfilename, "RDR1StringTable");
+                case ".dat": return ConvertToXml<AudioDatFile>(file, data, out newfilename, "RDR1AudioDat");
             }
 
             newfilename = file.Name + ".xml";
@@ -393,18 +379,11 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override byte[] ConvertFromXml(string xml, string filename, string folder = "")
         {
-            if (filename.EndsWith(".strtbl.xml")) return ConvertFromXml<StrtblFile>(xml, folder);
-            else if (filename.EndsWith(".fonttex.xml")) return ConvertFromXml<FonttexFile>(xml, folder);
+            if (filename.EndsWith(".fonttex.xml")) return ConvertFromXml<FonttexFile>(xml, folder);
             else if (filename.EndsWith(".wvd.xml")) return ConvertFromXml<WvdFile>(xml, folder);
             else if (filename.EndsWith(".wfd.xml")) return ConvertFromXml<WfdFile>(xml, folder);
-            else if (filename.EndsWith(".wft.xml")) return ConvertFromXml<WftFile>(xml, folder); //DEV ONLY
             else if (filename.EndsWith(".wtd.xml")) return ConvertFromXml<WtdFile>(xml, folder);
-            //else if (filename.EndsWith(".wsi.xml")) return ConvertFromXml<WsiFile>(xml);
-            //else if (filename.EndsWith(".wsg.xml")) return ConvertFromXml<WsgFile>(xml);
-            //else if (filename.EndsWith(".wbd.xml")) return ConvertFromXml<WbdFile>(xml);
-            //else if (filename.EndsWith(".wedt.xml")) return ConvertFromXml<WedtFile>(xml);
-            //else if (filename.EndsWith(".wtb.xml")) return ConvertFromXml<WtbFile>(xml);
-            else if (filename.EndsWith(".wst.xml") || filename.EndsWith(".sst.xml")) return ConvertFromXml<SstFile>(xml);
+            else if (filename.EndsWith(".wsi.xml")) return ConvertFromXml<WsiFile>(xml);
             return null;
         }
 
@@ -416,13 +395,43 @@ namespace CodeX.Games.RDR1.RPF6
 
         public override string ConvertToText(GameArchiveFileInfo file, byte[] data, out string newfilename)
         {
-            newfilename = file.Name;
-            return TextUtil.GetUTF8Text(data);
+            var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+            newfilename = Path.GetFileNameWithoutExtension(file.Name) + ".strtbl";
+
+            switch (ext)
+            {
+                case ".sst":
+                case ".wst":
+                    var sst = new SstFile(file);
+                    sst.Load(data);
+                    return sst.ToReadableText();
+                case ".strtbl":
+                    var strtbl = new StrtblFile();
+                    strtbl.Load(data);
+                    return strtbl.ToReadableText();
+                default:
+                    newfilename = file.Name + ".txt";
+                    return TextUtil.GetUTF8Text(data);
+            }
         }
 
         public override byte[] ConvertFromText(string text, string filename)
         {
-            return Encoding.UTF8.GetBytes(text);
+            var ext = Path.GetExtension(filename).ToLowerInvariant();
+            switch (ext)
+            {
+                case ".sst":
+                case ".wst":
+                    var sst = new SstFile();
+                    sst.FromReadableText(text);
+                    return sst.Save();
+                case ".strtbl":
+                    var strtbl = new StrtblFile();
+                    strtbl.FromReadableText(text);
+                    return strtbl.Save();
+                default:
+                    return Encoding.UTF8.GetBytes(text);
+            }
         }
 
         public override T LoadMetaNode<T>(GameArchiveFileInfo file, byte[] data = null)
@@ -448,7 +457,7 @@ namespace CodeX.Games.RDR1.RPF6
                                 return DataBagPack.FromXml(file, TextUtil.GetUTF8Text(data));
                         }
                         break; //unknown?
-                    case 0x30464252: //RBF0 
+                    case 0x30464252: //RBF0
                         var rbf = new RbfFile();
                         rbf.Load(data);
                         return rbf;
@@ -520,6 +529,7 @@ namespace CodeX.Games.RDR1.RPF6
                     case ".wbd": return Rsc6DataReader.Analyze<Rsc6BoundsDictionary>(rfe, data);
                     case ".wedt": return Rsc6DataReader.Analyze<Rsc6ExpressionDictionary>(rfe, data);
                     case ".wgd": return Rsc6DataReader.Analyze<Rsc6GringoDictionary>(rfe, data);
+                    case ".wat": return Rsc6DataReader.Analyze<Rsc6ActionTree>(rfe, data);
                     case ".wpfl": return Rsc6DataReader.Analyze<Rsc6ParticleEffects>(rfe, data);
                     case ".wnm": return Rsc6DataReader.Analyze<Rsc6Navmesh>(rfe, data);
                     case ".wsf": return Rsc6DataReader.Analyze<Rsc6ScaleFormFile>(rfe, data);
@@ -539,13 +549,7 @@ namespace CodeX.Games.RDR1.RPF6
             if (data == null) return null;
 
             var enl = entry.NameLower;
-            if (entry.Name.EndsWith(".strtbl")) //Stringtable
-            {
-                var sst = new StrtblFile();
-                sst.Load(data);
-                return sst;
-            }
-            else if (entry.Name.EndsWith(".fonttex")) //Fonttex
+            if (entry.Name.EndsWith(".fonttex")) //Fonttex
             {
                 var sst = new FonttexFile();
                 sst.Load(data);
@@ -675,75 +679,36 @@ namespace CodeX.Games.RDR1.RPF6
 
         public void LoadDependencies(PiecePack pack)
         {
-            //TODO: load dependencies properly instead of brute force loading everything
-            //TODO: use Rsc6Drawable.ApplyTextures
-
             if (pack?.Pieces == null) return;
 
             var fileent = pack.FileInfo as Rpf6FileEntry;
-            var filehash = fileent?.ShortNameHash ?? 0;
-            var fragment = fileent?.Name.EndsWith(".wft") ?? false;
-            var visualDict = fileent?.Name.EndsWith(".wvd") ?? false;
-
-            Rsc6Texture[] textures = visualDict ? LoadVisualDictTextures(fileent, pack) : LoadFragmentTextures(fileent);
+            var isVisualDict = fileent?.Name.EndsWith(".wvd") ?? false;
+            var textures = isVisualDict ? LoadVisualDictTextures(fileent, pack) : LoadFragmentTextures(fileent);
             if (textures == null || textures.Length == 0) return;
 
-            var texturesDict = textures.GroupBy(t => t.Name.ToLowerInvariant()).ToDictionary(g => g.Key, g => g.First()); //Dictionary for fast lookups
+            var dict = new Dictionary<JenkHash, Rsc6Texture>();
+            foreach (var tex in textures)
+            {
+                if (tex?.Name == null) continue;
+                var name = tex.Name.ToLowerInvariant().Replace(".dds", "");
 
-            //Parallelize piece processing
-            //Parallel.ForEach(pack.Pieces.Values, piece =>
+                if (name.StartsWith("memory:"))
+                {
+                    name = name[(name.LastIndexOf(':') + 1)..];
+                }
+
+                var hash = JenkHash.GenHash(name);
+                dict[hash] = tex;
+            }
+
             foreach (var piece in pack.Pieces.Values)
             {
-                var allMeshes = piece?.AllModels?.SelectMany(p => p.Meshes).ToArray();
-                if (allMeshes == null || allMeshes.Length == 0) return;
-
-                Parallel.ForEach(allMeshes, mesh =>
+                if (piece == null) continue;
+                if (piece is Rsc6Drawable drawable)
                 {
-                    if (mesh?.Textures == null) return;
-
-                    for (int i = 0; i < mesh.Textures.Length; i++)
-                    {
-                        var texture = mesh.Textures[i];
-                        if ((texture == null || texture.Data != null) && !fragment) continue;
-                        if (fragment && texture == null) continue;
-
-                        var texName = texture.Name.ToLowerInvariant();
-                        var tex = texturesDict.Values.FirstOrDefault(t => t.Name.ToLowerInvariant().Contains(texName));
-                        if (tex == null) continue;
-
-                        var previousTexture = Rsc6Texture.Create(mesh.Textures[i]); //Create copy of the original low-res texture
-                        mesh.Textures[i] = tex;
-
-                        //Update shader parameters
-                        foreach (var shader in ((Rsc6Drawable)piece)?.ShaderGroup.Item?.Shaders.Items)
-                        {
-                            foreach (var param in shader?.ParametersList.Item?.Parameters)
-                            {
-                                if (param.DataType != 0 || param.Texture == null) continue;
-
-                                if (tex.Name.Contains(param.Texture.Name.ToLowerInvariant()))
-                                {
-                                    param.Texture.Width = tex.Width;
-                                    param.Texture.Height = tex.Height;
-                                    param.Texture.MipLevels = tex.MipLevels;
-                                    param.Texture.Format = tex.Format;
-                                    param.Texture.Pack = tex.Pack;
-
-                                    //Preserve original low-res texture for texture editor preview
-                                    if (param.Texture.Data != null)
-                                    {
-                                        lock (piece.TexturePack.Textures)
-                                        {
-                                            piece.TexturePack.Textures[param.Texture.Name] = previousTexture;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                });
-            }//);
+                    drawable.ApplyTextures(dict);
+                }
+            }
         }
 
         public override GameArchiveFileInfo[] GetDependencyList(PiecePack pack)
@@ -771,7 +736,7 @@ namespace CodeX.Games.RDR1.RPF6
             return hs.Count > 0 ? [.. hs] : null;
         }
 
-        Rsc6Texture[] LoadVisualDictTextures(Rpf6FileEntry entry, PiecePack pack = null)
+        private Rsc6Texture[] LoadVisualDictTextures(Rpf6FileEntry entry, PiecePack pack = null)
         {
             //TODO: get rid of this and load dependencies properly
 
@@ -781,7 +746,6 @@ namespace CodeX.Games.RDR1.RPF6
             if (wvdParent == null) return null;
 
             var textures = new List<Rsc6Texture>();
-
             if (entry.Name.StartsWith("tile")) //We're searching for a tile, their textures can be in various dictionaries
             {
                 foreach (var drawable in ((WvdFile)pack).VisualDictionary.Drawables.Items)
@@ -835,8 +799,9 @@ namespace CodeX.Games.RDR1.RPF6
                         if (visualDict == null) continue;
                         for (int i = 0; i < visualDict.TextureDictionary.Item.Textures.Count; i++)
                         {
-                            if (visualDict.TextureDictionary.Item.Textures[i] == null) continue;
-                            if (textures.Find(item => item.Name == visualDict.TextureDictionary.Item.Textures[i].Name) == null)
+                            var tex = visualDict.TextureDictionary.Item.Textures[i];
+                            if (tex == null) continue;
+                            if (textures.Find(item => item.Name == tex.Name) == null)
                             {
                                 textures.Add(visualDict.TextureDictionary.Item.Textures[i]);
                             }
@@ -931,7 +896,6 @@ namespace CodeX.Games.RDR1.RPF6
 
             //Add the textures from fragmentTextureList
             texturesHashSet.UnionWith(dfm.FragTextures);
-
             return [.. texturesHashSet];
         }
 
@@ -939,8 +903,11 @@ namespace CodeX.Games.RDR1.RPF6
         public static Rpf6FileExt GetRpf6FileExt(string filename)
         {
             var extstr = Path.GetExtension(filename).Replace(".", "").ToLowerInvariant();
-            Enum.TryParse<Rpf6FileExt>(extstr, out var ext);
-            return ext;
+            if (Enum.TryParse(extstr, out Rpf6FileExt ext))
+            {
+                return ext;
+            }
+            return Rpf6FileExt.generic;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -971,9 +938,9 @@ namespace CodeX.Games.RDR1.RPF6
         public override void UpdateProjectItem(ProjectItem item, ProjectItemAction action)
         {
             base.UpdateProjectItem(item, action);
-
             var dfm = DataFileMgr;
             if (dfm == null) return;
+
             var gamepath = item.GamePath;
             if (string.IsNullOrEmpty(gamepath)) return;
             GetRpf6FileHashExt(gamepath, out var hash, out var ext);
@@ -1002,17 +969,16 @@ namespace CodeX.Games.RDR1.RPF6
                     }
                 }
             }
-
         }
 
         private void DoTests()
         {
-            bool animations = false, shaders = false, terrainBounds = false, grass = false, strtable = false, fragments = false, expressions = false;
+            bool animations = false, shaders = false, terrainBounds = false, sectorInfo = false, grass = false, strtable = false, fragments = false, expressions = false, scripts = false;
             var listShaders = new List<Rsc6ShaderFX>();
             var listIds = new List<string>();
             var objects = new List<string>();
 
-            if (!animations && !shaders && !terrainBounds && !grass && !strtable && !fragments && !expressions) return;
+            if (!animations && !shaders && !terrainBounds && !sectorInfo && !grass && !strtable && !fragments && !expressions && !scripts) return;
             foreach (var archive in AllArchives)
             {
                 var apl = archive.Path.ToLowerInvariant();
@@ -1033,6 +999,13 @@ namespace CodeX.Games.RDR1.RPF6
                                 wcdt.Load(data);
                             }
                         }
+                        if (scripts && n.EndsWith(".wsc"))
+                        {
+                            if (!fe.EntryParent.EntryParent.Name.Contains("rcm") && !fe.EntryParent.EntryParent.Name.Contains("missions")) continue;
+                            Core.Engine.Console.Write("Scripts", fe.Path);
+
+                            Debug.WriteLine($"\"{fe.Name.Replace(".wsc", "")}_layout\",");
+                        }
                         if (terrainBounds && n.EndsWith(".wtb"))
                         {
                             Core.Engine.Console.Write("TerrainBounds", fe.Path);
@@ -1041,6 +1014,31 @@ namespace CodeX.Games.RDR1.RPF6
                             {
                                 var wtb = new WtbFile(fe);
                                 wtb.Load(data);
+                            }
+                        }
+                        if (sectorInfo && n.EndsWith(".wsi"))
+                        {
+                            Core.Engine.Console.Write("SectorInfo", fe.Path);
+                            var data = EnsureFileData(fe, null);
+                            if (data != null)
+                            {
+                                var wsi = new WsiFile(fe);
+                                wsi.Load(data);
+
+                                var si = wsi.SectorInfo;
+                                if (si != null)
+                                {
+                                    var bbMin = new Vector3(si.BoundMin.Y, si.BoundMin.Z, si.BoundMin.X);
+                                    var bbMax = new Vector3(si.BoundMax.Y, si.BoundMax.Z, si.BoundMax.X);
+                                    Debug.WriteLine(string.Format("sectorsAABB.new(vector3({0}, {1}, {2}), vector3({3}, {4}, {5}), \"{6}\"),",
+                                        bbMin.X.ToString().Replace(',', '.'),
+                                        bbMin.Y.ToString().Replace(',', '.'),
+                                        bbMin.Z.ToString().Replace(',', '.'),
+                                        bbMax.X.ToString().Replace(',', '.'),
+                                        bbMax.Y.ToString().Replace(',', '.'),
+                                        bbMax.Z.ToString().Replace(',', '.'),
+                                        si.ToString()));
+                                }
                             }
                         }
                         if (grass && n.EndsWith(".wsg"))
@@ -1141,7 +1139,6 @@ namespace CodeX.Games.RDR1.RPF6
                                     }
                                     catch
                                     {
-
                                     }
                                 }
                             }
@@ -1340,7 +1337,7 @@ namespace CodeX.Games.RDR1.RPF6
                     };
                     mats[i] = m;
                 }
-                Rsc6BoundsMaterialTypes.Materials = mats.ToList();
+                Rsc6BoundsMaterialTypes.Materials = [.. mats];
             }
             UseStartupCache = true;
         }
@@ -1370,7 +1367,7 @@ namespace CodeX.Games.RDR1.RPF6
 
                         if (!this.StreamEntries.TryGetValue(fe.ResourceType, out var entries))
                         {
-                            entries = new Dictionary<JenkHash, Rpf6FileEntry>();
+                            entries = [];
                             this.StreamEntries[fe.ResourceType] = entries;
                         }
                         entries[hash] = fe;
@@ -1379,7 +1376,7 @@ namespace CodeX.Games.RDR1.RPF6
                     {
                         if (!this.StreamEntries.TryGetValue(Rpf6FileExt.binary, out var entries))
                         {
-                            entries = new Dictionary<JenkHash, Rpf6FileEntry>();
+                            entries = [];
                             this.StreamEntries[Rpf6FileExt.binary] = entries;
                         }
                         entries[fe.ShortNameHash] = fe;
@@ -1391,7 +1388,7 @@ namespace CodeX.Games.RDR1.RPF6
         private void LoadResidentTextures()
         {
             Core.Engine.Console.Write("Rpf6DataFileMgr", "Loading resident textures...");
-            
+
             //Load textures from swAll.wtd
             StreamEntries[Rpf6FileExt.wtd_wtx].TryGetValue(0x5D960088, out Rpf6FileEntry swall);
             if (swall != null)
@@ -1407,7 +1404,7 @@ namespace CodeX.Games.RDR1.RPF6
                     foreach (var tex in r.Textures.Values)
                     {
                         if (tex == null) continue;
-                        if (SwAll.Find(item => item.Name.Contains(tex.Name.ToLowerInvariant())) == null)
+                        if (SwAll.Find(item => item.Name.Contains(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
                         {
                             SwAll.Add((Rsc6Texture)tex);
                         }
@@ -1430,7 +1427,7 @@ namespace CodeX.Games.RDR1.RPF6
                     foreach (var tex in r.Textures.Values)
                     {
                         if (tex == null) continue;
-                        if (FragTextures.Find(item => item.Name.Contains(tex.Name.ToLowerInvariant())) == null)
+                        if (FragTextures.Find(item => item.Name.Contains(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
                         {
                             FragTextures.Add((Rsc6Texture)tex);
                         }
@@ -1456,8 +1453,8 @@ namespace CodeX.Games.RDR1.RPF6
                     foreach (string s in result)
                     {
                         if (string.IsNullOrEmpty(s) || s.Contains(':')) continue;
-                        bool dollar = s.StartsWith("$");
-                        string child = s[(dollar ? 1 : 0)..s.IndexOf(" ")].ToLowerInvariant();
+                        bool dollar = s.StartsWith('$');
+                        string child = s[(dollar ? 1 : 0)..s.IndexOf(' ')].ToLowerInvariant();
                         JenkIndex.Ensure(child);
                         int smicIndex = s.IndexOf("smic_");
                         var smicContent = s[smicIndex..].Split(" ");

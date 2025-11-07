@@ -1,15 +1,15 @@
 ﻿using CodeX.Core.Engine;
-using CodeX.Core.Physics.Characters;
+using CodeX.Core.Numerics;
 using CodeX.Core.Physics;
+using CodeX.Core.Physics.Characters;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
+using CodeX.Games.RDR1.RSC6;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.IO;
-using CodeX.Games.RDR1.RSC6;
-using CodeX.Core.Numerics;
+using System.Linq;
 using System.Numerics;
 
 namespace CodeX.Games.RDR1.Prefabs

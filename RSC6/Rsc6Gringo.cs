@@ -2,13 +2,13 @@
 using System;
 using System.Linq;
 using System.Numerics;
-using static BepuPhysics.Collidables.CompoundBuilder;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6GringoDictionary : Rsc6BlockBaseMap, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6GringoDictionary : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 32;
         public override uint VFT { get; set; } = 0x0091BC40;
@@ -37,7 +37,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6GringoBase : Rsc6FileBase, MetaNode //ggoComponentBase
+    [TC(typeof(EXP))]
+    public class Rsc6GringoBase : Rsc6FileBase, MetaNode //ggoComponentBase
     {
         public override ulong BlockLength => 16;
         public override uint VFT { get; set; } = 0x01979634;
@@ -79,9 +80,6 @@ namespace CodeX.Games.RDR1.RSC6
         public static Rsc6GringoBase Create(Rsc6DataReader r)
         {
             var type = (Rsc6ComponentType)r.ReadUInt32();
-            if (!Enum.IsDefined(typeof(Rsc6ComponentType), type))
-            {
-            }
             r.Position -= 4;
             return Create(type);
         }
@@ -99,7 +97,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Gringo : Rsc6GringoBase //ggoItemGringo
+    [TC(typeof(EXP))]
+    public class Rsc6Gringo : Rsc6GringoBase //ggoItemGringo
     {
         public override ulong BlockLength => base.BlockLength + 60;
         public short InstanceIndex { get; set; } //m_iInstanceIndex
@@ -177,7 +176,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6GringoUseContext : Rsc6GringoBase //ggoComponentUseContext
+    [TC(typeof(EXP))]
+    public class Rsc6GringoUseContext : Rsc6GringoBase //ggoComponentUseContext
     {
         public override ulong BlockLength => base.BlockLength + 112;
         public Rsc6PtrArr<Rsc6BlockMap> Attributes { get; set; } //m_Attributes, atArray<ggoItemPureAttribList>
@@ -334,7 +334,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6GringoItemAttributes : Rsc6GringoBase //ggoItemPureAttribList
+    [TC(typeof(EXP))]
+    public class Rsc6GringoItemAttributes : Rsc6GringoBase //ggoItemPureAttribList
     {
         public override ulong BlockLength => base.BlockLength + 112;
         public Rsc6PtrArr<Rsc6GringoItemAttribBase> Attributes { get; set; } //m_Attributes, atArray<ggoItemPureAttribBaseRef>
@@ -364,6 +365,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
+    [TC(typeof(EXP))]
     public class Rsc6GringoItemAttribBase : Rsc6BlockBase //ggoItemPureAttribBaseRef
     {
         public override ulong BlockLength => 4;

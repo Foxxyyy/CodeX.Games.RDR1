@@ -2,8 +2,6 @@
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -54,48 +52,6 @@ namespace CodeX.Games.RDR1.Files
         {
             SectorInfo = new();
             SectorInfo.Read(reader);
-
-
-
-            /*
-
-            WHY IS THIS HERE?
-
-            //Set ChildPtrs count for each subsector, only if sagSectorInfo isn't for horse/terrain curves
-            var si = SectorInfo;
-            if (si?.ChildPtrs.Items == null && si?.ChildGroup.Item != null)
-            {
-                ushort gsChildCount = 0;
-                var secs = si.ChildGroup.Item.Sectors;
-                var parents = si.ChildGroup.Item.SectorsParents;
-
-                for (int i = 0; i < secs.Count; i++)
-                {
-                    ushort childCount = 0;
-                    var sec = secs[i];
-
-                    if (sec.Name.ToString() == sec.Scope.ToString())
-                    {
-                        gsChildCount++;
-                    }
-
-                    for (int p = 0; p < parents.Count; p++)
-                    {
-                        var par = parents[p];
-                        if (par.Parent.Item?.Name.ToString() != sec.Name.ToString()) continue;
-                        childCount++;
-                    }
-
-                    var childs = new Rsc6SectorInfo[childCount];
-                    sec.ChildPtrs = new(childs, childCount, childCount);
-                }
-
-                var globalChilds = new Rsc6SectorInfo[gsChildCount];
-                si.ChildPtrs = new(globalChilds, gsChildCount, gsChildCount);
-            }
-
-            */
-
         }
 
         public override void Write(MetaNodeWriter writer)

@@ -1,17 +1,19 @@
-﻿using System;
+﻿using CodeX.Core.Numerics;
+using CodeX.Core.Utilities;
+using CodeX.Games.RDR1.RPF6;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Utilities;
-using CodeX.Core.Engine;
-using CodeX.Core.Numerics;
-using CodeX.Games.RDR1.RPF6;
-using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6SectorInfo : Rsc6BlockBaseMap, MetaNode //sagSectorInfo
+    [TC(typeof(EXP))]
+    public class Rsc6SectorInfo : Rsc6BlockBaseMap, MetaNode //sagSectorInfo
     {
         public override ulong BlockLength => 480;
         public override uint VFT { get; set; } = 0x01909C38;
@@ -94,6 +96,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ulong NamedNodeMap { get; set; } //m_NamedNodeMap, something like (u16)m_Slots + (rage::atMap<int,rage::datRef<RDR2NameAttribute>>)m_Hash + (u16)m_Used + (byte)m_AllowReCompute
 
         public BoundingBox Bounds { get; set; }
+        public static Rsc6SectorInfo Root { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -103,8 +106,8 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_10h = reader.ReadUInt64();
             Added = reader.ReadBoolean();
             PropsGroup = reader.ReadBoolean();
-            MissingMedLOD = reader.ReadBoolean(); 
-            Unknown_1Bh = reader.ReadByte(); 
+            MissingMedLOD = reader.ReadBoolean();
+            Unknown_1Bh = reader.ReadByte();
             ScopedNameHash = reader.ReadUInt32();
 
             for (int i = 0; i < CurveArrays.Length; i++) //Start of sagCurveGroup
@@ -181,10 +184,44 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_1D4h = reader.ReadUInt32();
             NamedNodeMap = reader.ReadUInt64();
             Bounds = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
+
+            if (ChildGroup.Item != null)
+            {
+                Root = this;
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
+            VisualDictionary = new Rsc6StreamableBase(false);
+            MedVisualDictionary = new Rsc6StreamableBase(false);
+            VLowVisualDictionary = new Rsc6StreamableBase(false);
+            BoundDictionary = new Rsc6StreamableBase(false);
+
+            if (ChildGroup.Item != null) //root
+            {
+                var arr = new Rsc6SectorInfo[] { null };
+                ChildPtrs = new(arr);
+                Root = this;
+            }
+            else
+            {
+                var childrens = new List<Rsc6SectorInfo>();
+                var childSectors = Root.ChildGroup.Item?.Sectors.Items;
+
+                for (int i = 1; i < childSectors.Length; i++)
+                {
+                    var sector = childSectors[i];
+                    if (Name.ToString() != sector.Scope.ToString()) continue;
+                    childrens.Add(null);
+                }
+
+                if (childrens.Count > 0)
+                {
+                    ChildPtrs = new([.. childrens]);
+                }
+            }
+
             base.Write(writer);
             writer.WriteStr(Name);
             writer.WriteSingle(LODFade);
@@ -287,7 +324,7 @@ namespace CodeX.Games.RDR1.RSC6
             BoundMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMax"));
             PlacedLightsGroup = new(reader.ReadNode<Rsc6PlacedLightsGroup>("PlacedLightsGroup"));
             Props = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
-            Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
+            //Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
 
             var dAttr = reader.ReadNodeArray<Rsc6MapAttribute>("DoorsAttributes");
             if (dAttr != null)
@@ -344,7 +381,7 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
 
-            var unk104 = reader.ReadNodeArray<Rsc6DrawableInstance>("Unknown_104h");
+            var secondaryInstances = reader.ReadNodeArray<Rsc6DrawableInstance>("Unknown_104h");
             if (DrawableInstances.Items != null)
             {
                 var portals = new List<Rsc6Portal>();
@@ -364,20 +401,20 @@ namespace CodeX.Games.RDR1.RSC6
                     var inst1 = DrawableInstances[i];
                     inst1.Index = i;
 
-                    if (unk104 != null)
+                    if (secondaryInstances != null)
                     {
-                        for (int i1 = 0; i1 < unk104.Length; i1++)
+                        for (int i1 = 0; i1 < secondaryInstances.Length; i1++)
                         {
-                            var u = unk104[i1];
+                            var u = secondaryInstances[i1];
                             if (u == null) continue;
                             if (u.InstanceNodeUsed != inst1.Node) continue;
                             u.InstanceNode = inst1;
                         }
                     }
                 }
-                Portals = new(portals.ToArray());
+                Portals = new([.. portals]);
             }
-            DrawableInstances2 = new(unk104);
+            DrawableInstances2 = new(secondaryInstances);
         }
 
         public void Write(MetaNodeWriter writer)
@@ -407,7 +444,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteString("SectorNameLower", NameHash.ToString());
             if (Occluders.Count > 0) writer.WriteNodeArray("Occluders", Occluders.Items);
             writer.WriteUInt32("ResidentStatus", ResidentStatus);
-            if (PropNames.Count > 0) writer.WriteStringArray("PropNames", PropNames.Items.Select(s => s.Value).ToArray());
+            if (PropNames.Count > 0) writer.WriteStringArray("PropNames", [.. PropNames.Items.Select(s => s.Value)]);
             if (Locators.Count > 0) writer.WriteNodeArray("Locators", Locators.Items);
             writer.WriteBool("AnyHighInstanceLoaded", AnyHighInstanceLoaded);
             writer.WriteBool("HasVLowLODResource", HasVLowLODResource);
@@ -430,8 +467,9 @@ namespace CodeX.Games.RDR1.RSC6
             return Name.Value ?? Scope.Value;
         }
     }
-     
-    [TC(typeof(EXP))] public class Rsc6ScopedSectors : Rsc6BlockBase, MetaNode //sagScopedSectors
+
+    [TC(typeof(EXP))]
+    public class Rsc6ScopedSectors : Rsc6BlockBase, MetaNode //sagScopedSectors
     {
         public override ulong BlockLength => 28;
         public Rsc6PtrArr<Rsc6SectorInfo> Sectors { get; set; } //m_ScopedSectors
@@ -460,7 +498,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             Sectors = new(reader.ReadNodeArray<Rsc6SectorInfo>("Sectors"));
-            ParentsNames = new(reader.ReadStringArray("SectorsParents").ToList());
+            ParentsNames = new([.. reader.ReadStringArray("SectorsParents")]);
             ScopeName = new Rsc6Str(reader.ReadString("Name"));
 
             if (Sectors.Items != null && Sectors.Items.Length > 1)
@@ -471,14 +509,13 @@ namespace CodeX.Games.RDR1.RSC6
                 for (int i = 1; i < ParentsNames.Count; i++)
                 {
                     var p = ParentsNames[i].ToLower();
-                    var parentSector = Sectors.Items.FirstOrDefault(s => s.Name.ToString().ToLower() == p);
+                    var parentSector = Sectors.Items.FirstOrDefault(s => s.Name.ToString().Equals(p, StringComparison.CurrentCultureIgnoreCase));
                     var count = parents.Count(item => item == p);
                     parents.Add(p);
                     indices.Add((ushort)count);
                 }
 
-                SectorsIndices = new(indices.ToArray());
-
+                SectorsIndices = new([.. indices]);
                 if (ParentsNames != null)
                 {
                     var parentsPos = new Rsc6ScopedSectorParent[ParentsNames.Count];
@@ -492,7 +529,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                         parentsPos[i] = new Rsc6ScopedSectorParent()
                         {
-                            Parent = new(Sectors.Items.FirstOrDefault(p => p.Name.Value.ToLower() == ParentsNames[i].ToLower()))
+                            Parent = new(Sectors.Items.FirstOrDefault(p => p.Name.Value.Equals(ParentsNames[i], StringComparison.CurrentCultureIgnoreCase)))
                         };
                     }
                     SectorsParents = new Rsc6ManagedArr<Rsc6ScopedSectorParent>(parentsPos);
@@ -509,14 +546,15 @@ namespace CodeX.Games.RDR1.RSC6
                                                                           .ToArray());
             writer.WriteString("Name", ScopeName.Value);
         }
-        
+
         public override string ToString()
         {
             return ScopeName.Value;
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6ScopedSectorParent : Rsc6BlockBase
+    [TC(typeof(EXP))]
+    public class Rsc6ScopedSectorParent : Rsc6BlockBase
     {
         public override ulong BlockLength => 4;
         public Rsc6Ptr<Rsc6SectorInfo> Parent { get; set; }
@@ -540,15 +578,17 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableInstanceBase : Rsc6FileBase, MetaNode //rage::rmpNode + sagWorldNode + rdrDrawableInstanceBase
+    [TC(typeof(EXP))]
+    public class Rsc6DrawableInstanceBase : Rsc6FileBase, MetaNode //rage::rmpNode + sagWorldNode + rdrDrawableInstanceBase
     {
         public override ulong BlockLength => 224;
         public override uint VFT { get; set; } = 0x01913300;
 
         //Start of rage::rmpNode & sagWorldNode
         public float TimeLastVisible { get; set; } //m_TimeLastVisible
+
         public ulong Unknown_8h { get; set; } //Always 0
-        public Vector4 LastKnownPositionAndFlags { get; set; } //m_LastKnownPositionAndFlags
+        public Vector4 LastKnownPositionAndFlags { get; set; } //m_LastKnownPositionAndFlags, w is a flags field, if Matrix.Translation != Vector3.Zero then w |= 0x800 (Forces update in next frame)
         //End of rage::rmpNode
 
         public int Node { get; set; } //m_Node
@@ -579,7 +619,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Str Name { get; set; } //m_Name
         public Rsc6Ptr<Rsc6Room> Room { get; set; } //m_Room
         public int Drawable { get; set; } //m_Drawable, always 0
-        public uint Unknown_C4h { get; set; } //Always 0
+        public uint Unknown_C4h { get; set; } //Always 0, alternative drawable, lod?
         public uint Unknown_C8h { get; set; } //Always 0
         public uint Unknown_CCh { get; set; } //Always 0
         public uint Unknown_D0h { get; set; } //Always 0
@@ -695,7 +735,7 @@ namespace CodeX.Games.RDR1.RSC6
             AO = reader.ReadByte("AO");
             Name = new(reader.ReadString("Name"));
             Room = new(reader.ReadNode<Rsc6Room>("Room"));
-            InstanceHash = new(Name.Value);
+            InstanceHash = new(Name.ToString());
 
             if (Room.Item != null)
             {
@@ -739,13 +779,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Room : Rsc6FileBase, MetaNode //rage::rmpRoom + rdrRoom
+    [TC(typeof(EXP))]
+    public class Rsc6Room : Rsc6FileBase, MetaNode //rage::rmpRoom + rdrRoom
     {
         /*
          * A rmpRoom is a bounding volume that describes the world visibility and provides a simplified version of the actual polygonal volume.
          * Anything that is inside or partially inside a room is considered visible if one can see a portal connected to the room or
          * if the viewpoint is in the room itself.
-         * A room maintains a list of rmpNodes that are within this room, so if the room volume can be seen, those nodes can be seen as well. 
+         * A room maintains a list of rmpNodes that are within this room, so if the room volume can be seen, those nodes can be seen as well.
          */
 
         public override ulong BlockLength => 144;
@@ -852,7 +893,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Portal : Rsc6FileBase, MetaNode //rage::rmpPortal
+    [TC(typeof(EXP))]
+    public class Rsc6Portal : Rsc6FileBase, MetaNode //rage::rmpPortal
     {
         /*
          * A portal is a polygon that connects two (or more) rmpRooms together.
@@ -965,7 +1007,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6DrawableInstance : Rsc6BlockBaseMap, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6DrawableInstance : Rsc6BlockBaseMap, MetaNode
     {
         public override ulong BlockLength => 144;
         public override uint VFT { get; set; } = 0x0198EFC0;
@@ -1046,7 +1089,9 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_80h);
             writer.WriteUInt32(Unknown_84h);
             writer.WriteUInt32(Unknown_88h);
-            writer.WritePtrEmbed(InstanceNode, InstanceNode, 0);
+
+            var instBase = InstanceNode as Rsc6DrawableInstanceBase;
+            writer.WritePtrEmbed(InstanceNode, InstanceNode, (ulong)(instBase.Index * 224));
         }
 
         public void Read(MetaNodeReader reader)
@@ -1075,7 +1120,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PolygonBlock : Rsc6FileBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6PolygonBlock : Rsc6FileBase, MetaNode
     {
         public override ulong BlockLength => 112;
         public override uint VFT { get; set; } = 0x01909C10;
@@ -1104,7 +1150,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Polygon : MetaNode //rage::spdPolygon
+    [TC(typeof(EXP))]
+    public class Rsc6Polygon : MetaNode //rage::spdPolygon
     {
         /*
          * spdPolygon  - A convex, planar polygon.
@@ -1119,6 +1166,7 @@ namespace CodeX.Games.RDR1.RSC6
         //rage::spdPolyNode
         //'Next/Prev' actually refers to (atDNode<spdPolyNode*> m_PolyNode, a dictionary for mapping different nodes), but since they are not being used I'm not bothering to implement them.
         public uint Unknown_10h { get; set; }
+
         public int Next { get; set; } //Always 0
         public int Prev { get; set; } //Always 0
         public int Polygon { get; set; } //m_Polygon, offset to the current spdPolygon
@@ -1216,13 +1264,14 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6CurveGroup : Rsc6BlockBase, MetaNode //sagCurveArray
+    [TC(typeof(EXP))]
+    public class Rsc6CurveGroup : Rsc6BlockBase, MetaNode //sagCurveArray
     {
         /*
          * There's a block of 24 pointers in each sagSectorInfo that refer to this sagCurveGroup structure
          * Most of the time only 1 or 2 curves are used per sector
          * 'swTerrain', 'swAll' & some other random sectors like 'theCeliaWastes' doesn't have any curves
-         * 
+         *
          * Curves 12, 13, 14, 21, 22, 23 & 24 are never used
          * Curves 8, 9 & 10 are only used in 'swWater'
          * Curves 5, 6, 18 & 19 are only used in 'swAiCurves'
@@ -1277,7 +1326,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Curve : Rsc6FileBase, MetaNode //sagCurve
+    [TC(typeof(EXP))]
+    public class Rsc6Curve : Rsc6FileBase, MetaNode //sagCurve
     {
         public override ulong BlockLength => 80; //rage::mayaCurve + sagCurve
         public override uint VFT { get; set; } = 0x0190DAB8;
@@ -1406,7 +1456,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PropInstanceInfo : Rsc6BlockBase, MetaNode //propInstanceInfo
+    [TC(typeof(EXP))]
+    public class Rsc6PropInstanceInfo : Rsc6BlockBase, MetaNode //propInstanceInfo
     {
         public override ulong BlockLength => 48;
         public Rsc6Str EntityName { get; set; } //m_TypeName
@@ -1499,7 +1550,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6Attribute : Rsc6FileBase, MetaNode //RDR2AttribBase
+    [TC(typeof(EXP))]
+    public class Rsc6Attribute : Rsc6FileBase, MetaNode //RDR2AttribBase
     {
         public override ulong BlockLength => 16;
         public override uint VFT { get; set; } //TODO: finish writing
@@ -1516,7 +1568,7 @@ namespace CodeX.Games.RDR1.RSC6
             TargetPointer = reader.ReadUInt32();
             TargetType = reader.ReadUInt32();
             ClassID = reader.ReadUInt32();
-            
+
             if (TargetType == 1 && ClassID == 1)
                 Type = Rsc6AttributeType.PROPS_DOORS_1;
             else if (TargetType == 3 && ClassID == 2)
@@ -1588,10 +1640,10 @@ namespace CodeX.Games.RDR1.RSC6
                 case 1: return new Rsc6AttributeInstancedProp(); //Prop & doors
                 case 2:
                 case 5:
-                    {
-                        if (targetType == 3) return new Rsc6AttributeDrawableInstanceProp(); //Prop & gringos
-                        else return new Rsc6AttributeInstancedProp2();
-                    }
+                {
+                    if (targetType == 3) return new Rsc6AttributeDrawableInstanceProp(); //Prop & gringos
+                    else return new Rsc6AttributeInstancedProp2();
+                }
                 default: throw new NotImplementedException("Unknown RDRAttribute type");
             }
         }
@@ -1608,7 +1660,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6MapAttribute : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6MapAttribute : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 12;
         public JenkHash TargetHash { get; set; } //The name of the attribute
@@ -1642,7 +1695,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6AttributeInstancedProp : Rsc6Attribute, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6AttributeInstancedProp : Rsc6Attribute, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 16;
         public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp { get; set; }
@@ -1708,7 +1762,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6AttributeInstancedProp2 : Rsc6Attribute, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6AttributeInstancedProp2 : Rsc6Attribute, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 20; //TODO: confirm this is +20 and not +16
         public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp { get; set; }
@@ -1778,7 +1833,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6AttributeDrawableInstanceProp : Rsc6Attribute, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6AttributeDrawableInstanceProp : Rsc6Attribute, MetaNode
     {
         public override ulong BlockLength => base.BlockLength + 32;
         public Rsc6Ptr<Rsc6DrawableInstanceBase> TargetProp { get; set; }
@@ -1835,8 +1891,8 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             TargetedProp = reader.ReadString("TargetProp");
             Name = reader.ReadUInt32("Name");
-            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
-            Unknown_24h = reader.ReadUInt32("Unknown_24h");
+            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h", new Vector3(-431602080f)));
+            Unknown_24h = reader.ReadUInt32("Unknown_24h", 0xCDCDCDCD);
         }
 
         public new void Write(MetaNodeWriter writer)
@@ -1849,6 +1905,7 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 writer.WriteVector3("Unknown_14h", Unknown_14h);
             }
+
             if (Unknown_24h != 0xCDCDCDCD)
             {
                 writer.WriteUInt32("Unknown_24h", Unknown_24h);
@@ -1861,7 +1918,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6SectorChild : Rsc6BlockBase, MetaNode //sagSectorChild
+    [TC(typeof(EXP))]
+    public class Rsc6SectorChild : Rsc6BlockBase, MetaNode //sagSectorChild
     {
         public override ulong BlockLength => 112;
         public BoundingBox SectorBounds { get; set; }
@@ -1936,7 +1994,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLightsGroup : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6PlacedLightsGroup : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 64;
         public Vector4 BoundsMin { get; set; } //m_AABBMin
@@ -1992,7 +2051,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLight : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6PlacedLight : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 160;
         public Vector4 Position { get; set; } //m_Position
@@ -2157,7 +2217,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6PlacedLightGlow : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6PlacedLightGlow : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 64;
         public Colour GlowColor { get; set; } //m_GlowColor
@@ -2288,7 +2349,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6LocatorStatic : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6LocatorStatic : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 48;
         public Vector4 Offset { get; set; }
@@ -2297,7 +2359,6 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_24h { get; set; } //Padding
         public uint Unknown_28h { get; set; } //Padding
         public uint Unknown_2Ch { get; set; } //Padding
-
 
         public override void Read(Rsc6DataReader reader) //rdrLocatorStatic
         {
@@ -2336,7 +2397,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
+    [TC(typeof(EXP))]
+    public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
     {
         public override ulong BlockLength => 80;
         public override uint VFT { get; set; } = 0x01909C20;
@@ -2391,7 +2453,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6InstanceDataMember : Rsc6BlockBase, MetaNode //sagInstDataMember
+    [TC(typeof(EXP))]
+    public class Rsc6InstanceDataMember : Rsc6BlockBase, MetaNode //sagInstDataMember
     {
         public override ulong BlockLength => 36;
         public int Unknown_0h { get; set; } //Always 0
@@ -2454,7 +2517,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6UnknownInstData : Rsc6BlockBase, MetaNode
+    [TC(typeof(EXP))]
+    public class Rsc6UnknownInstData : Rsc6BlockBase, MetaNode
     {
         public override ulong BlockLength => 48;
         public Vector4 Unknown_0h { get; set; }
@@ -2495,7 +2559,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainWorldResource : Rsc6BlockBaseMap, MetaNode //sagTerrainWorldResource
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainWorldResource : Rsc6BlockBaseMap, MetaNode //sagTerrainWorldResource
     {
         public override ulong BlockLength => 144;
         public override uint VFT { get; set; } = 0x04CACFCC;
@@ -2522,14 +2587,14 @@ namespace CodeX.Games.RDR1.RSC6
             TextureDictionaryLookup = reader.ReadAtMapArr<Rsc6TerrainTextureEntries>();
             TextureSets = reader.ReadArr<Rsc6TerrainTextureSet>();
 
-            //I should really make an atRangeArray structure as this is used for a lot of stuff, ie. the 4 vertex/index buffers for drawables, should be the case for other games too.
+            //I should really make an atRangeArray structure as this is used for a lot of stuff.
             for (int i = 0; i < LodGridBuckets.Length; i++)
             {
                 LodGridBuckets[i] = reader.ReadPtr<Rsc6GridBucket>();
             }
 
-            GridSize = reader.ReadArray<short>(5, false);//.ReadInt16Arr(5);
-            GridSubDivs = reader.ReadArray<short>(5, false);//.ReadInt16Arr(5);
+            GridSize = reader.ReadArray<short>(5, false);
+            GridSubDivs = reader.ReadArray<short>(5, false);
             NumLODLevels = reader.ReadInt32();
         }
 
@@ -2548,8 +2613,8 @@ namespace CodeX.Games.RDR1.RSC6
                 writer.WritePtr(LodGridBuckets[i]);
             }
 
-            writer.WriteStructArray(GridSize);//.WriteInt16Array(GridSize);
-            writer.WriteStructArray(GridSubDivs);//.WriteInt16Array(GridSubDivs);
+            writer.WriteStructArray(GridSize);
+            writer.WriteStructArray(GridSubDivs);
             writer.WriteInt32(NumLODLevels);
         }
 
@@ -2577,7 +2642,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainVisualDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<terTerrainVisual>, 0, unsigned short>
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainVisualDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<terTerrainVisual>, 0, unsigned short>
     {
         public override ulong BlockLength => 8;
         public Rsc6PtrArr<Rsc6TerrainVisual> Elements { get; set; } //m_Elements, capacity is the total size of all pointers (count * 4)
@@ -2602,7 +2668,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainSectorDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<sagTerrainSector>, 0, unsigned short>
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainSectorDictionary : Rsc6BlockBase, MetaNode //rage::atArray<rage::datOwner<sagTerrainSector>, 0, unsigned short>
     {
         public override ulong BlockLength => 8;
         public Rsc6PtrArr<Rsc6TerrainSector> Elements { get; set; } //m_Elements
@@ -2627,7 +2694,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainVisual : Rsc6BlockBase, MetaNode //terTerrainVisual
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainVisual : Rsc6BlockBase, MetaNode //terTerrainVisual
     {
         public override ulong BlockLength => 52;
         public Rsc6StreamableBase ClientsHead { get; set; } //m_ClientsHead
@@ -2657,6 +2725,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            ClientsHead = new Rsc6StreamableBase(false);
             writer.WriteStruct(ClientsHead);
             writer.WritePtrArr(Sectors);
             writer.WriteInt32Array(TextureDictionaries);
@@ -2686,7 +2755,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainSector : Rsc6BlockBase, MetaNode //sagTerrainSector
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainSector : Rsc6BlockBase, MetaNode //sagTerrainSector
     {
         public override ulong BlockLength => 80;
         public Vector4 AABBMin { get; set; } //m_MinAndBoundingRadius
@@ -2773,7 +2843,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainTextureDictionary : Rsc6BlockBase, MetaNode //terTextureDictionary
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainTextureDictionary : Rsc6BlockBase, MetaNode //terTextureDictionary
     {
         /*
          * Reference to a texture dictionary (#td), has to be in the "mapres" folder.
@@ -2814,7 +2885,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainTextureEntries : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TerrainTextureEntries> //rage::atMapEntry<rage::ConstString, int>
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainTextureEntries : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TerrainTextureEntries> //rage::atMapEntry<rage::ConstString, int>
     {
         public override ulong BlockLength => 12;
         public Rsc6Str Name { get; set; } //m_String
@@ -2844,7 +2916,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TerrainTextureSet : Rsc6BlockBase, MetaNode //terTextureSet
+    [TC(typeof(EXP))]
+    public class Rsc6TerrainTextureSet : Rsc6BlockBase, MetaNode //terTextureSet
     {
         public override ulong BlockLength => 736;
         public byte[] ReferencingSectors { get; set; } //m_ReferencingSectors, zero bytes, seems to be a buffer to dynamically reference sectors that will use this texture asset
@@ -2920,7 +2993,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6GridBucket : Rsc6BlockBase, MetaNode //gridBucket
+    [TC(typeof(EXP))]
+    public class Rsc6GridBucket : Rsc6BlockBase, MetaNode //gridBucket
     {
         public override ulong BlockLength => 20;
         public Rsc6Arr<short> BucketArray { get; set; } //m_BucketArray
@@ -2969,34 +3043,37 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6StreamableBase //rage::pgStreamableBase
+    [TC(typeof(EXP))]
+    public struct Rsc6StreamableBase //rage::pgStreamableBase
     {
         /*
          * A base class in RAGE Engine that seems to be used for handling streamed resources.
          * Manages assets such as models, textures and map elements that need to be loaded and unloaded dynamically (can track the residency state).
-         * 
+         *
          * Assets are scheduled for loading, a scheduler processes assets every frame, they're managed in priority queues.
          * They can be evicted when no longer loading using pgStreamableBase::Shutdown()
-         * 
+         *
          * Basic Scheduler (by default) loads assets every frame
          * pgQueueScheduler ensures assets are loaded only once.
          */
 
-        public uint VFT { get; set; } //Always 0, seems to be for storing a VFT since this is skipped in the datResourceSkip
+        public uint VFT { get; set; } //Always 0, VFT placeholder
         public int Handle { get; set; } = -1; //Always -1 (pgStreamer::Error), handle of a file
         public uint Unknown_8h { get; set; } //0 for #ft, 64 for #tl/#si
         public uint State { get; set; } //Always 0, (State &= 0xCFFFFFFF | _state) -> rage::pgStreamableBase::State
 
-        public Rsc6StreamableBase()
+        public Rsc6StreamableBase(bool fragment)
         {
+            Handle = -1;
+            Unknown_8h = fragment ? 0U : 64U;
         }
 
-        public int GetVirtualSize() //rage::pgStreamableBase::GetVirtualSize
+        public readonly int GetVirtualSize() //rage::pgStreamableBase::GetVirtualSize
         {
             return (Handle == -1) ? -1 : (Handle & 0x7FFF) << 12;
         }
 
-        public int GetPhysicalSize() //rage::pgStreamableBase::GetPhysicalSize
+        public readonly int GetPhysicalSize() //rage::pgStreamableBase::GetPhysicalSize
         {
             return (Handle == -1) ? -1 : (Handle >> 4) & 0x7FFF000;
         }
@@ -3012,9 +3089,9 @@ namespace CodeX.Games.RDR1.RSC6
     public enum Rsc6MayaCurveForm : short
     {
         FORM_UNKNOWN = -1,
-	    FORM_OPEN = 0, //Open curve
-	    FORM_CLOSED, //Closed curve
+        FORM_OPEN = 0, //Open curve
+        FORM_CLOSED, //Closed curve
         FORM_PERIODIC, //When you choose "Close curve" in Maya. The curve will repeat smoothly.
-	    FORM_NUMFORMS
+        FORM_NUMFORMS
     }
 }

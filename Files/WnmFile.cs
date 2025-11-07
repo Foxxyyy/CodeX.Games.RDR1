@@ -2,7 +2,6 @@
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -28,8 +27,8 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
 
-            Navmesh = r.ReadBlock<Rsc6Navmesh>();
-            Pieces = new Dictionary<JenkHash, Piece>();
+            Navmesh = r.ReadBlock(reader => Rsc6Navmesh.Create(r));
+            Pieces = [];
 
             if (Navmesh != null)
             {

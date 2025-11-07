@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using TC = System.ComponentModel.TypeConverterAttribute;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RPF6
 {
@@ -19,6 +19,7 @@ namespace CodeX.Games.RDR1.RPF6
         public uint TOCSize { get; set; } //Size of table of content (EntryCount * 20)
         public uint StringTableOffset { get; set; } //Used with the Nintendo Switch/PS4/PC versions but not necessary
         public int EncFlag { get; set; } //Encryption flag
+
         public bool Encrypted
         {
             get => (uint)EncFlag > 0U;
@@ -125,7 +126,7 @@ namespace CodeX.Games.RDR1.RPF6
 
         public static void RenameEntry(Rpf6Entry entry, string newname)
         {
-            //rename the entry in the RPF header... 
+            //rename the entry in the RPF header...
             //also make sure any relevant child paths are updated...
 
             string dirpath = GetParentPath(entry.Path);
@@ -162,7 +163,7 @@ namespace CodeX.Games.RDR1.RPF6
                 Root.Path = Path.ToLowerInvariant();
                 dir = (Rpf6DirectoryEntry)Root;
             }
-            
+
             foreach (var file in dir.Files)
             {
                 file.Path = dir.Path + "\\" + file.NameLower;
@@ -176,7 +177,6 @@ namespace CodeX.Games.RDR1.RPF6
                         childrpf.UpdatePaths();
                     }
                 }
-
             }
 
             foreach (Rpf6DirectoryEntry subdir in dir.Directories.Cast<Rpf6DirectoryEntry>())
@@ -272,7 +272,7 @@ namespace CodeX.Games.RDR1.RPF6
                     {
                         e.StartIndex = newSupers.Count;
                         newSupers.AddRange(e.Children.OrderBy(o => o.NameOffset.Hash));
-                        
+
                         foreach (var child in e.Children)
                             sortSupers(child);
                     }
@@ -492,21 +492,20 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-        public static byte[] GetDataFromResourceBytes(byte[] rdata)
+        public static byte[] GetDataFromResourceBytes(byte[] rdata) //TODO: merge this into ExtractFile
         {
-            //TODO: merge this into ExtractFile
             using var br = new DataReader(new MemoryStream(rdata));
             var num1 = br.ReadUInt32();
             var num2 = br.ReadInt32();
             FlagInfo flagInfo;
 
-            if (num1 == 0x85435352 || num1 == 0x86435352)//RSC5/6 (+0x80)
+            if (num1 == 0x85435352 || num1 == 0x86435352) //RSC5-6 (+0x80)
             {
                 flagInfo = new FlagInfo(br.ReadInt32(), br.ReadInt32());
             }
             else
             {
-                if (num1 != 0x05435352 && num1 != 0x06435352)//RSC5/6
+                if (num1 != 0x05435352 && num1 != 0x06435352) //RSC5-6
                 {
                     return null;
                 }
@@ -520,13 +519,10 @@ namespace CodeX.Games.RDR1.RPF6
             }
 
             using var dr = new DataReader(new MemoryStream(numArray));
-            int length = (int)dr.Length;
-            byte[] data = dr.ReadBytes(length);
+            var length = (int)dr.Length;
+            var data = dr.ReadBytes(length);
             var output = Rpf6Crypto.DecompressZStandard(data);
-            if (output == null) //Some resources still use zlib (.wtx)
-            {
-                output = GetZLibData(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
-            }
+            output ??= GetZLibData(data, flagInfo.BaseResourceSizeP + flagInfo.BaseResourceSizeV, false);
             return output;
         }
 
@@ -534,13 +530,10 @@ namespace CodeX.Games.RDR1.RPF6
         {
             try
             {
-                return BufferUtil.Decompress(data, noHeader ? 0 : 2);//if data includes 2 bytes of zlib header, it needs to be ignored
+                return BufferUtil.Decompress(data, noHeader ? 0 : 2); //If data includes 2 bytes of zlib header, it needs to be ignored
             }
             catch { return null; }
         }
-
-
-
 
         internal void ReadStartupCache(BinaryReader br)
         {
@@ -551,12 +544,13 @@ namespace CodeX.Games.RDR1.RPF6
             StringTableOffset = br.ReadUInt32();
             EncFlag = br.ReadInt32();
 
-            AllEntries = new List<GameArchiveEntry>();
+            AllEntries = [];
             var entrydict = new Dictionary<string, GameArchiveFileInfo>();
             for (int i = 0; i < EntryCount; i++)
             {
                 var entry = Rpf6Entry.ReadEntry(this, br);
                 AllEntries.Add(entry);
+
                 if ((entry is GameArchiveFileInfo finfo) && (finfo.IsArchive))
                 {
                     entrydict[finfo.Path.ToLowerInvariant()] = finfo;
@@ -597,8 +591,8 @@ namespace CodeX.Games.RDR1.RPF6
 
             string fpath = gtafolder;
             relpath = relpath.Replace("RDR1\\\\", "");
-            fpath = fpath.EndsWith("\\") ? fpath : fpath + "\\";
-            fpath = fpath + relpath;
+            fpath = fpath.EndsWith('\\') ? fpath : fpath + "\\";
+            fpath += relpath;
 
             if (File.Exists(fpath))
             {
@@ -610,10 +604,8 @@ namespace CodeX.Games.RDR1.RPF6
 
             using (var fstream = File.Open(fpath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using (var bw = new BinaryWriter(fstream))
-                {
-                    file.WriteNewArchive(bw);
-                }
+                using var bw = new BinaryWriter(fstream);
+                file.WriteNewArchive(bw);
             }
             return file;
         }
@@ -751,7 +743,7 @@ namespace CodeX.Games.RDR1.RPF6
                 Name = name,
                 NameOffset = JenkHash.GenHash(name),
                 IsDirectory = true,
-                Children = new List<Rpf6Entry>()
+                Children = []
             };
 
             foreach (var exdir in dir.Directories)
@@ -791,6 +783,7 @@ namespace CodeX.Games.RDR1.RPF6
         public bool ReadBackFromRPF { get; set; } = true;
 
         private string _Attributes;
+
         public override string Attributes
         {
             get
@@ -814,6 +807,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         public abstract void Read(BinaryReader r);
+
         public abstract void Write(BinaryWriter w);
 
         public static Rpf6Entry ReadEntry(GameArchive archive, BinaryReader br)
@@ -1064,6 +1058,7 @@ namespace CodeX.Games.RDR1.RPF6
         {
             Flag1 = flag;
         }
+
         public FlagInfo(int flag1, int flag2)
         {
             Flag1 = flag1;
@@ -1407,7 +1402,7 @@ namespace CodeX.Games.RDR1.RPF6
             }
             return [.. intList];
         }
-        #endregion
+        #endregion 
 
         public bool IsResource
         {
@@ -1479,7 +1474,6 @@ namespace CodeX.Games.RDR1.RPF6
             return (GetCompactSize(sysSegSize) & 0x7FFF) | (GetCompactSize(gpuSegSize) & 0x7FFF) << 15 | 3 << 30;
         }
     }
-
 
     public enum Rpf6FileExt : byte
     {

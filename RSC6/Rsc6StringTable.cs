@@ -1,12 +1,13 @@
-﻿using System.Linq;
+﻿using CodeX.Core.Utilities;
 using System.Collections.Generic;
-using CodeX.Core.Utilities;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System.Linq;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    [TC(typeof(EXP))] public class Rsc6StringTable : Rsc6BlockBaseMap, MetaNode //rage::txtStringTable
+    [TC(typeof(EXP))]
+    public class Rsc6StringTable : Rsc6BlockBaseMap //rage::txtStringTable
     {
         public override ulong BlockLength => 20;
         public override uint VFT { get; set; } = 0x00EC9BC8;
@@ -29,19 +30,10 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteInt32(NumIdentifiers);
             writer.WriteUInt32(Unknown_10h);
         }
-
-        public void Read(MetaNodeReader reader)
-        {
-            HashTable = new(reader.ReadNode<Rsc6TextHashTable>("HashTable"));
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteNode("HashTable", HashTable.Item);
-        }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TextHashTable : Rsc6BlockBase, MetaNode //rage::txtHashTable
+    [TC(typeof(EXP))]
+    public class Rsc6TextHashTable : Rsc6BlockBase //rage::txtHashTable
     {
         public override ulong BlockLength => 16;
         public int NumSlots { get; set; } //mNumSlots, number of max slots in the table, always 101
@@ -62,16 +54,6 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteInt32(NumEntries);
         }
 
-        public void Read(MetaNodeReader reader)
-        {
-            BuildSlots(reader.ReadNodeArray<Rsc6TextHashEntry>("Slots"));
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteNodeArray("Slots", Rsc6DataMap.Flatten(Slots.Items, e => e).ToArray());
-        }
-
         public void BuildSlots(IEnumerable<Rsc6TextHashEntry> entries)
         {
             var list = entries?.ToList();
@@ -85,7 +67,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TextHashEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TextHashEntry>, MetaNode //rage::txtHashEntry
+    [TC(typeof(EXP))]
+    public class Rsc6TextHashEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TextHashEntry> //rage::txtHashEntry
     {
         public override ulong BlockLength => 12;
         public JenkHash Hash { get; set; } //mHash, equal to mData.Hash
@@ -109,30 +92,14 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WritePtr(Next);
         }
 
-        public void Read(MetaNodeReader reader)
-        {
-            Hash = reader.ReadJenkHash("@hash");
-            var item = new Rsc6TextStringData
-            {
-                Hash = this.Hash,
-                String = new(reader.ReadString("Text"))
-            };
-            Data = new(item);
-        }
-
-        public void Write(MetaNodeWriter writer)
-        {
-            writer.WriteJenkHash("@hash", Hash);
-            writer.WriteString("Text", Xml.Escape(Data.Item?.String.Value?.Trim('\x00') ?? ""));
-        }
-
         public override string ToString()
         {
             return Hash.ToString();
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6TextStringData : Rsc6BlockBase //rage::txtStringData
+    [TC(typeof(EXP))]
+    public class Rsc6TextStringData : Rsc6BlockBase //rage::txtStringData
     {
         public override ulong BlockLength => 16;
         public JenkHash Hash { get; set; } //m_Hash

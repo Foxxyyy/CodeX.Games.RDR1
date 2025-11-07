@@ -6,7 +6,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.Files;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -40,7 +39,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             Console.Write("RDR1Peds", "Loading Clips names...");
             var rpf = fman.AllArchives.FirstOrDefault(e => e.Name == "animationres.rpf");
-            var clipsBin = rpf.AllEntries.FirstOrDefault(e => e.Name == "clips.bin"); 
+            var clipsBin = rpf.AllEntries.FirstOrDefault(e => e.Name == "clips.bin");
 
             if (clipsBin != null)
             {
@@ -49,7 +48,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
             Console.Write("RDR1Peds", "Building Prefabs...");
             var peds = entries
-                .Where(e =>  e.Value.Name.EndsWith(".wfd") && !e.Value.Name.Contains("medlod") && !e.Value.Name.Contains("x_hilod"))
+                .Where(e => e.Value.Name.EndsWith(".wfd") && !e.Value.Name.Contains("medlod") && !e.Value.Name.Contains("x_hilod"))
                 .Select(e => e.Value.Name.Replace(".wfd", ""))
                 .ToList();
 
@@ -60,7 +59,7 @@ namespace CodeX.Games.RDR1.Prefabs
                         && !e.Value.Name.Contains("hat")
                         && !e.Value.Name.Contains("p_gen")
                         && !e.Value.Name.Contains("rocks")
-                        &&  e.Value.Name.Contains('_'))
+                        && e.Value.Name.Contains('_'))
                 .Select(e => e.Value.Name.Replace(".wft", ""))
                 .ToList();
 
@@ -90,7 +89,6 @@ namespace CodeX.Games.RDR1.Prefabs
             var totaltime = stopwatch.Elapsed.TotalMilliseconds;
             Console.Write("RDR1Peds", $"Peds initialised. Total time: {totaltime} ms");
         }
-
 
         public RDR1PedPrefab GetPrefab(string name)
         {
@@ -232,7 +230,7 @@ namespace CodeX.Games.RDR1.Prefabs
                 BuildPiece();
             }
         }
-        
+
         public void BuildPiece()
         {
             var peds = Prefab?.Peds;
@@ -261,11 +259,13 @@ namespace CodeX.Games.RDR1.Prefabs
             if (dict == null) return null;
 
             var list = new List<string>() { "" };
+            var list1 = new List<string>() { "" };
             foreach (var kvp in dict)
             {
                 if (kvp.Value == null) continue;
                 var name = kvp.Value.Name;
                 list.Add(Path.GetFileName(name));
+                list1.Add(name);
 
                 if (name == "gped_idl0")
                 {
@@ -280,6 +280,61 @@ namespace CodeX.Games.RDR1.Prefabs
 
             ClipName = defaultval;
             list.Sort();
+            list1.Sort();
+
+            /*if (Was.FileInfo.NameLower == "gent.was")
+            {
+                var sb = new StringBuilder();
+                sb.Append("= { ");
+                int count = 0;
+
+                foreach (var item in list1)
+                {
+                    var ttt = item.ToLowerInvariant();
+                    if (string.IsNullOrEmpty(ttt) || !ttt.StartsWith("human"))
+                    {
+                        continue;
+                    }
+
+                    var name = Path.GetFileName(ttt);
+                    //if (!name.StartsWith("gent_wag_") && !name.StartsWith("gped_wag_"))
+                        //continue;
+
+                    if (name.StartsWith("gent_col_") || name.StartsWith("gped_col_"))
+                        continue;
+                    if (name.StartsWith("gent_crc_") || name.StartsWith("gped_crc_"))
+                        continue;
+                    if (name.StartsWith("gent_hrs_") || name.StartsWith("gped_hrs_"))
+                        continue;
+                    if (name.StartsWith("gent_hnd_") || name.StartsWith("gped_hnd_"))
+                        continue;
+                    if (name.StartsWith("gent_ldg_") || name.StartsWith("gped_ldg_"))
+                        continue;
+                    if (name.StartsWith("gent_lvl_") || name.StartsWith("gped_lvl_"))
+                        continue;
+                    if (name.StartsWith("gent_mne_") || name.StartsWith("gped_mne_"))
+                        continue;
+                    if (name.StartsWith("gent_mel_") || name.StartsWith("gped_mel_"))
+                        continue;
+                    if (name.StartsWith("gent_nor_") || name.StartsWith("gped_nor_"))
+                        continue;
+                    if (name.StartsWith("gent_rft_") || name.StartsWith("gped_rft_"))
+                        continue;
+                    if (name.StartsWith("gent_stg_") || name.StartsWith("gped_stg_"))
+                        continue;
+                    if (name.StartsWith("gent_wag_") || name.StartsWith("gped_wag_"))
+                        continue;
+
+                    var animName = name.Substring(name.IndexOf('_') + 1);
+                    sb.Append($", \"{animName}\"");
+                    count++;
+                }
+
+                sb.Append(" };");
+                Debug.WriteLine(sb.ToString());
+                Debug.WriteLine(count.ToString() + " items");
+            }*/
+
             return [.. list];
         }
 
@@ -291,7 +346,7 @@ namespace CodeX.Games.RDR1.Prefabs
             var animTypes = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.AnimTypes;
             if (anims == null) return null;
 
-            var list = new List<string>();    
+            var list = new List<string>();
             for (int i = 0; i < anims.Length; i++)
             {
                 var anim = anims[i];

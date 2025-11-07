@@ -15,7 +15,6 @@ namespace CodeX.Games.RDR1.Files
 
         public WtdFile(Rpf6FileEntry file) : base(file)
         {
-
         }
 
         public WtdFile()

@@ -1,13 +1,12 @@
-﻿using System;
-using System.IO.Compression;
-using System.IO;
-using System.Security.Cryptography;
-using System.Collections.Generic;
-using CodeX.Core.Utilities;
-using System.Numerics;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
-using CodeX.Core.Engine;
+using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RSC6;
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Numerics;
+using System.Security.Cryptography;
 using MI = System.Runtime.CompilerServices.MethodImplAttribute;
 using MO = System.Runtime.CompilerServices.MethodImplOptions;
 
@@ -17,8 +16,8 @@ namespace CodeX.Games.RDR1.RPF6
     {
         public static Aes AesAlg;
         public static byte[] AES_KEY;
-        public static readonly int[] AES_KEY_OFFSETS = new int[] { 0x22a2300, 0x2293500 };//TODO: more offsets?
-        public static readonly byte[] AES_KEY_HASH = new byte[20] { 0x87, 0x86, 0x24, 0x97, 0xEE, 0x46, 0x85, 0x53, 0x72, 0xB5, 0x1C, 0x7A, 0x32, 0x4A, 0x2B, 0xB5, 0xCD, 0x66, 0xF4, 0xAF };
+        public static readonly int[] AES_KEY_OFFSETS = [0x22a2300, 0x2293500];
+        public static readonly byte[] AES_KEY_HASH = [0x87, 0x86, 0x24, 0x97, 0xEE, 0x46, 0x85, 0x53, 0x72, 0xB5, 0x1C, 0x7A, 0x32, 0x4A, 0x2B, 0xB5, 0xCD, 0x66, 0xF4, 0xAF];
 
         public static bool Init(string folder)
         {
@@ -44,16 +43,14 @@ namespace CodeX.Games.RDR1.RPF6
         {
             byte[] exedata = File.ReadAllBytes(folder + "\\rdr.exe");
             if (exedata == null) return false;
+
             AES_KEY = SearchUtil.HashSearch(exedata, AES_KEY_OFFSETS, 32, AES_KEY_HASH);
             if (AES_KEY != null) return true;
-            using (var exestr = new MemoryStream(exedata))
-            {
-                AES_KEY = SearchUtil.HashSearch(exestr, AES_KEY_HASH, 32, 1048576, 4);
-                return (AES_KEY != null);
-            }
+
+            using var exestr = new MemoryStream(exedata);
+            AES_KEY = SearchUtil.HashSearch(exestr, AES_KEY_HASH, 32, 1048576, 4);
+            return (AES_KEY != null);
         }
-
-
 
         public static byte[] DecryptAES(byte[] data)
         {
@@ -71,7 +68,9 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 var decryptor = rijndael.CreateDecryptor();
                 for (var roundIndex = 0; roundIndex < 16; roundIndex++)
+                {
                     decryptor.TransformBlock(buffer, 0, length, buffer, 0);
+                }
             }
             return buffer;
         }
@@ -92,23 +91,22 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 var encryptor = rijndael.CreateEncryptor();
                 for (var roundIndex = 0; roundIndex < 16; roundIndex++)
+                {
                     encryptor.TransformBlock(buffer, 0, length, buffer, 0);
+                }
             }
             return buffer;
         }
-
 
         public static byte[] DecompressZStandard(byte[] compressedData) //ZStandard
         {
             try
             {
-                using (var memoryStream = new MemoryStream(compressedData))
-                using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
-                using (var temp = new MemoryStream())
-                {
-                    compressionStream.CopyTo(temp);
-                    return temp.ToArray();
-                }
+                using var memoryStream = new MemoryStream(compressedData);
+                using var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress);
+                using var temp = new MemoryStream();
+                compressionStream.CopyTo(temp);
+                return temp.ToArray();
             }
             catch
             {
@@ -120,13 +118,11 @@ namespace CodeX.Games.RDR1.RPF6
         {
             try
             {
-                using (var memoryStream = new MemoryStream())
-                using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Compress))
-                {
-                    compressionStream.Write(decompressedData, 0, decompressedData.Length);
-                    compressionStream.Close();
-                    return memoryStream.ToArray();
-                }
+                using var memoryStream = new MemoryStream();
+                using var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Compress);
+                compressionStream.Write(decompressedData, 0, decompressedData.Length);
+                compressionStream.Close();
+                return memoryStream.ToArray();
             }
             catch
             {
@@ -134,19 +130,9 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-
-
-
-
-
-
-
-
-
-
-
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Vector3 ToZXY(Vector3 vec)
+        [MI(MO.AggressiveInlining)]
+        public static Vector3 ToZXY(Vector3 vec)
         {
             var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
             var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
@@ -155,7 +141,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Vector4 ToZXY(Vector4 vec)
+        [MI(MO.AggressiveInlining)]
+        public static Vector4 ToZXY(Vector4 vec)
         {
             var x = float.IsNaN(vec.X) ? 0.0f : vec.X;
             var y = float.IsNaN(vec.Y) ? 0.0f : vec.Y;
@@ -165,7 +152,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static BoundingBox4 ToZXY(BoundingBox4 bb)
+        [MI(MO.AggressiveInlining)]
+        public static BoundingBox4 ToZXY(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
             {
@@ -176,7 +164,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        [MI(MO.AggressiveInlining)] public static BoundingBox4 ToXYZ(BoundingBox4 bb)
+        [MI(MO.AggressiveInlining)]
+        public static BoundingBox4 ToXYZ(BoundingBox4 bb)
         {
             var newBB = new BoundingBox()
             {
@@ -186,15 +175,16 @@ namespace CodeX.Games.RDR1.RPF6
             return new BoundingBox4(newBB);
         }
 
-
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Quaternion ToZXY(Quaternion quat)
+        [MI(MO.AggressiveInlining)]
+        public static Quaternion ToZXY(Quaternion quat)
         {
             return new Quaternion(quat.Z, quat.X, quat.Y, quat.W);
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix3x4 ToZXY(Matrix3x4 m)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix3x4 ToZXY(Matrix3x4 m)
         {
             m.Translation = ToZXY(m.Translation);
             m.Orientation = ToZXY(m.Orientation);
@@ -202,7 +192,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix3x4 ToXYZ(Matrix3x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix3x4 ToXYZ(Matrix3x4 m, bool write = false)
         {
             var r1 = ToXYZ(m.Row1);
             var r2 = ToXYZ(m.Row2);
@@ -214,7 +205,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix3x4[] ToXYZ(Matrix3x4[] m, bool write = false)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix3x4[] ToXYZ(Matrix3x4[] m, bool write = false)
         {
             if (m == null) return null;
             for (int i = 0; i < m.Length; i++)
@@ -225,7 +217,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix4x4 ToZXY(Matrix4x4 m, bool write = false)
         {
             var m14 = write ? FNaN : (float.IsNaN(m.M14) ? 0.0f : m.M14);
             var m24 = write ? FNaN : (float.IsNaN(m.M24) ? 0.0f : m.M24);
@@ -242,7 +235,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix4x4 ToXYZ(Matrix4x4 m, bool write = false)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix4x4 ToXYZ(Matrix4x4 m, bool write = false)
         {
             var m14 = write ? FNaN : (float.IsNaN(m.M14) ? 0.0f : m.M14);
             var m24 = write ? FNaN : (float.IsNaN(m.M24) ? 0.0f : m.M24);
@@ -259,7 +253,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from XYZ to ZXY</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix4x4[] ToZXY(Matrix4x4[] m)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix4x4[] ToZXY(Matrix4x4[] m)
         {
             for (int i = 0; i < m.Length; i++)
             {
@@ -269,7 +264,8 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         ///<summary>Swap the axis from ZXY to XYZ</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix4x4[] ToXYZ(Matrix4x4[] m, bool write = false)
+        [MI(MO.AggressiveInlining)]
+        public static Matrix4x4[] ToXYZ(Matrix4x4[] m, bool write = false)
         {
             if (m == null) return null;
             for (int i = 0; i < m.Length; i++)
@@ -284,7 +280,8 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector3 in ZXY format.</param>
         ///<returns>A new Vector3 in XYZ format.</returns>
-        [MI(MO.AggressiveInlining)] public static Vector3 ToXYZ(Vector3 vector)
+        [MI(MO.AggressiveInlining)]
+        public static Vector3 ToXYZ(Vector3 vector)
         {
             return new Vector3(vector.Y, vector.Z, vector.X);
         }
@@ -294,17 +291,20 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector4 in ZXYW format.</param>
         ///<returns>A new Vector4 in XYZW format.</returns>
-        [MI(MO.AggressiveInlining)] public static Vector4 ToXYZ(Vector4 vector)
+        [MI(MO.AggressiveInlining)]
+        public static Vector4 ToXYZ(Vector4 vector)
         {
             return new Vector4(vector.Y, vector.Z, vector.X, (vector.W == 0.0f) ? FNaN : vector.W);
         }
 
-        [MI(MO.AggressiveInlining)] public static Vector2 Half2ToVector2(Half2 value)
+        [MI(MO.AggressiveInlining)]
+        public static Vector2 Half2ToVector2(Half2 value)
         {
             return new Vector2((float)value.X, (float)value.Y);
         }
 
-        [MI(MO.AggressiveInlining)] public static Vector4 Half4ToVector4(Half4 value)
+        [MI(MO.AggressiveInlining)]
+        public static Vector4 Half4ToVector4(Half4 value)
         {
             return new Vector4((float)value.X, (float)value.Y, (float)value.Z, (float)value.W);
         }
@@ -314,7 +314,8 @@ namespace CodeX.Games.RDR1.RPF6
         ///</summary>
         ///<param name="vector">The input Vector4[] in ZXYW format.</param>
         ///<returns>A new Vector4[] in XYZW format.</returns>
-        [MI(MO.AggressiveInlining)] public static Vector4[] ToXYZ(Vector4[] vector)
+        [MI(MO.AggressiveInlining)]
+        public static Vector4[] ToXYZ(Vector4[] vector)
         {
             if (vector == null) return null;
             for (int i = 0; i < vector.Length; i++)
@@ -331,7 +332,8 @@ namespace CodeX.Games.RDR1.RPF6
         ///<param name="buffer">The buffer to write to.</param>
         ///<param name="offset">The offset in the buffer where writing starts.</param>
         ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
-        [MI(MO.AggressiveInlining)] public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
+        [MI(MO.AggressiveInlining)]
+        public static void WriteVector3AtIndex(Vector3 vec, byte[] buffer, int offset, bool zxy = true)
         {
             if (zxy) //XYZ > ZXY (RDR1 to CX)
             {
@@ -352,7 +354,8 @@ namespace CodeX.Games.RDR1.RPF6
         ///<param name="buffer">The buffer to write to.</param>
         ///<param name="offset">The offset in the buffer where writing starts.</param>
         ///<param name="zxy">Determines whether to swap the axis according to the ZXY (RDR1>CX) or YZX (CX>RDR1) convention. Default is true (ZXY).</param>
-        [MI(MO.AggressiveInlining)] public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
+        [MI(MO.AggressiveInlining)]
+        public static void WriteVector4AtIndex(Vector4 vec, byte[] buffer, int offset, bool zxy = true)
         {
             if (float.IsNaN(vec.W))
             {
@@ -370,8 +373,6 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-
-
         /// <summary>
         /// Transforms an array of items of type T from XYZ to ZXY space. This method should be used for unmanaged types only.
         /// </summary>
@@ -387,7 +388,7 @@ namespace CodeX.Games.RDR1.RPF6
                     items[i] = (T)(object)ToZXY((Vector4)(object)items[i]);
                 }
             }
-            else if(typeof(T) == typeof(BoundingBox4))
+            else if (typeof(T) == typeof(BoundingBox4))
             {
                 for (int i = 0; i < items.Length; i++)
                 {
@@ -417,7 +418,6 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-
         /// <summary>
         /// Transforms an array of items of type T from ZXY to XYZ space. This method should be used for unmanaged types only.
         /// </summary>
@@ -433,7 +433,7 @@ namespace CodeX.Games.RDR1.RPF6
                     items[i] = (T)(object)ToXYZ((Vector4)(object)items[i]);
                 }
             }
-            else if(typeof(T) == typeof(BoundingBox4))
+            else if (typeof(T) == typeof(BoundingBox4))
             {
                 for (int i = 0; i < items.Length; i++)
                 {
@@ -463,13 +463,6 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
-
-
-
-
-
-
-
         /// <summary>
         /// Converts a floating point number into a fixed point number.
         /// </summary>
@@ -478,14 +471,16 @@ namespace CodeX.Games.RDR1.RPF6
         /// <![CDATA[It's multiplying the float by a constant value and discarding the extra bits (Vector3::Pack1010102)]]>
         /// </format>
         /// </remarks>
-        [MI(MO.AggressiveInlining)] public static uint PackFixedPoint(float value, uint size, uint shift)
+        [MI(MO.AggressiveInlining)]
+        public static uint PackFixedPoint(float value, uint size, uint shift)
         {
             float scale = ((1u << (int)(size - 1)) - 1);
             return ((uint)(value * scale) & ((1u << (int)size) - 1)) << (int)shift;
         }
 
         ///<summary>Converts a <see cref="System.Numerics.Vector4" /> to the Dec3N format.</summary>
-        [MI(MO.AggressiveInlining)] public static uint GetDec3N(Vector4 val, bool zxy = true)
+        [MI(MO.AggressiveInlining)]
+        public static uint GetDec3N(Vector4 val, bool zxy = true)
         {
             var wPack = (val.W > 0.5f) ? 1 << 30 : (val.W < -0.5f) ? -1 << 30 : 0;
             if (zxy) //XYZ > ZXY (RDR1 to CX)
@@ -494,7 +489,8 @@ namespace CodeX.Games.RDR1.RPF6
                 return PackFixedPoint(val.Y, 10, 0) | PackFixedPoint(val.Z, 10, 10) | PackFixedPoint(val.X, 10, 20) | (uint)wPack;
         }
 
-        [MI(MO.AggressiveInlining)] public static Vector4 Dec3NToVector4(uint u)
+        [MI(MO.AggressiveInlining)]
+        public static Vector4 Dec3NToVector4(uint u)
         {
             var ux = (int)((u & 0x3FF) << 22);
             var uy = (int)(((u >> 10) & 0x3FF) << 22);
@@ -509,7 +505,8 @@ namespace CodeX.Games.RDR1.RPF6
             return v;
         }
 
-        [MI(MO.AggressiveInlining)] public static uint Vector4ToDec3N(in Vector4 v)
+        [MI(MO.AggressiveInlining)]
+        public static uint Vector4ToDec3N(in Vector4 v)
         {
             var sx = (v.X >= 0.0f);
             var sy = (v.Y >= 0.0f);
@@ -526,8 +523,6 @@ namespace CodeX.Games.RDR1.RPF6
             var u = ux + (uy << 10) + (uz << 20) + (uw << 30);
             return (uint)u;
         }
-
-
 
         ///<summary>Creates a <see cref="CodeX.Core.Numerics.Colour" /> from a string representing RGB values, e.g., "255, 255, 255".</summary>
         public static Colour ParseRGBString(string rgbString)
@@ -557,7 +552,6 @@ namespace CodeX.Games.RDR1.RPF6
             piece.BoundingSphere = new BoundingSphere(piece.BoundingBox.Center, piece.BoundingBox.Size.Length() * 0.5f);
         }
 
-
         ///<summary>Checks if a specified value is present in an enum.</summary>
         public static bool IsDefinedInEnumRange<TEnum>(byte value) where TEnum : Enum
         {
@@ -571,21 +565,20 @@ namespace CodeX.Games.RDR1.RPF6
             return false;
         }
 
-
-
         ///<summary>Returns a <see cref="System.Numerics.Vector4" /> with NaN values.</summary>
-        [MI(MO.AggressiveInlining)] public static Vector4 GetVec4NaN()
+        [MI(MO.AggressiveInlining)]
+        public static Vector4 GetVec4NaN()
         {
             return new Vector4(FNaN, FNaN, FNaN, FNaN);
         }
 
         ///<summary>Returns a <see cref="System.Numerics.Matrix4x4" /> with NaN values.</summary>
-        [MI(MO.AggressiveInlining)] public static Matrix4x4 GetMatrix4x4NaN()
+        [MI(MO.AggressiveInlining)]
+        public static Matrix4x4 GetMatrix4x4NaN()
         {
             return new Matrix4x4(FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN);
         }
 
         public static readonly float FNaN = BufferUtil.GetUintFloat(0x7F800001); //NaN as 0x0100807F (float.NaN = 0x0000C0FF).
-
     }
 }

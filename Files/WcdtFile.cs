@@ -34,7 +34,7 @@ namespace CodeX.Games.RDR1.Files
             if (Clips == null) return null;
             var w = new Rsc6DataWriter();
             w.WriteBlock(Clips);
-            var data = w.Build(58);
+            var data = w.Build(31);
             return data;
         }
 

@@ -1,14 +1,13 @@
-﻿using System;
-using System.Text;
-using System.Linq;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Numerics;
+﻿using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -245,7 +244,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public T ReadBlock<T>(Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
-            if (Position == 0) return default(T);
+            if (Position == 0) return default;
             if (BlockPool.TryGetValue(Position, out var exitem))
             {
                 if (exitem is T exblock)
@@ -263,7 +262,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public T ReadBlock<T>(ulong position, Func<Rsc6DataReader, T> createFunc = null) where T : IRsc6Block, new()
         {
-            if (position == 0) return default(T);
+            if (position == 0) return default;
             var p = Position;
             Position = position;
             var b = ReadBlock<T>(createFunc);
@@ -851,7 +850,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6Ptr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6Ptr<T> where T : IRsc6Block, new()
     {
         public ulong Position { get; set; }
         public T Item { get; set; }
@@ -896,7 +896,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6PtrUnmanaged<T>(T item) where T : unmanaged
+    [TC(typeof(EXP))]
+    public struct Rsc6PtrUnmanaged<T>(T item) where T : unmanaged
     {
         public ulong Position { get; set; } = 0;
         public T Item { get; set; } = item;
@@ -952,7 +953,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6Arr<T> where T : unmanaged
+    [TC(typeof(EXP))]
+    public struct Rsc6Arr<T> where T : unmanaged
     {
         public uint Position { get; set; }
         public uint Count { get; set; }
@@ -1011,7 +1013,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
 
         public readonly T this[int index]
-        { 
+        {
             get => Items[index];
             set => Items[index] = value;
         }
@@ -1022,7 +1024,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6PackedArr
+    [TC(typeof(EXP))]
+    public struct Rsc6PackedArr
     {
         public uint Position { get; set; }
         public uint ElementSize { get; set; } //32 is max
@@ -1096,7 +1099,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6ManagedArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6ManagedArr<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public ushort Count { get; set; }
@@ -1156,7 +1160,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6ManagedSizedArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6ManagedSizedArr<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public ushort Count { get; set; }
@@ -1215,7 +1220,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6AtMapArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6AtMapArr<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public ushort Count { get; set; } //m_Slots, number of slots in toplevel hash
@@ -1254,7 +1260,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < Count; i++)
             {
-                Items[i] = reader.ReadBlock(Pointers[i], createFunc);;
+                Items[i] = reader.ReadBlock(Pointers[i], createFunc); ;
             }
             reader.Position = p;
         }
@@ -1300,7 +1306,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6PtrArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6PtrArr<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public ushort Count { get; set; }
@@ -1389,7 +1396,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6RawLst<T>(T[] items) where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6RawLst<T>(T[] items) where T : IRsc6Block, new()
     {
         public uint Position { get; set; } = 0;
         public T[] Items { get; set; } = items;
@@ -1434,7 +1442,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6RawArr<T>(T[] items) where T : unmanaged
+    [TC(typeof(EXP))]
+    public struct Rsc6RawArr<T>(T[] items) where T : unmanaged
     {
         public ulong Position { get; set; } = 0;
         public T[] Items { get; set; } = items;
@@ -1469,7 +1478,8 @@ namespace CodeX.Games.RDR1.RSC6
         public override readonly string ToString() => "Count: " + (Items?.Length.ToString() ?? "0");
     }
 
-    [TC(typeof(EXP))] public struct Rsc6RawPtrArr<T> where T : IRsc6Block, new()
+    [TC(typeof(EXP))]
+    public struct Rsc6RawPtrArr<T> where T : IRsc6Block, new()
     {
         public uint Position { get; set; }
         public uint[] Pointers { get; set; }
@@ -1483,7 +1493,7 @@ namespace CodeX.Games.RDR1.RSC6
                 Items = items;
             }
         }
-    
+
         public void ReadPtr(Rsc6DataReader reader)
         {
             Position = reader.ReadUInt32();
@@ -1536,7 +1546,8 @@ namespace CodeX.Games.RDR1.RSC6
         public override readonly string ToString() => "Count: " + (Items?.Length.ToString() ?? "0");
     }
 
-    [TC(typeof(EXP))] public struct Rsc6Str
+    [TC(typeof(EXP))]
+    public struct Rsc6Str
     {
         public ulong Position { get; set; }
         public string Value { get; set; }
@@ -1608,7 +1619,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6StrArr
+    [TC(typeof(EXP))]
+    public struct Rsc6StrArr
     {
         public ulong Position { get; set; }
         public Rsc6Str[] Items { get; set; }
@@ -1693,7 +1705,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6PtrStr
+    [TC(typeof(EXP))]
+    public struct Rsc6PtrStr
     {
         public ulong Position { get; set; }
         public ushort Count { get; set; }
@@ -1802,7 +1815,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
+    [TC(typeof(EXP))]
+    public struct Rsc6PoolArr<T> where T : unmanaged //Flash files - .wsf
     {
         public uint Position { get; set; }
         public ushort Count { get; set; } //m_Size
@@ -1866,7 +1880,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public class Rsc6BlockMap : Rsc6BlockBase
+    [TC(typeof(EXP))]
+    public class Rsc6BlockMap : Rsc6BlockBase
     {
         public override ulong BlockLength => 4;
         public uint Block { get; set; }
@@ -1882,16 +1897,20 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public abstract class Rsc6BlockBase : IRsc6Block
+    [TC(typeof(EXP))]
+    public abstract class Rsc6BlockBase : IRsc6Block
     {
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
         public abstract ulong BlockLength { get; }
+
         public abstract void Read(Rsc6DataReader reader);
+
         public abstract void Write(Rsc6DataWriter writer);
     }
 
-    [TC(typeof(EXP))] public abstract class Rsc6FileBase : Rsc6BlockBase
+    [TC(typeof(EXP))]
+    public abstract class Rsc6FileBase : Rsc6BlockBase
     {
         public abstract uint VFT { get; set; }
 
@@ -1906,7 +1925,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public abstract class Rsc6BlockBaseMap : Rsc6FileBase //rage::pgBase
+    [TC(typeof(EXP))]
+    public abstract class Rsc6BlockBaseMap : Rsc6FileBase //rage::pgBase
     {
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
 
@@ -1923,7 +1943,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public abstract class Rsc6BlockBaseMapRef : Rsc6BlockBaseMap //rage::pgBaseRefCounted
+    [TC(typeof(EXP))]
+    public abstract class Rsc6BlockBaseMapRef : Rsc6BlockBaseMap //rage::pgBaseRefCounted
     {
         public uint RefCount { get; set; } //m_RefCount
 

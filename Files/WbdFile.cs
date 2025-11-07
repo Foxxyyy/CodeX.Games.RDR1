@@ -18,7 +18,6 @@ namespace CodeX.Games.RDR1.Files
 
         public WbdFile(Rpf6FileEntry file) : base(file)
         {
-
         }
 
         public WbdFile(Rsc6BoundsDictionary boundsDictionary) : base(null)

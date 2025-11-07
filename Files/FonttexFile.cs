@@ -1,12 +1,13 @@
-﻿using System.IO;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System.IO;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.Files
 {
-    [TC(typeof(EXP))] public class FonttexFile : FilePack, MetaNode
+    [TC(typeof(EXP))]
+    public class FonttexFile : FilePack, MetaNode
     {
         public float Version { get; set; } //version, 1.02f
         public int CharHeight { get; set; } //m_CharHeight, delta y for a linefeed
@@ -26,7 +27,6 @@ namespace CodeX.Games.RDR1.Files
 
         public FonttexFile()
         {
-
         }
 
         public override void Load(byte[] data)

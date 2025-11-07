@@ -1,11 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
-using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -49,7 +48,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-
         }
 
         public void Write(MetaNodeWriter writer)
@@ -105,7 +103,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            
         }
 
         public void Write(MetaNodeWriter writer)
@@ -232,7 +229,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-            
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -361,7 +357,7 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6ClipTags : Rsc6BlockBase //rage::crTags
     {
         /*
-         * Manages a time line of tags  
+         * Manages a time line of tags
          * Performs containment, sorting, searching and editing operations.
          */
 
@@ -406,7 +402,7 @@ namespace CodeX.Games.RDR1.RSC6
         public float End { get; set; } //m_End, tag end phase [0..1]
         public ushort Flags { get; set; } //m_Flags
         public ushort Unknown_16h { get; set; }
-        public ushort Type { get; set; } //m_Type, always 2
+        public ushort Type { get; set; } //m_Type
         public byte TrackNumber { get; set; } //m_TrackNumber, always 0
         public byte Unknown_1Bh { get; set; } //Always 0
         public uint Unknown_1Ch { get; set; } //Always 0
@@ -443,7 +439,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-
         }
 
         public void Write(MetaNodeWriter writer)
@@ -531,7 +526,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            
         }
 
         public override string ToString()
@@ -559,12 +553,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            
         }
 
         public virtual void Read(MetaNodeReader reader)
         {
-            
         }
 
         public virtual void Write(MetaNodeWriter writer)
@@ -896,7 +888,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            
         }
 
         public void Write(MetaNodeWriter writer)
@@ -952,7 +943,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            
         }
 
         public override string ToString()
@@ -1086,7 +1076,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            
         }
 
         public void Write(MetaNodeWriter writer)
@@ -1133,11 +1122,11 @@ namespace CodeX.Games.RDR1.RSC6
 
         public uint CalcNumChunks(uint numFrames)
         {
-	        if(numFrames > 1)
-	        {
-		        return ((numFrames - 2) / FramesPerChunk) + 1;
-	        }
-	        return 1;
+            if (numFrames > 1)
+            {
+                return ((numFrames - 2) / FramesPerChunk) + 1;
+            }
+            return 1;
         }
 
         public override string ToString()
@@ -1181,7 +1170,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            
         }
 
         public void Write(MetaNodeWriter writer)
@@ -1262,7 +1250,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1356,7 +1343,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public virtual void EvaluateVector(int frame, int c, ref Vector4 v)
         {
-
         }
     }
 
@@ -1418,7 +1404,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1453,7 +1438,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1487,7 +1471,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(MetaNodeReader reader)
         {
-
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1762,7 +1745,7 @@ namespace CodeX.Games.RDR1.RSC6
         FORMAT_PACK_MASK = 12
     }
 
-    public enum Rsc6FormatReconstructOrder :uint
+    public enum Rsc6FormatReconstructOrder : uint
     {
         FORMAT_RECONSTRUCT_X = 0,
         FORMAT_RECONSTRUCT_Y = 1,

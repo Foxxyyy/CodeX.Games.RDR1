@@ -16,3 +16,4 @@ C:\Research\CodeX\CodeX-028\CodeX-main\CodeX.Games.RDR1\obj\Debug\net8.0-windows
 C:\Research\CodeX\CodeX-028\CodeX-main\CodeX.Games.RDR1\obj\Debug\net8.0-windows\refint\CodeX.Games.RDR1.dll
 C:\Research\CodeX\CodeX-028\CodeX-main\CodeX.Games.RDR1\obj\Debug\net8.0-windows\CodeX.Games.RDR1.pdb
 C:\Research\CodeX\CodeX-028\CodeX-main\CodeX.Games.RDR1\obj\Debug\net8.0-windows\ref\CodeX.Games.RDR1.dll
+C:\Research\CodeX\CodeX-028\CodeX-main\CodeX.Games.RDR1\obj\Debug\net8.0-windows\CodeX.Games.RDR1.sourcelink.json

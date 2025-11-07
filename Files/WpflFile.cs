@@ -1,8 +1,8 @@
 ﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using System.Collections.Generic;
 using CodeX.Games.RDR1.RSC6;
+using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -13,7 +13,6 @@ namespace CodeX.Games.RDR1.Files
 
         public WpflFile(Rpf6FileEntry file) : base(file)
         {
-
         }
 
         public WpflFile()

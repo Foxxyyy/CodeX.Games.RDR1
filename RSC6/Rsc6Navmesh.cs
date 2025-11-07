@@ -1,118 +1,96 @@
-﻿using System;
-using System.Numerics;
-using TC = System.ComponentModel.TypeConverterAttribute;
-using EXP = System.ComponentModel.ExpandableObjectConverter;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
-using CodeX.Core.Engine;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using CodeX.Core.Utilities;
+using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.RSC6
 {
-    public class Rsc6Navmesh : Navmesh, IRsc6Block //rage::ai::navStreamingMeshDataManager::navMeshRscFile
+    public class Rsc6Navmesh : Navmesh, IRsc6Block
     {
-        public uint BlockLength => 24;
-        public bool IsPhysical => false;
-        public ulong FilePosition { get; set; }
-        public uint VFT { get; set; } = 0x04A00394;
+        public virtual ulong BlockLength => 8;
+        public virtual bool IsPhysical => false;
+        public virtual ulong FilePosition { get; set; }
+        public virtual uint VFT { get; set; } = 0x04A00394;
         public Rsc6Ptr<Rsc6BlockMap> BlockMap { get; set; }
-        public Rsc6ManagedArr<Rsc6NavMeshChunkDataPair> ChunkDataPairs { get; set; } //m_ChunkDataPairs
-        public Rsc6ManagedArr<Rsc6NavMeshSpanDataPair> SpanDataPairs { get; set; } //m_SpanDataPairs
 
-        public Vector4 Extents { get; set; }
-        public Vector3 AABBMin { get; set; }
-        public Vector3 AABBMax { get; set; }
-
-        ulong BlockBase.BlockLength => throw new NotImplementedException();
-
+        public Vector4 AABBMin;
+        public Vector4 AABBMax;
+        public BoundingBox Extents;
         public Vector3[] CachedVertices;
         public ushort[] CachedIndices;
         public Rsc6NavmeshPolygon[] CachedPolygons;
 
-        public void Read(Rsc6DataReader reader)
+        public virtual void Read(Rsc6DataReader reader)
         {
             VFT = reader.ReadUInt32();
             BlockMap = reader.ReadPtr<Rsc6BlockMap>();
-            ChunkDataPairs = reader.ReadArr<Rsc6NavMeshChunkDataPair>();
-            SpanDataPairs = reader.ReadArr<Rsc6NavMeshSpanDataPair>();
+        }
 
-            if (ChunkDataPairs.Items != null)
+        public virtual void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(VFT);
+            writer.WritePtr(BlockMap);
+        }
+
+        public static Rsc6Navmesh Create(Rsc6DataReader r)
+        {
+            var type = (Rsc6NavmeshType)r.ReadUInt32();
+            r.Position -= 4;
+            return Create(type);
+        }
+
+        public static Rsc6Navmesh Create(Rsc6NavmeshType type)
+        {
+            return type switch
             {
-                for (int i = 0; i < ChunkDataPairs.Items.Length; i++)
-                {
-                    var pair = ChunkDataPairs.Items[i];
-                    var aabb = pair.ChunkData.QuadTree.Item?.AABB ?? new Vector4();
-                    if (aabb != new Vector4())
-                    {
-                        Extents = aabb;
-
-                        var verts = pair.ChunkData.Vertices.Items;
-                        float minY = float.MaxValue, maxY = float.MinValue;
-
-                        if (verts != null)
-                        {
-                            foreach (var v in verts)
-                            {
-                                float y = v.Y / (float)ushort.MaxValue; // Normalize to [0,1]
-                                if (y < minY) minY = y;
-                                if (y > maxY) maxY = y;
-                            }
-                        }
-
-                        AABBMin = new Vector3(aabb.X, minY, aabb.Y);
-                        AABBMax = new Vector3(aabb.Z, maxY, aabb.W);
-
-                        CachedVertices = GetVertexPositions(pair.ChunkData.Vertices);
-                        CachedIndices = pair.ChunkData.VertexIndices.Items;
-                        CachedPolygons = pair.ChunkData.Polygons.Items;
-
-                        InitNavmesh();
-                    }
-                }
-            }
+                Rsc6NavmeshType.NavStreamingMesh => new Rsc6NavStreamingMesh(),
+                Rsc6NavmeshType.NavMovableMesh => new Rsc6NavMovableMesh(),
+                _ => throw new Exception("Unknown navmesh type")
+            };
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public Mesh InitNavmesh() //PartMesh = Mesh, or PartChildren with PartMesh
         {
-            throw new NotImplementedException();
-        }
-
-        public void InitNavmesh()
-        {
-            //PartMesh = Mesh, or PartChildren with PartMesh
-
             var vertexCount = CachedVertices?.Length ?? 0;
             var indexCount = CachedIndices?.Length ?? 0;
             var polyCount = CachedPolygons?.Length ?? 0;
-            if ((vertexCount == 0) || (indexCount == 0) || (polyCount == 0)) return;
+            if ((vertexCount == 0) || (indexCount == 0) || (polyCount == 0)) return null;
 
             var tribuilder = new ShapeBuilder("Navmesh", false);
             var linbuilder = new ShapeBuilder("Navmesh", false, MeshTopology.LineList);
 
+            var rand = new Random(unchecked((int)DateTime.Now.Ticks));
             for (int p = 0; p < polyCount; p++)
             {
                 ref var poly = ref CachedPolygons[p];
-                var pic = poly.MaterialIndex;
-                var pcol = Colour.Red;
+                var pic = poly.NumLocalLinks;
+                var pcol = new Colour(rand.Next(64, 256), rand.Next(64, 256), rand.Next(64, 256), 255);
+
                 var pnorm = poly.ComputeNormal(this);
                 if (pic < 1) continue;
 
                 var p0 = poly.GetVertex(0, CachedVertices, CachedIndices);
-                if (pic < 2) continue;//only one point? TODO: handle this?
+                if (pic < 2) continue; //Only one point? TODO: handle this?
 
-                if (pic == 2) //only 2 points - it's a line
+                if (pic == 2) //Only 2 points - it's a line
                 {
                     var p1 = poly.GetVertex(1, CachedVertices, CachedIndices);
                     linbuilder.EnsureSpaceForPolygon(2);
                     linbuilder.AddVertex(p0, pnorm, pcol);
                     linbuilder.AddVertex(p1, pnorm, pcol);
                 }
-                else //at least one triangle
+                else //At least one triangle
                 {
-                    var tricount = (int)pic - 2; //turn polys into triangles
+                    var tricount = pic - 2; //Turn polys into triangles
                     tribuilder.EnsureSpaceForPolygon(tricount * 3);
                     tribuilder.AddPolygon(tricount);
+
                     for (int t = 0; t < tricount; t++)
                     {
                         var p1 = poly.GetVertex(t + 1, CachedVertices, CachedIndices);
@@ -123,11 +101,13 @@ namespace CodeX.Games.RDR1.RSC6
                     }
                 }
             }
+
             tribuilder.EndBuild();
             linbuilder.EndBuild();
+
             var meshes = tribuilder.Shapes;
             meshes.AddRange(linbuilder.Shapes);
-            if (meshes.Count == 0) return;
+            if (meshes.Count == 0) return null;
 
             PartMesh = meshes[0];
             if (meshes.Count > 1)
@@ -142,9 +122,11 @@ namespace CodeX.Games.RDR1.RSC6
                     part.UpdateBounds();
                     children.Add(part);
                 }
-                PartChildren = children.ToArray();
+                PartChildren = [.. children];
             }
+
             UpdateBounds();
+            return PartMesh;
         }
 
         public Vector3[] GetVertexPositions(Rsc6RawArr<Rsc6NavmeshVertex> vertices)
@@ -152,27 +134,8 @@ namespace CodeX.Games.RDR1.RSC6
             var verts = vertices.Items;
             if (verts == null) return null;
 
-            float minX = Extents.X;
-            float maxX = Extents.Z;
-            float minZ = Extents.Y;
-            float maxZ = Extents.W;
-
-            // Find minY and maxY dynamically from vertex data
-            float minY = float.MaxValue, maxY = float.MinValue;
-            foreach (var v in verts)
-            {
-                float y = v.Y / (float)ushort.MaxValue; // Normalize Y
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-            }
-
-            // Compute extents
-            float extentX = (maxX - minX) * 0.5f;
-            float extentY = (maxY - minY) * 0.5f;
-            float extentZ = (maxZ - minZ) * 0.5f;
-
-            var aabbmin = new Vector3(minX, minY, minZ);
-            var aabbsize = new Vector3(extentX, extentY, extentZ);
+            var aabbmin = AABBMin.XYZ();
+            var aabbsize = Extents.Size;
             var arr = new Vector3[verts.Length];
 
             for (int i = 0; i < verts.Length; i++)
@@ -180,6 +143,147 @@ namespace CodeX.Games.RDR1.RSC6
                 arr[i] = verts[i].ToVector3(aabbmin, aabbsize);
             }
             return arr;
+        }
+    }
+
+    public class Rsc6NavMovableMesh : Rsc6Navmesh //rage::ai::navMeshMovableType
+    {
+        public override ulong BlockLength => 24;
+        public override uint VFT { get; set; } = 0x04A5994C;
+        public uint FlagContainsData { get; set; } //m_FlagContainsData
+        public uint Unknown_Ch { get; set; } //Always 0?
+        public Rsc6NavMeshChunkData MeshChunkData { get; set; } //m_MeshChunkData
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            FlagContainsData = reader.ReadUInt32();
+            Unknown_Ch = reader.ReadUInt32();
+            AABBMax = reader.ReadVector4(); //m_BoundBoxMax
+            AABBMin = reader.ReadVector4(); //m_BoundBoxMin
+            MeshChunkData = reader.ReadBlock<Rsc6NavMeshChunkData>();
+
+            Extents = new BoundingBox(AABBMin.XYZ(), AABBMax.XYZ());
+            CachedVertices = GetVertexPositions(MeshChunkData.Vertices);
+            CachedIndices = MeshChunkData.VertexIndices.Items;
+            CachedPolygons = MeshChunkData.Polygons.Items;
+
+            InitNavmesh();
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+        }
+    }
+
+    public class Rsc6NavStreamingMesh : Rsc6Navmesh //rage::ai::navStreamingMeshDataManager::navMeshRscFile
+    {
+        public override ulong BlockLength => 24;
+        public override uint VFT { get; set; } = 0x04A00394;
+        public Rsc6ManagedArr<Rsc6NavMeshChunkDataPair> ChunkDataPairs { get; set; } //m_ChunkDataPairs
+        public Rsc6ManagedArr<Rsc6NavMeshSpanDataPair> SpanDataPairs { get; set; } //m_SpanDataPairs
+
+        public Vector3 ComputedSize { get; set; }
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            ChunkDataPairs = reader.ReadArr<Rsc6NavMeshChunkDataPair>();
+            SpanDataPairs = reader.ReadArr<Rsc6NavMeshSpanDataPair>();
+
+            var meshes = new List<Mesh>();
+            if (ChunkDataPairs.Items != null)
+            {
+                for (int i = 0; i < ChunkDataPairs.Items.Length; i++)
+                {
+                    var pair = ChunkDataPairs.Items[i];
+                    var chunk = pair.ChunkData;
+                    var quadtree = chunk.QuadTree.Item;
+                    if (quadtree == null) continue;
+
+                    var aabb = quadtree.AABB; //minX, minZ, maxX, maxZ
+                    if (aabb == Vector4.Zero) continue;
+
+                    //XZ extents from AABB
+                    float minX = aabb.X;
+                    float maxX = aabb.Z;
+                    float minZ = aabb.Y;
+                    float maxZ = aabb.W;
+
+                    float sizeX = maxX - minX;
+                    float sizeZ = maxZ - minZ;
+
+                    var verts = chunk.Vertices.Items;
+                    if (verts == null || verts.Length == 0) continue;
+
+                    //The quadtree AABB gives us XZ range, so we derive Y from vertices.
+                    //Start with a temporary AABBMin/Size that matches the quadtree’s XZ span.
+                    var tempAabbMin = new Vector3(minX, 0.0f, minZ);
+                    var tempAabbSize = new Vector3(sizeX, 1.0f, sizeZ);
+
+                    Debug.WriteLine($"Chunk {i}:");
+                    Debug.WriteLine($"  AABB (XZ): min=({minX:F2}, {minZ:F2}) max=({maxX:F2}, {maxZ:F2}) size=({sizeX:F2}, {sizeZ:F2})");
+                    Debug.WriteLine($"  Raw ushort ranges: X [{verts.Min(v => v.X)}, {verts.Max(v => v.X)}], " +
+                                      $"Y [{verts.Min(v => v.Y)}, {verts.Max(v => v.Y)}], Z [{verts.Min(v => v.Z)}, {verts.Max(v => v.Z)}]");
+
+                    // Decode a few sample vertices to inspect scaling
+                    for (int s = 0; s < Math.Min(5, verts.Length); s++)
+                    {
+                        var p = verts[s].ToVector3(tempAabbMin, tempAabbSize);
+                        Debug.WriteLine($"    v{s}: {p}");
+                    }
+
+                    float minY = float.MaxValue;
+                    float maxY = float.MinValue;
+
+                    foreach (var vert in verts)
+                    {
+                        var pos = vert.ToVector3(tempAabbMin, tempAabbSize);
+                        if (pos.Y < minY) minY = pos.Y;
+                        if (pos.Y > maxY) maxY = pos.Y;
+                    }
+
+                    //Store final values
+                    var aabbMin = new Vector3(minX, minY, minZ);
+                    var aabbMax = new Vector3(maxX, maxY, maxZ);
+                    AABBMin = new Vector4(aabbMin, 0.0f);
+                    AABBMax = new Vector4(aabbMax, 0.0f);
+                    Extents = new BoundingBox(aabbMin, aabbMax);
+                    ComputedSize = aabbMax - aabbMin;
+
+                    //Use values in downstream
+                    CachedVertices = GetVertexPositions(chunk.Vertices);
+                    CachedIndices = chunk.VertexIndices.Items;
+                    CachedPolygons = chunk.Polygons.Items;
+
+                    var mesh = InitNavmesh();
+                    if (mesh != null)
+                    {
+                        meshes.Add(mesh);
+                    }
+                }
+            }
+
+            if (meshes.Count > 0)
+            {
+                var childrens = new List<EditablePart>();
+                foreach (var mesh in meshes)
+                {
+                    var part = new Navmesh { PartMesh = mesh };
+                    part.UpdateBounds();
+                    childrens.Add(part);
+                }
+
+                PartChildren = [.. childrens];
+                UpdateBounds();
+            }
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            base.Write(writer);
+            throw new NotImplementedException();
         }
     }
 
@@ -223,13 +327,13 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public override ulong BlockLength => 12;
         public override uint VFT { get; set; } = 0x04A589AC;
-        public Rsc6RawArr<Rsc7NavmeshPolygonLink> Links { get; set; } //m_Links
+        public Rsc6RawArr<Rsc6NavmeshExternalPolygonLink> Links { get; set; } //m_Links
         public uint NumLinks { get; set; } //m_NumLinks
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Links = reader.ReadRawArrPtr<Rsc7NavmeshPolygonLink>();
+            Links = reader.ReadRawArrPtr<Rsc6NavmeshExternalPolygonLink>();
             NumLinks = reader.ReadUInt32();
             Links = reader.ReadRawArrItems(Links, NumLinks);
         }
@@ -245,7 +349,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => 44;
         public override uint VFT { get; set; } = 0x04A588C0;
         public Rsc6Ptr<Rsc6NavmeshQuadtree> QuadTree { get; set; } //m_Quadtree
-        public Rsc6RawArr<Rsc6NavmeshPolygonLink> LocalLinks { get; set; } //m_LocalLinks, rage::ai::navMeshLocalPolygonLink
+        public Rsc6RawArr<Rsc6NavmeshLocalPolygonLink> LocalLinks { get; set; } //m_LocalLinks
         public Rsc6PtrUnmanaged<Vector3> Normals { get; set; } //m_Normals
         public Rsc6RawArr<Rsc6NavmeshPolygon> Polygons { get; set; } //m_Polygons
         public Rsc6RawArr<Rsc6NavmeshVertex> Vertices { get; set; } //m_Vertices
@@ -262,7 +366,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Read(reader);
             QuadTree = reader.ReadPtr<Rsc6NavmeshQuadtree>();
-            LocalLinks = reader.ReadRawArrPtr<Rsc6NavmeshPolygonLink>();
+            LocalLinks = reader.ReadRawArrPtr<Rsc6NavmeshLocalPolygonLink>();
             Normals = reader.ReadPtrUnmanaged<Vector3>();
             Polygons = reader.ReadRawArrPtr<Rsc6NavmeshPolygon>();
             Vertices = reader.ReadRawArrPtr<Rsc6NavmeshVertex>();
@@ -297,7 +401,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            AABB = reader.ReadVector4();
+            AABB = reader.ReadVector4(false);
             Root = reader.ReadBlock<Rsc6NavmeshQuadtreeCell>();
         }
 
@@ -337,7 +441,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6NavmeshPolygon //rage::ai::navMeshPolygon
+    [TC(typeof(EXP))]
+    public struct Rsc6NavmeshPolygon //rage::ai::navMeshPolygon
     {
         public Rsc6NavmeshVertex LocalCenter { get; set; } //m_LocalCenter
         public byte MaterialIndex { get; set; } //m_MaterialIndex
@@ -355,7 +460,7 @@ namespace CodeX.Games.RDR1.RSC6
         public readonly Vector3 GetVertex(int polyVertexIndex, Vector3[] nmverts, ushort[] nminds)
         {
             if (polyVertexIndex < 0) return default;
-            var i = NormalIndex + polyVertexIndex;
+            var i = VertexIndices + polyVertexIndex;
             if (i >= nminds.Length) return default;
             var ind = nminds[i];
             if (ind >= nmverts.Length) return default;
@@ -391,7 +496,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc7NavmeshPolygonLink //rage::ai::navMeshExternalPolygonLink
+    [TC(typeof(EXP))]
+    public struct Rsc6NavmeshExternalPolygonLink //rage::ai::navMeshExternalPolygonLink
     {
         public byte ActorRadiusDist1 { get; set; } //m_ActorRadiusDist1
         public byte ActorRadiusDist2 { get; set; } //m_ActorRadiusDist2
@@ -427,7 +533,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6NavmeshVertex //rage::ai::aiStoredVector3
+    [TC(typeof(EXP))]
+    public struct Rsc6NavmeshVertex //rage::ai::aiStoredVector3
     {
         public ushort X { get; set; } //aiStoredFloat
         public ushort Y { get; set; } //aiStoredFloat
@@ -444,8 +551,9 @@ namespace CodeX.Games.RDR1.RSC6
 
         public readonly Vector3 ToVector3()
         {
-            const float usmax = ushort.MaxValue;
-            return new Vector3(X / usmax, Y / usmax, Z / usmax);
+            const float xz_scale = ushort.MaxValue;
+            const float y_scale = 512.0f;
+            return new Vector3(Z / xz_scale, X / xz_scale, Y / y_scale);
         }
 
         public readonly Vector3 ToVector3(in Vector3 aabbmin, in Vector3 aabbsize)
@@ -467,7 +575,8 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    [TC(typeof(EXP))] public struct Rsc6NavmeshPolygonLink
+    [TC(typeof(EXP))]
+    public struct Rsc6NavmeshLocalPolygonLink //rage::ai::navMeshLocalPolygonLink
     {
         public byte ActorRadiusDist1 { get; set; } //m_ActorRadiusDist1
         public byte ActorRadiusDist2 { get; set; } //m_ActorRadiusDist2
@@ -475,5 +584,11 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort PackedB { get; set; } //m_PackedB
         public ushort PackedC { get; set; } //m_PackedC
         public ushort PackedD { get; set; } //m_PackedD
+    }
+
+    public enum Rsc6NavmeshType : uint
+    {
+        NavMovableMesh = 0x04A5994C, //rage::ai::navMeshMovableType (vehicles)
+        NavStreamingMesh = 0x04A00394 //rage::ai::navStreamingMeshDataManager::navMeshRscFile (terrain)
     }
 }

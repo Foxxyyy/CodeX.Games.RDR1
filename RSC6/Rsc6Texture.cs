@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
+using System;
+using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.RSC6
 {
@@ -82,7 +82,7 @@ namespace CodeX.Games.RDR1.RSC6
             var list = new List<Tuple<JenkHash, Rsc6Texture>>();
             foreach (var tex in textures)
             {
-                list.Add(new Tuple<JenkHash, Rsc6Texture>(JenkHash.GenHash(tex.Name.Replace(".dds", "")), tex)); //Hashes don't use the extension
+                list.Add(new Tuple<JenkHash, Rsc6Texture>(JenkHash.GenHash(tex.Name.Replace(".dds", "").ToLowerInvariant()), tex)); //Hashes don't use the extension
             }
 
             var cnt = list.Count;
@@ -316,7 +316,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             if (TextureSize == 0)
                 writer.WriteUInt32(0x018489E8); //External texture (for WVD)
-            else if(wvd) 
+            else if (wvd)
                 writer.WriteUInt32(0x01848890); //WVD texture
             else if (wfd)
                 writer.WriteUInt32(0x00D253E4); //WFD texture
@@ -393,7 +393,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public Rsc6TextureData()
         {
-
         }
 
         public Rsc6TextureData(ulong length)
@@ -468,7 +467,6 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-
         }
     }
 
@@ -500,5 +498,4 @@ namespace CodeX.Games.RDR1.RSC6
         ET1S = 13,
         ETAS = 14
     }
-
 }

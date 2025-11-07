@@ -18,6 +18,7 @@ namespace CodeX.Games.RDR1.Prefabs
 
         //CodeX stuff
         public string[] VehicleNames;
+
         public Dictionary<string, RDR1VehiclePrefab> Prefabs = new();
         public SimpleCache<JenkHash, WtdFile> WtdCache = new();
         public object WtdCacheSyncRoot = new();
@@ -70,7 +71,7 @@ namespace CodeX.Games.RDR1.Prefabs
                 if (line == string.Empty) continue;
                 var start = line.IndexOf(' ') + 1;
                 var end = line.IndexOf(',');
-                string fragment = line[start..end];    
+                string fragment = line[start..end];
                 list.Add(fragment);
             }
             return list.ToArray();

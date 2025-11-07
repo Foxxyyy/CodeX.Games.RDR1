@@ -2,7 +2,6 @@
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
-using System.Collections.Generic;
 
 namespace CodeX.Games.RDR1.Files
 {
@@ -16,7 +15,6 @@ namespace CodeX.Games.RDR1.Files
 
         public WfdFile(Rpf6FileEntry file) : base(file)
         {
-            
         }
 
         public WfdFile(Rsc6FragDrawable drawable) : base(null)

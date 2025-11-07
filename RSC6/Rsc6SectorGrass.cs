@@ -1,10 +1,8 @@
-﻿using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
-using System.IO;
+using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
 {

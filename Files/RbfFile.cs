@@ -1,16 +1,17 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Numerics;
-using System.Collections.Generic;
-using CodeX.Core.Engine;
+﻿using CodeX.Core.Engine;
 using CodeX.Core.Utilities;
-using TC = System.ComponentModel.TypeConverterAttribute;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
+using System.Text;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
+using TC = System.ComponentModel.TypeConverterAttribute;
 
 namespace CodeX.Games.RDR1.Files
 {
-    [TC(typeof(EXP))] public class RbfFile : DataBagPack
+    [TC(typeof(EXP))]
+    public class RbfFile : DataBagPack
     {
         private const int RBF_IDENT = 0x30464252;
         public RbfStructure Current { get; set; }
@@ -86,8 +87,10 @@ namespace CodeX.Games.RDR1.Files
                             break;
                         case "short_array": //convert byte array to short array
                             var scnt = dataLength / 2;
-                            var shrvalue = new RbfBytesShortArray();
-                            shrvalue.Value = BufferUtil.ReadArray<short>(data, 0, scnt);
+                            var shrvalue = new RbfBytesShortArray
+                            {
+                                Value = BufferUtil.ReadArray<short>(data, 0, scnt)
+                            };
                             Current.Children.Add(shrvalue);
                             Current.Content = shrvalue;
                             break;
@@ -136,75 +139,75 @@ namespace CodeX.Games.RDR1.Files
             switch (dataType)
             {
                 case RbfDataType.None: // open element...
+                {
+                    var structureValue = new RbfStructure();
+                    structureValue.Name = descriptor.Name;
+
+                    if (Current != null)
                     {
-                        var structureValue = new RbfStructure();
-                        structureValue.Name = descriptor.Name;
-
-                        if (Current != null)
-                        {
-                            Current.AddChild(structureValue);
-                            Stack.Push(Current);
-                        }
-                        Current = structureValue;
-
-                        var x1 = reader.ReadInt16();
-                        var x2 = reader.ReadInt16();
-                        Current.PendingAttributes = reader.ReadInt16();
-                        break;
+                        Current.AddChild(structureValue);
+                        Stack.Push(Current);
                     }
+                    Current = structureValue;
+
+                    var x1 = reader.ReadInt16();
+                    var x2 = reader.ReadInt16();
+                    Current.PendingAttributes = reader.ReadInt16();
+                    break;
+                }
                 case RbfDataType.UInt32:
-                    {
-                        var intValue = new RbfUint32();
-                        intValue.Name = descriptor.Name;
-                        intValue.Value = reader.ReadUInt32();
-                        Current.AddChild(intValue);
-                        break;
-                    }
+                {
+                    var intValue = new RbfUint32();
+                    intValue.Name = descriptor.Name;
+                    intValue.Value = reader.ReadUInt32();
+                    Current.AddChild(intValue);
+                    break;
+                }
                 case RbfDataType.BoolTrue:
-                    {
-                        var booleanValue = new RbfBoolean();
-                        booleanValue.Name = descriptor.Name;
-                        booleanValue.Value = true;
-                        Current.AddChild(booleanValue);
-                        break;
-                    }
+                {
+                    var booleanValue = new RbfBoolean();
+                    booleanValue.Name = descriptor.Name;
+                    booleanValue.Value = true;
+                    Current.AddChild(booleanValue);
+                    break;
+                }
                 case RbfDataType.BoolFalse:
-                    {
-                        var booleanValue = new RbfBoolean();
-                        booleanValue.Name = descriptor.Name;
-                        booleanValue.Value = false;
-                        Current.AddChild(booleanValue);
-                        break;
-                    }
+                {
+                    var booleanValue = new RbfBoolean();
+                    booleanValue.Name = descriptor.Name;
+                    booleanValue.Value = false;
+                    Current.AddChild(booleanValue);
+                    break;
+                }
                 case RbfDataType.Float:
-                    {
-                        var floatValue = new RbfFloat();
-                        floatValue.Name = descriptor.Name;
-                        floatValue.Value = reader.ReadSingle();
-                        Current.AddChild(floatValue);
-                        break;
-                    }
+                {
+                    var floatValue = new RbfFloat();
+                    floatValue.Name = descriptor.Name;
+                    floatValue.Value = reader.ReadSingle();
+                    Current.AddChild(floatValue);
+                    break;
+                }
                 case RbfDataType.Float3:
-                    {
-                        var floatVectorValue = new RbfFloat3();
-                        floatVectorValue.Name = descriptor.Name;
-                        floatVectorValue.X = reader.ReadSingle();
-                        floatVectorValue.Y = reader.ReadSingle();
-                        floatVectorValue.Z = reader.ReadSingle();
-                        Current.AddChild(floatVectorValue);
-                        break;
-                    }
+                {
+                    var floatVectorValue = new RbfFloat3();
+                    floatVectorValue.Name = descriptor.Name;
+                    floatVectorValue.X = reader.ReadSingle();
+                    floatVectorValue.Y = reader.ReadSingle();
+                    floatVectorValue.Z = reader.ReadSingle();
+                    Current.AddChild(floatVectorValue);
+                    break;
+                }
                 case RbfDataType.String:
-                    {
-                        var valueLength = reader.ReadInt16();
-                        var valueBytes = reader.ReadBytes(valueLength);
-                        var value = Encoding.ASCII.GetString(valueBytes);
-                        var stringValue = new RbfString();
-                        stringValue.Name = descriptor.Name;
-                        stringValue.Value = value;
-                        Current.AddChild(stringValue);
-                        break;
-                    }
+                {
+                    var valueLength = reader.ReadInt16();
+                    var valueBytes = reader.ReadBytes(valueLength);
+                    var value = Encoding.ASCII.GetString(valueBytes);
+                    var stringValue = new RbfString();
+                    stringValue.Name = descriptor.Name;
+                    stringValue.Value = value;
+                    Current.AddChild(stringValue);
+                    break;
+                }
                 default:
                     throw new Exception("Unsupported data type.");
             }
@@ -383,7 +386,6 @@ namespace CodeX.Games.RDR1.Files
                         {
                             fld.TypeName = JenkHash.GenHash(ccname);
                         }
-
                     }
                     if (isarray)
                     {
@@ -481,7 +483,6 @@ namespace CodeX.Games.RDR1.Files
                 case RbfDataType.String: return DataBagValueType.String;
             }
         }
-
     }
 
     public enum RbfDataType : byte
@@ -500,7 +501,11 @@ namespace CodeX.Games.RDR1.Files
     {
         public string Name { get; set; }
         public RbfDataType Type { get; set; }
-        public override string ToString() { return Name + ": " + Type.ToString(); }
+
+        public override string ToString()
+        {
+            return Name + ": " + Type.ToString();
+        }
     }
 
     [TC(typeof(EXP))]
@@ -508,6 +513,7 @@ namespace CodeX.Games.RDR1.Files
     {
         string Name { get; set; }
         RbfDataType DataType { get; }
+
         void Save(RbfFile file, DataWriter writer);
     }
 
@@ -604,6 +610,7 @@ namespace CodeX.Games.RDR1.Files
         {
             file.WriteRecordId(this, writer);
         }
+
         public override string ToString()
         {
             return Name + ": " + Value.ToString();
