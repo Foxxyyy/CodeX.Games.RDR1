@@ -1,4 +1,6 @@
-# CodeX (028)
+# CodeX (029)
+
+https://github.com/Foxxyyy/CodeX.Games.RDR1
 
 Research project for Red Dead Redemption, intended to be used with CodeX. 
 

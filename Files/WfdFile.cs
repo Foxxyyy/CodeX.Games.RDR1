@@ -39,7 +39,7 @@ namespace CodeX.Games.RDR1.Files
             {
                 var d = FragDrawable.Drawable.Item;
                 Piece = d;
-                Piece.FilePack = this;
+                Piece.SetFilePack(this);
                 Pieces.Add(e.ShortNameHash, d);
             }
         }

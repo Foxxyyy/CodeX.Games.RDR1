@@ -66,7 +66,7 @@ namespace CodeX.Games.RDR1.Files
 
                         p.UpdateBounds();
                         p.Name = e.Name;
-                        p.FilePack = this;
+                        p.SetFilePack(this);
 
                         Pieces.Add(hashes[i], p);
                         BoundingBox = BoundingBox.Merge(BoundingBox, p.BoundingBox); //Expand the global bounding box to encompass all pieces

@@ -101,7 +101,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6Texture : Rsc6TextureBase
+    public class Rsc6Texture : Rsc6TextureBase //grcTextureD11
     {
         public override ulong BlockLength => base.BlockLength + 52;
         public byte TextureType { get; set; } //m_ImageType
@@ -115,7 +115,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint NextTextureOffset { get; set; } = 0xCDCDCDCD;
         public Rsc6Ptr<Rsc6TextureData> DataRef { get; set; }
         public Rsc6Ptr<Rsc6TextureCRN> DataCRND { get; set; }
-        public uint IsSRBG { get; set; } //m_IsSRBG
+        public uint IsSRBG { get; set; } = 1; //m_IsSRBG
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -217,6 +217,7 @@ namespace CodeX.Games.RDR1.RSC6
                 0x33545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT3), //861165636
                 0x35545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT5), //894720068
                 0x444E5243 => ConvertToEngineFormat(Rsc6TextureFormat.CRND),        //1145983555
+                0x1A => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_R16),        //26
                 0x32 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8),         //50
                 0x20 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8),   //32
                 _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8)
@@ -232,6 +233,7 @@ namespace CodeX.Games.RDR1.RSC6
                 TextureFormat.BC3 => 0x35545844, //DXT5
                 TextureFormat.A8 => 0x32,        //A8
                 TextureFormat.A8R8G8B8 => 0x20,  //A8R8G8B8
+                TextureFormat.R16U => 0x1A,      //R16
                 _ => throw new NotImplementedException("Unknown pixel format!")
             };
             return BitConverter.GetBytes(format);
@@ -244,6 +246,7 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6TextureFormat.D3DFMT_DXT3 => TextureFormat.BC2,
                 Rsc6TextureFormat.D3DFMT_DXT5 => TextureFormat.BC3,
                 Rsc6TextureFormat.D3DFMT_A8R8G8B8 => TextureFormat.A8R8G8B8,
+                Rsc6TextureFormat.D3DFMT_R16 => TextureFormat.R16U,
                 Rsc6TextureFormat.D3DFMT_A8 => TextureFormat.A8,
                 Rsc6TextureFormat.CRND => TextureFormat.Unknown,
                 _ => TextureFormat.BC1,
@@ -274,7 +277,7 @@ namespace CodeX.Games.RDR1.RSC6
         }
     }
 
-    public class Rsc6TextureBase : Texture, IRsc6Block
+    public class Rsc6TextureBase : Texture, IRsc6Block //rage::grcTexture
     {
         public virtual ulong BlockLength => 32;
         public ulong FilePosition { get; set; }
@@ -282,7 +285,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint VFT { get; set; }
         public uint BlockMap { get; set; }
         public uint RefCount { get; set; } = 1; //m_RefCount
-        public ResourceTextureType ResourceType { get; set; } = ResourceTextureType.SEPARATED; //m_ResourceType, 0 for embedded textures or 2 for seperated
+        public ResourceTextureType ResourceType { get; set; } //m_ResourceType, 0 for embedded textures or 2 for seperated
         public ushort LayerCount { get; set; } //m_LayerCount, 0 for standard/volume/depth textures or 5 for cubemaps
         public uint Unknown_10h { get; set; }
         public int TextureSize { get; set; } //m_PhysicalSize, 0 for seperated textures
@@ -455,8 +458,6 @@ namespace CodeX.Games.RDR1.RSC6
             var data = reader.ReadBytes((int)DataSize);
 
             //TODO: FIX THIS
-            //do we seriously need a random dll just to do some texture format conversion?
-
             //var resultPtr = get_dds_from_crn(data, (uint)data.Length, out int bufferSize);
             //if (resultPtr != IntPtr.Zero)
             //{
@@ -473,7 +474,9 @@ namespace CodeX.Games.RDR1.RSC6
     public enum Rsc6TextureFormat : uint
     {
         CRND = 0,
+        KTX_20 = 1,
         D3DFMT_A8 = 2,
+        D3DFMT_R16 = 26,
         D3DFMT_DXT1 = 82,
         D3DFMT_DXT3 = 83,
         D3DFMT_DXT5 = 84,

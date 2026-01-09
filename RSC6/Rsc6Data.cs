@@ -1214,7 +1214,7 @@ namespace CodeX.Games.RDR1.RSC6
             set => Items[index] = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return "Count: " + Count.ToString();
         }
@@ -1233,6 +1233,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public uint[] Pointers;
         public T[] Items;
+
+        public Rsc6AtMapArr()
+        {
+        }
 
         public Rsc6AtMapArr(T[] items)
         {
@@ -1260,14 +1264,14 @@ namespace CodeX.Games.RDR1.RSC6
 
             for (int i = 0; i < Count; i++)
             {
-                Items[i] = reader.ReadBlock(Pointers[i], createFunc); ;
+                Items[i] = reader.ReadBlock(Pointers[i], createFunc);
             }
             reader.Position = p;
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public readonly void Write(Rsc6DataWriter writer)
         {
-            var ptrs = new uint[Capacity];
+            var ptrs = new uint[Count];
             writer.AddPointerRef(ptrs);
             writer.WriteUInt32(Position);
             writer.WriteUInt16(Count);
@@ -1278,29 +1282,28 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBoolean(AllowRecompute);
 
             var data = writer.WriteArray(ptrs);
-            var offset = 0u;
             if (Items != null)
             {
-                for (int i = 0; i < Capacity; i++)
+                for (int i = 0; i < Count; i++)
                 {
-                    var item = (i < Items.Length) ? Items[i] : default;
+                    var item = Items[i];
                     if (item != null)
                     {
+                        var offset = (uint)(i * sizeof(uint));
                         writer.WriteBlock(item);
                         writer.AddPointerRef(item, data, offset);
                     }
-                    offset += 48;
                 }
             }
         }
 
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return "Count: " + Count.ToString();
         }
@@ -1968,7 +1971,7 @@ namespace CodeX.Games.RDR1.RSC6
 
     public static class Rsc6DataMap
     {
-        public static List<T> Build<T>(List<T> entries, int customBucket = -1, bool sortbuckets = false, bool reversebuckets = false, T[] extest = null) where T : IRsc6DataMapEntry<T>
+        public static List<T> Build<T>(List<T> entries, int customBucket = -1, bool sortbuckets = false, bool reversebuckets = false) where T : IRsc6DataMapEntry<T>
         {
             if (entries.Count < 1 || ((entries.Count == 1) && (entries[0].MapKey == 0)))
             {
@@ -2045,22 +2048,6 @@ namespace CodeX.Games.RDR1.RSC6
                         c.MapNext = default;
                         p.MapNext = c;
                         p = c;
-                    }
-                }
-            }
-
-            if (extest != null) //Just testing
-            {
-                var numtest = extest.Length;
-                for (int i = 0; i < numtest; i++)
-                {
-                    var ot = extest[i];
-                    var nt = result[i];
-
-                    while (ot != null)
-                    {
-                        ot = ot.MapNext;
-                        nt = nt.MapNext;
                     }
                 }
             }

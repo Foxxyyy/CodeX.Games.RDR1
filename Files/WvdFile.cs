@@ -52,7 +52,7 @@ namespace CodeX.Games.RDR1.Files
                     var drawable = drawables[i];
                     if (drawable != null)
                     {
-                        drawable.FilePack = this;
+                        drawable.SetFilePack(this);
                     }
 
                     var hash = (i < hashes.Length) ? hashes[i] : 0;

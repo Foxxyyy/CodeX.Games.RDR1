@@ -42,7 +42,7 @@ namespace CodeX.Games.RDR1.Files
 
                 Piece = d;
                 Piece.Name = e.Name;
-                Piece.FilePack = this;
+                Piece.SetFilePack(this);
                 Piece.Collider = b;
 
                 if (Piece.Name.StartsWith("st_")) //If we have a tree, let's not switch between lods, low lods have no trunks...

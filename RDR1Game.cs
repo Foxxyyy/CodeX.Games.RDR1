@@ -56,19 +56,19 @@ namespace CodeX.Games.RDR1
 
         public override Setting[] GetMapSettings()
         {
-            return new[]
-            {
+            return
+            [
                 RDR1Map.StartPositionSetting,
                 RDR1Map.EnabledSetting,
                 RDR1Map.EnableInstancedGrass,
                 RDR1Map.TreesDistanceSetting,
                 RDR1Map.GrassDistanceSetting
-            };
+            ];
         }
 
         private bool AutoDetectFolder(out Dictionary<string, string> matches)
         {
-            matches = new Dictionary<string, string>();
+            matches = [];
             if (CheckGameFolder(GameFolder))
             {
                 matches.Add("Current CodeX Folder", GameFolder);

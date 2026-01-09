@@ -63,7 +63,7 @@ namespace CodeX.Games.RDR1.RPF6
             InitFileType(".cutbin", "Cutscene Binary", FileTypeIcon.XmlFile, FileTypeAction.ViewXml, true);
             InitFileType(".strtbl", "String Table", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".fonttex", "Font Data", FileTypeIcon.Canvas, FileTypeAction.ViewXml, true);
-            InitFileType(".tr", "AI Programs", FileTypeIcon.TextFile, FileTypeAction.ViewText);
+            InitFileType(".tr", "Task Rules", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".csv", "Comma-Separated Values File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".cfg", "Config File", FileTypeIcon.TextFile, FileTypeAction.ViewText);
             InitFileType(".refgroup", "Reference Group", FileTypeIcon.TextFile, FileTypeAction.ViewText);
@@ -382,6 +382,7 @@ namespace CodeX.Games.RDR1.RPF6
             if (filename.EndsWith(".fonttex.xml")) return ConvertFromXml<FonttexFile>(xml, folder);
             else if (filename.EndsWith(".wvd.xml")) return ConvertFromXml<WvdFile>(xml, folder);
             else if (filename.EndsWith(".wfd.xml")) return ConvertFromXml<WfdFile>(xml, folder);
+            else if (filename.EndsWith(".wft.xml")) return ConvertFromXml<WftFile>(xml, folder);
             else if (filename.EndsWith(".wtd.xml")) return ConvertFromXml<WtdFile>(xml, folder);
             else if (filename.EndsWith(".wsi.xml")) return ConvertFromXml<WsiFile>(xml);
             return null;
@@ -727,7 +728,7 @@ namespace CodeX.Games.RDR1.RPF6
                         if (mesh == null) continue;
                         foreach (var tex in mesh.Textures)
                         {
-                            if (tex == null) continue;
+                            if (tex == null || tex?.Pack == null) continue;
                             hs.Add(tex.Pack.FileInfo);
                         }
                     }

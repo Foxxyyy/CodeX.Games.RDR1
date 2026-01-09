@@ -59,7 +59,7 @@ namespace CodeX.Games.RDR1.RSC6
             var list = entries?.ToList();
             if (list?.Count > 0)
             {
-                var newlst = Rsc6DataMap.Build(list, 101, false, false, Slots.Items);
+                var newlst = Rsc6DataMap.Build(list, 101, false, false);
                 Slots = new([.. newlst]);
                 NumSlots = Slots.Count;
                 NumEntries = list.Count;

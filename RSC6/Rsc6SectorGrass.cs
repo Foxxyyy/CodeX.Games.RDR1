@@ -142,7 +142,7 @@ namespace CodeX.Games.RDR1.RSC6
             mesh.Read(reader);
 
             var fvf = 0u;
-            var elems = mesh.VertexLayout?.Elements;
+            var elems = mesh.VertexLayout.Elements;
 
             for (int i = 0; i < elems.Length; i++)
             {
@@ -189,7 +189,7 @@ namespace CodeX.Games.RDR1.RSC6
                     VertexData = VertexBuffer.Item.VertexData.Items,
                     VertexCount = VertexBuffer.Item.VertexCount,
                     VertexStride = (int)VertexBuffer.Item.VertexStride,
-                    VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout
+                    VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout ?? new VertexLayout("P")
                 };
                 mesh.Write(writer);
             }

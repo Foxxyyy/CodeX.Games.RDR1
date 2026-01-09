@@ -2080,24 +2080,34 @@ namespace CodeX.Games.RDR1.RSC6
         public void Read(MetaNodeReader reader)
         {
             BlendShapes = new(reader.ReadNodeArray("BlendShapes", (_) => new Rsc6BlendShape(this)));
-            Targets = new(reader.ReadNodeArray<Rsc6TargetEntry>("Targets"));
+            var targets = reader.ReadNodeArray<Rsc6TargetEntry>("Targets");
+            var newTargets = Rsc6DataMap.Build(targets.ToList(), -1, false, false);
+            var flatten = Rsc6DataMap.Flatten(newTargets.ToArray(), e => e).Where(e => e?.Data.Item != null);
+
+            Targets = new([.. newTargets])
+            {
+                Capacity = (ushort)flatten.Count()
+            };
         }
 
         public void Write(MetaNodeWriter writer)
         {
+            var targets = Rsc6DataMap.Flatten(Targets.Items, e => e).Where(e => e?.Data.Item != null);
             writer.WriteNodeArray("BlendShapes", BlendShapes.Items);
-            writer.WriteNodeArray("Targets", Targets.Items);
+            writer.WriteNodeArray("Targets", targets.ToArray());
         }
     }
 
-    public class Rsc6TargetEntry : Rsc6BlockBase, MetaNode //rage::atMapEntry<rage::datPadded<unsigned short>, rage::datOwner<rage::grbTarget>>
+    public class Rsc6TargetEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TargetEntry>, MetaNode //rage::atMapEntry<rage::datPadded<unsigned short>, rage::datOwner<rage::grbTarget>>
     {
         public override ulong BlockLength => 12;
         public ushort Key { get; set; } //key, the ID of the target to blend
         public ushort Pad { get; set; } = 0xCDCD; //datPadded
         public Rsc6Ptr<Rsc6Target> Data { get; set; } //data
         public Rsc6Ptr<Rsc6TargetEntry> Next { get; set; } //next
-        public Rsc6TargetEntry EntryNext { get => Next.Item; set => Next = new(value); }
+
+        public Rsc6TargetEntry MapNext { get => Next.Item; set => Next = new(value); }
+        public uint MapKey { get => Key; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2119,14 +2129,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Key = reader.ReadUInt16("Key");
             Data = new(reader.ReadNode<Rsc6Target>("Data"));
-            Next = new(reader.ReadNode<Rsc6TargetEntry>("Next"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteUInt16("Key", Key);
             writer.WriteNode("Data", Data.Item);
-            writer.WriteNode("Next", Next.Item);
         }
     }
 
@@ -2142,7 +2150,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             get
             {
-                if (!Name.Contains('\0')) return base.ToString();
+                if (Name.All(c => c == '�')) return string.Empty; //If name is all padding characters, return empty string
+                if (!Name.Contains('\0')) return Name.ToString();
                 return Name[..Name.IndexOf('\0')];
             }
         }
@@ -2158,8 +2167,8 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
-            var nameLength = Name.Length + 1;
-            var padding = new byte[64 - nameLength];
+            var nameLength = Name?.Length + 1 ?? 0;
+            var padding = Enumerable.Repeat((byte)0xCD, 64 - nameLength).ToArray();
 
             if (!string.IsNullOrEmpty(Name))
             {
@@ -2180,7 +2189,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteString("Name", FixedName);
+            if (!string.IsNullOrEmpty(FixedName))
+            {
+                writer.WriteString("Name", FixedName);
+            }
             writer.WriteInt32("TargetIndex", TargetIndex);
             writer.WriteNodeArray("Morphables", Morphables.Items);
         }
@@ -2305,7 +2317,7 @@ namespace CodeX.Games.RDR1.RSC6
         public int DrawBufferIdx { get; set; } //m_DrawBufferIdx
         public int UpdateBufferIdx { get; set; } //m_UpdateBufferIdx
         public bool IsResource { get; set; } //m_IsResource
-        public byte[] Pad { get; set; } = new byte[3] { 0xCD, 0xCD, 0xCD }; //m_Pad
+        public byte[] Pad { get; set; } = [0xCD, 0xCD, 0xCD]; //m_Pad
         public int BlendCount { get; set; } //BlendCount
         public uint BlendSize { get; set; } //BlendSize
         public uint Pad0 { get; set; } = 0xCDCDCDCD; //pad0
@@ -2317,7 +2329,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             get
             {
-                if (!Name.Contains('\0')) return base.ToString();
+                if (Name.All(c => c == '�')) return string.Empty; //If name is all padding characters, return empty string
+                if (!Name.Contains('\0')) return Name.ToString();
                 return Name[..Name.IndexOf('\0')];
             }
         }
@@ -2343,8 +2356,8 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var nameLength = Name.Length + 1;
-            var padding = new byte[64 - nameLength];
+            var nameLength = Name?.Length + 1 ?? 0;
+            var padding = Enumerable.Repeat((byte)0xCD, 64 - nameLength).ToArray();
 
             if (!string.IsNullOrEmpty(Name))
             {
@@ -2385,7 +2398,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteInt32("MaterialIndex", MaterialIndex);
+            if (!string.IsNullOrEmpty(FixedName))
+            {
+                writer.WriteString("Name", FixedName);
+            }
+
+            if (MaterialIndex != 0) writer.WriteInt32("MaterialIndex", MaterialIndex);
             writer.WriteNodeArray("Targets", Targets.Items);
             writer.WriteNodeArray("Offsets", Offsets.Items);
             writer.WriteNode("Fvf", Fvf.Item);
@@ -2412,8 +2430,8 @@ namespace CodeX.Games.RDR1.RSC6
         public bool HasTangents { get; set; } //m_HasTangents
         public byte Pad { get; set; } = 0xCD; //m_Pad
         public Rsc6Arr<ulong> Positions { get; set; } //m_Positions
-        public Rsc6Arr<int> Normals { get; set; } //m_Normals
-        public Rsc6Arr<int> Tangents { get; set; } //m_Tangents
+        public Rsc6Arr<uint> Normals { get; set; } //m_Normals
+        public Rsc6Arr<uint> Tangents { get; set; } //m_Tangents
         public Rsc6Arr<int> VertexMap { get; set; } //m_VertexMap
 
         public Vector4[] DataPos
@@ -2442,8 +2460,8 @@ namespace CodeX.Games.RDR1.RSC6
             HasTangents = reader.ReadBoolean();
             Pad = reader.ReadByte();
             Positions = reader.ReadArr<ulong>();
-            Normals = reader.ReadArr<int>();
-            Tangents = reader.ReadArr<int>();
+            Normals = reader.ReadArr<uint>();
+            Tangents = reader.ReadArr<uint>();
             VertexMap = reader.ReadArr<int>();
         }
 
@@ -2464,8 +2482,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             TotalMeshVerts = reader.ReadInt32("TotalMeshVerts");
             Positions = new(reader.ReadUInt64Array("Positions"));
-            Normals = new(reader.ReadInt32Array("Normals"));
-            Tangents = new(reader.ReadInt32Array("Tangents"));
+            Normals = new(reader.ReadUInt32Array("Normals"));
+            Tangents = new(reader.ReadUInt32Array("Tangents"));
             VertexMap = new(reader.ReadInt32Array("VertexMap"));
             HasPositions = Positions.Items != null;
             HasNormals = Normals.Items != null;
@@ -2476,8 +2494,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteInt32("TotalMeshVerts", TotalMeshVerts);
             writer.WriteUInt64Array("Positions", Positions.Items);
-            writer.WriteInt32Array("Normals", Normals.Items);
-            writer.WriteInt32Array("Tangents", Tangents.Items);
+            writer.WriteUInt32Array("Normals", Normals.Items);
+            writer.WriteUInt32Array("Tangents", Tangents.Items);
             writer.WriteInt32Array("VertexMap", VertexMap.Items);
         }
     }
