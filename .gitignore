@@ -1,0 +1,27 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+packages/
+
+# Logs
+*.log
+
+# Generated files
+Generated/
+
+# OS files
+Thumbs.db
+.DS_Store
