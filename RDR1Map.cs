@@ -71,8 +71,9 @@ namespace CodeX.Games.RDR1
             Rsc6DataWriter.UseProjectExplorer = true;
 
             Game = game;
-            DefaultSpawnPoint = position;
+            DefaultSpawnPoint = EnabledSetting.GetBool() ? position : new Vector3(0.0f);
             BoundingBox = new BoundingBox(new Vector3(-100000.0f), new Vector3(100000.0f));
+
             InitRenderData();
             InitPhysicsSim();
 
@@ -83,12 +84,7 @@ namespace CodeX.Games.RDR1
         protected override bool StreamingInit()
         {
             Core.Engine.Console.Write("RDR1Map", "Initialising " + Game.Name + "...");
-            FileManager = Game.GetFileManager() as Rpf6FileManager;
-
-            if (FileManager == null)
-            {
-                throw new Exception("Failed to initialize RDR1.");
-            }
+            FileManager = Game.GetFileManager() as Rpf6FileManager ?? throw new Exception("Failed to initialize RDR1.");
 
             if (EnabledSetting.GetBool() == false)
             {
@@ -131,7 +127,7 @@ namespace CodeX.Games.RDR1
 
             Core.Engine.Console.Write("RDR1Map", "Loading grids...");
             SmicGrid = new RDR1Grid(FileManager, 0x100, "game\\tune_d11generic.rpf\\tune\\smicgrid", "rdr2", "XXXXYYYY.txt");
-            TreeGrid = new RDR1Grid(FileManager, 0x100, "game\\treeres.rpf\\treeres", "rdr2", "XXXXYYYY_spd.wsp"); //TODO: also tree_instancefile_YYYYXXXX.txt ?
+            TreeGrid = new RDR1Grid(FileManager, 0x100, "game\\treeres.rpf\\treeres", "rdr2", "XXXXYYYY_spd.wsp");
             GrassGrid = new RDR1Grid(FileManager, 0x80, "game\\grassres.rpf\\grassres", "rdr2", "grass_instancefile_XXXXYYYY.wsg");
             BoundsGrid = new RDR1Grid(FileManager, 0x40, "game\\terrainboundres.rpf\\terrainboundres\\territory_swall_noid", "rdr2", "XXXXYYYY_bnd.wtb");
 
@@ -142,19 +138,19 @@ namespace CodeX.Games.RDR1
             return true;
         }
 
-        protected override bool StreamingUpdate()
+        protected override void StreamingUpdate()
         {
-            if (!EnabledSetting.GetBool()) return false;
+            if (!EnabledSetting.GetBool()) return;
 
             var ents = StreamEntities.CurrentSet;
             var spos = StreamPosition;
-            var needsAnotherUpdate = false;
 
             AddWsiEntities(ref spos, ents);
             AddTerrainBoundsTiles(ref spos);
             AddTerrainTiles(ref spos, ents);
             AddTreeTiles(ref spos, ents);
             AddGrassTiles(ref spos, ents);
+            AddNavmeshes(ref spos);
 
             /*
             var scale = new Vector3(10.0f);
@@ -174,8 +170,6 @@ namespace CodeX.Games.RDR1
             */
 
             EntityCountStat.SetCounter(ents.Count);
-            if (needsAnotherUpdate) StreamUpdateRequest = true;
-            return true;
         }
 
         private void AddWsiEntities(ref Vector3 spos, HashSet<Entity> ents)
@@ -219,8 +213,6 @@ namespace CodeX.Games.RDR1
                             ents.Add(bndent);
                         }
                     }
-                    else
-                    { }
                 }
             }
         }
@@ -229,149 +221,164 @@ namespace CodeX.Games.RDR1
         {
             if (sector == null) return;
             if (sector.Enabled == false) return;
-            
+
+            FileManager.DataFileMgr.SmicMapping.TryGetValue(sector.Name, out var sectorsmic);
+
+            var rootpack = Cache.GetPiecePack(root.NameHash, Rpf6FileExt.wvd) as WvdFile;
+            var roottxd = rootpack?.VisualDictionary?.TextureDictionary.Item;
             var split = sector.StreamingBox.Contains(ref spos) == ContainmentType.Contains;
-            if (split && (sector.ChildSectors != null))
+
+            if (split && sector.ChildSectors != null)
             {
                 foreach (var child in sector.ChildSectors)
                 {
                     RecurseAddWsiEntities(ref spos, ents, child, root);
                 }
             }
-            else if (split && (sector.ScopedEntity != null))
+            else if (split && sector.ScopedEntity != null)
             {
-                var ent = sector.ScopedEntity;
-                var pack = Cache.GetPiecePack(ent.ModelName, Rpf6FileExt.wvd);
-                var rootpack = Cache.GetPiecePack(root.NameHash, Rpf6FileExt.wvd) as WvdFile;
-                var piece = pack?.Piece as Rsc6Drawable;
-                
-                if (pack?.Pieces?.Count > 1)
-                {
-                    pack.Pieces.TryGetValue(ent.ModelName, out var ppiece);
-                    piece = ppiece as Rsc6Drawable;
-                }
-
-                if (piece == null) return;
-                var roottxd = rootpack?.VisualDictionary?.TextureDictionary.Item;
-                
-                if (roottxd != null)
-                {
-                    piece.ApplyTextures(roottxd);
-                }
-                ent.SetPiece(piece);
-                ents.Add(ent);
+                AddScopedEntity(sector.ScopedEntity, ents, roottxd, sectorsmic);
             }
             else
             {
-                var vlow = sector.ScopedEntityVlow;
-                var med = sector.ScopedEntityMed;
-                var medpack = (med != null) ? Cache.GetPiecePack(med.ModelName, Rpf6FileExt.wvd) : null;
-                var vlowpack = (vlow != null) ? Cache.GetPiecePack(vlow.ModelName, Rpf6FileExt.wvd) : null;
-                
-                if ((med != null) && (medpack?.Piece != null))
-                {
-                    if (medpack?.Piece is not Rsc6Drawable piece) return;
-                    var rootpack = Cache.GetPiecePack(root.NameHash, Rpf6FileExt.wvd) as WvdFile;
-                    var roottxd = rootpack?.VisualDictionary?.TextureDictionary.Item;
-                    if (roottxd != null)
-                    {
-                        piece.ApplyTextures(roottxd);
-                    }
-                    med.SetPiece(piece);
-                    ents.Add(med);
-                }
-                else if (vlow != null)
-                {
-                    var piece = vlowpack?.Piece;
-                    if (piece == null) return;
-                    vlow.SetPiece(piece);
-                    ents.Add(vlow);
-                }
-                else
-                { }
+                AddScopedLodEntity(sector.ScopedEntityMed, sector.ScopedEntityVlow, ents, roottxd, sectorsmic);
             }
 
-            if (split)
+            if (!split) return;
+            foreach (var ent in sector.Entities)
             {
-                var smicmap = FileManager.DataFileMgr.SmicMapping;
-                smicmap.TryGetValue(sector.Name, out var sectorsmic);
+                if (ent is not WsiEntity wsient) continue;
 
-                var rootpack = Cache.GetPiecePack(root.NameHash, Rpf6FileExt.wvd) as WvdFile;
-                var roottxd = rootpack?.VisualDictionary?.TextureDictionary.Item;
+                var dist = (wsient.Position - spos).Length();
+                if (dist > wsient.LodDistMax) continue;
+                wsient.StreamingDistance = dist;
 
-                foreach (var ent in sector.Entities)
+                var piece = GetWsiEntityPiece(wsient);
+                if (piece == null) continue;
+
+                var smic = sectorsmic;
+                if (wsient.PropInstance != null)
                 {
-                    if (ent is not WsiEntity wsient) continue;
-
-                    var dist = (wsient.Position - spos).Length();
-                    if (dist > wsient.LodDistMax) continue;
-                    wsient.StreamingDistance = dist;
-
-                    Piece piece = null;
-                    var modelName = wsient.ModelName;
-                    var pi = wsient.PropInstance;
-                    var di = wsient.DrawableInstance;
-                    
-                    if (pi != null)
+                    FileManager.DataFileMgr.SmicMapping.TryGetValue(wsient.Name, out var modelsmic);
+                    if (modelsmic != null)
                     {
-                        var pack = Cache.GetPiecePack(modelName, Rpf6FileExt.wft);
-                        piece = pack?.Piece;
-                        if (piece == null)
-                        { }
+                        smic = modelsmic;
                     }
-                    else if (di != null)
-                    {
-                        var pname = wsient.ParentName?.ToLowerInvariant();
-                        var pack = Cache.GetPiecePack(pname, Rpf6FileExt.wvd);
-                        
-                        if (pack == null)
-                        {
-                            pack = Cache.GetPiecePack(pname + "_non-terrain", Rpf6FileExt.wvd);
-                            if (pack != null)
-                            { }
-                        }
-                        if (pack?.Pieces != null)
-                        {
-                            pack.Pieces.TryGetValue(modelName, out piece);
-                            if (piece == null)
-                            { }
-                        }
-                        else
-                        { }
-                    }
-
-                    if (piece == null) continue;
-
-                    if (piece is Rsc6Drawable dwbl)
-                    {
-                        if (roottxd != null)
-                        {
-                            dwbl.ApplyTextures(roottxd);
-                        }
-                        if (sectorsmic != null)
-                        {
-                            foreach (var secsmic in sectorsmic)
-                            {
-                                var wtd = Cache.GetTexturePack(secsmic?.ToLowerInvariant()) as WtdFile;
-                                var txd = wtd?.TextureDictionary;
-                                if (txd != null)
-                                {
-                                    dwbl.ApplyTextures(txd);
-                                }
-                            }
-                        }
-                    }
-
-                    wsient.SetPiece(piece);
-                    ents.Add(wsient);
-
-                    ents.Add(ent);
                 }
 
-                //if (sector.LightsEntity != null)
-                //{
-                //    ents.Add(sector.LightsEntity);
-                //}
+                if (piece is Rsc6Drawable drawable)
+                {
+                    ApplySmicTextures(drawable, roottxd, smic);
+                }
+
+                wsient.SetPiece(piece);
+                ents.Add(wsient);
+            }
+
+            //if (sector.LightsEntity != null)
+            //{
+            //    ents.Add(sector.LightsEntity);
+            //}
+        }
+
+        private void AddScopedEntity(Entity ent, HashSet<Entity> ents, Rsc6TextureDictionary roottxd, IEnumerable<string> smic)
+        {
+            if (ent is not WsiEntity wsient) return;
+
+            var pack = Cache.GetPiecePack(wsient.ModelName, Rpf6FileExt.wvd);
+            var piece = pack?.Piece as Rsc6Drawable;
+
+            if (pack?.Pieces?.Count > 1)
+            {
+                pack.Pieces.TryGetValue(wsient.ModelName, out var ppiece);
+                piece = ppiece as Rsc6Drawable;
+            }
+
+            if (piece == null) return;
+            ApplySmicTextures(piece, roottxd, smic);
+
+            wsient.SetPiece(piece);
+            ents.Add(wsient);
+        }
+
+        private void AddScopedLodEntity(Entity med, Entity vlow, HashSet<Entity> ents, Rsc6TextureDictionary roottxd, IEnumerable<string> smic)
+        {
+            if (med is WsiEntity medwsi)
+            {
+                var medpack = Cache.GetPiecePack(medwsi.ModelName, Rpf6FileExt.wvd);
+                if (medpack?.Piece is Rsc6Drawable medPiece)
+                {
+                    ApplySmicTextures(medPiece, roottxd, smic);
+                    medwsi.SetPiece(medPiece);
+                    ents.Add(medwsi);
+                    return;
+                }
+            }
+
+            if (vlow is WsiEntity vlowwsi)
+            {
+                var vlowpack = Cache.GetPiecePack(vlowwsi.ModelName, Rpf6FileExt.wvd);
+                var vlowPiece = vlowpack?.Piece;
+
+                if (vlowPiece is Rsc6Drawable vlowDrawable)
+                {
+                    ApplySmicTextures(vlowDrawable, roottxd, smic);
+                }
+
+                if (vlowPiece != null)
+                {
+                    vlowwsi.SetPiece(vlowPiece);
+                    ents.Add(vlowwsi);
+                }
+            }
+        }
+
+        private Piece GetWsiEntityPiece(WsiEntity wsient)
+        {
+            if (wsient == null) return null;
+            var modelName = wsient.ModelName;
+
+            if (wsient.PropInstance != null)
+            {
+                var pack = Cache.GetPiecePack(modelName, Rpf6FileExt.wft);
+                return pack?.Piece;
+            }
+
+            if (wsient.DrawableInstance != null)
+            {
+                var pname = wsient.ParentName?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(pname)) return null;
+
+                var pack = Cache.GetPiecePack(pname, Rpf6FileExt.wvd);
+                pack ??= Cache.GetPiecePack(pname + "_non-terrain", Rpf6FileExt.wvd);
+
+                if (pack?.Pieces != null && pack.Pieces.TryGetValue(modelName, out var piece))
+                {
+                    return piece;
+                }
+            }
+            return null;
+        }
+
+        private void ApplySmicTextures(Rsc6Drawable piece, Rsc6TextureDictionary roottxd, IEnumerable<string> smic)
+        {
+            if (piece == null) return;
+            if (roottxd != null)
+            {
+                piece.ApplyTextures(roottxd);
+            }
+
+            if (smic == null) return;
+            foreach (var secsmic in smic)
+            {
+                if (string.IsNullOrEmpty(secsmic)) continue;
+                var wtd = Cache.GetTexturePack(secsmic.ToLowerInvariant()) as WtdFile;
+                var txd = wtd?.TextureDictionary;
+
+                if (txd != null)
+                {
+                    piece.ApplyTextures(txd);
+                }
             }
         }
 
@@ -380,11 +387,11 @@ namespace CodeX.Games.RDR1
             var dfm = FileManager.DataFileMgr;
             var wtlentries = dfm.StreamEntries[Rpf6FileExt.wtl];
             wtlentries.TryGetValue("lod", out var lodwtlentry);
-            
+
             var lodwtl = FileManager.LoadFilePack<WtlFile>(lodwtlentry);
             TerrainWorld = lodwtl?.TerrainLod;
             TerrainTiles = [];
-            
+
             var wvdbasepath = lodwtlentry.Parent.PathLower;
             var wvdentries = dfm.StreamEntries[Rpf6FileExt.wvd];
             var wvddivs = new int[] { 2, 4, 1, 1, 8 };
@@ -392,7 +399,7 @@ namespace CodeX.Games.RDR1
             var texsetnames = new List<string>();
             var texdicts = TerrainWorld.TextureDictionaries.Items; //probably just load all these
             var texsets = TerrainWorld.TextureSets.Items;
-            
+
             for (int l = 0; l < TerrainWorld.NumLODLevels; l++)
             {
                 var gridsize = (int)TerrainWorld.GridSize[l]; //128,128,512,1024,1024
@@ -406,7 +413,7 @@ namespace CodeX.Games.RDR1
                 var cmin = (int)bucket.ColumnMin;
                 var rcnt = (int)bucket.GridSizeRow;
                 var ccnt = (int)bucket.GridSizeColumn;
-                
+
                 for (var r = 0; r < rcnt; r++)
                 {
                     for (var c = 0; c < ccnt; c++)
@@ -414,7 +421,7 @@ namespace CodeX.Games.RDR1
                         var i = r * ccnt + c;
                         var b = barr[i];
                         if (b < 0) continue;
-                        
+
                         var sector = sectors[b];
                         var visual = visuals[sector.VisualIndex];
                         var x = rmin + r;
@@ -433,11 +440,11 @@ namespace CodeX.Games.RDR1
                         var wvdx = ((x + 1024) / wvdd) * wvdd - 1024 + 100;
                         var wvdy = ((y + 1024) / wvdd) * wvdd - 1024;
                         if (l == 4) { wvdx = 100; wvdy = -1; } //lod4 only has one wvd
-                        
+
                         var tilename = $"tile_{wvdx}_{wvdy}";
                         var wvdname = $"resource_{l}\\{tilename}.wvd";
                         var wvdpath = $"{wvdbasepath}\\{wvdname}";
-                        
+
                         FileManager.EntryDict.TryGetValue(wvdpath, out var wvdentry);
                         ent.Name = tilename;
                         ent.WvdName = wvdname;
@@ -499,6 +506,29 @@ namespace CodeX.Games.RDR1
             }
         }
 
+        private void AddNavmeshes(ref Vector3 spos)
+        {
+            var range = StreamNavmeshesRange;
+            var sbox = RDR1Grid.GetVisibleBox(spos, range);
+            var bounds = Rsc6NavmeshLookup.NavmeshBounds;
+            var entries = FileManager?.DataFileMgr?.StreamEntries[Rpf6FileExt.wbd_wcdt_wnm];
+            if (entries == null || bounds == null) return;
+
+            foreach (var kvp in entries)
+            {
+                var entry = kvp.Value;
+                if (entry == null) continue;
+                if (entry.EntryParent.NameHash != 0x08F78E67) continue; //rsc_territory_w
+                if (!bounds.TryGetValue(entry.NameHash, out var bbox)) continue;
+                if (!bbox.Intersects(sbox)) continue;
+
+                var ent = Cache.GetNavmesh(entry);
+                if (ent == null) continue;
+
+                StreamNavmeshes.Add(ent);
+            }
+        }
+
         private bool RecurseAddTerrainTile(in Vector3I coord, ref Vector3 spos, HashSet<Entity> ents)
         {
             TerrainTiles.TryGetValue(coord, out var tile);
@@ -518,6 +548,7 @@ namespace CodeX.Games.RDR1
                 var griddivs = (int)TerrainWorld.GridSubDivs[clod]; //2,4,2,1,1
                 var cellsize = (clod == 0) ? (gridsize / 2) : gridsize;
                 var anyok = false;
+
                 for (var cx = 0; cx < griddivs; cx++)
                 {
                     for (var cy = 0; cy < griddivs; cy++)
@@ -549,6 +580,7 @@ namespace CodeX.Games.RDR1
                     dwbl?.ApplyTextures(wtd.TextureDictionary);
                 }
             }
+
             if (tile.TexSetNames != null)
             {
                 foreach (var texset in tile.TexSetNames)
@@ -560,7 +592,6 @@ namespace CodeX.Games.RDR1
             }
 
             ents.Add(tile);
-
             return true;
         }
 
@@ -585,7 +616,7 @@ namespace CodeX.Games.RDR1
         {
             var range = TreesDistanceSetting.GetFloat();
             TreeGrid.UpdateVisibleCells(spos, range);
-            var sbox = TreeGrid.GetVisibleBox(spos, range);
+            var sbox = RDR1Grid.GetVisibleBox(spos, range);
 
             foreach (var cell in TreeGrid.VisibleCells)
             {
@@ -597,17 +628,16 @@ namespace CodeX.Games.RDR1
                 {
                     if (batch == null) continue;
                     if (batch.Enabled == false) continue;
-                    
+
                     var bbox = batch.BoundingBox;
                     if (bbox.Intersects(sbox) == false) continue;
-                    
+
                     var pack = Cache.GetPiecePack(batch.ModelHash, Rpf6FileExt.wft);
                     if (pack == null) continue;
-                    if (pack.Pieces.Count > 1) { }
-                    
+
                     var piece = pack.Piece;
                     if (piece == null) continue;
-                    
+
                     batch.SetPiece(piece);
                     batch.Batch?.StreamingUpdate(spos);
                     ents.Add(batch);
@@ -620,7 +650,7 @@ namespace CodeX.Games.RDR1
             if (EnableInstancedGrass.GetBool() == false) return;
             var range = GrassDistanceSetting.GetFloat();
             GrassGrid.UpdateVisibleCells(spos, range);
-            var sbox = GrassGrid.GetVisibleBox(spos, range);
+            var sbox = RDR1Grid.GetVisibleBox(spos, range);
 
             foreach (var cell in GrassGrid.VisibleCells)
             {
@@ -632,28 +662,24 @@ namespace CodeX.Games.RDR1
                 {
                     if (batch == null) continue;
                     if (batch.Enabled == false) continue;
-                    
+
                     var bbox = batch.BoundingBox;
                     if (bbox.Intersects(sbox) == false) continue;
-                    
+
                     var pack = Cache.GetPiecePack(batch.ModelHash, Rpf6FileExt.wft);
                     if (pack == null)
                     {
                         if (batch.Name.StartsWith("p_sno")) //fallback since p_sno_grass02x doesn't seem to exist
                         {
-                            var newname = "p_cho" + batch.Name.Substring(5);
+                            var newname = string.Concat("p_cho", batch.Name.AsSpan(5));
                             pack = Cache.GetPiecePack(newname, Rpf6FileExt.wft);
-                            if (pack == null)
-                            { }
                         }
                     }
-                    
+
                     if (pack == null) continue;
-                    if (pack.Pieces.Count > 1) { }
-                    
                     var piece = pack.Piece;
                     if (piece == null) continue;
-                    
+
                     batch.SetPiece(piece);
                     batch.Batch?.StreamingUpdate(spos);
                     ents.Add(batch);
@@ -784,15 +810,12 @@ namespace CodeX.Games.RDR1
         {
             return [new BaseField("Map States", BaseFieldType.ObjectArray)];
         }
-
-        public override void GetFieldValue(BaseField field, out object value)
+        public override void GetFieldValue(BaseField field, out BaseValue value)
         {
-            value = (field?.Name == "Map States") ? MapStatesFile?.CurrentGroups : null;
+            value = (field?.Name == "Map States") ? new(MapStatesFile?.CurrentGroups) : default;
         }
-
-        public override void SetFieldValue(BaseField field, object value)
-        {
-        }
+        public override void SetFieldValue(BaseField field, in BaseValue value)
+        { }
     }
 
     public class RDR1MapStateGroup : BaseObject
@@ -801,13 +824,9 @@ namespace CodeX.Games.RDR1
         public bool MP;
         public bool Undead;
         public Dictionary<string, string> States;
-        public List<(string, string, string)> WSIs = []; //name,statename,stateval
+        public List<(string, string, string)> WSIs = new(); //name,statename,stateval
         private Dictionary<string, string[]> StateOptions;
         private BaseField[] Fields;
-
-        public RDR1MapStateGroup()
-        {
-        }
 
         public RDR1MapStateGroup(RDR1Map map)
         {
@@ -862,7 +881,7 @@ namespace CodeX.Games.RDR1
 
                 if (opts.TryGetValue(state, out var list) == false)
                 {
-                    list = [""]; //Start with an empty entry, just so that's an option
+                    list = new List<string>() { "" }; //Start with an empty entry, just so that's an option
                     opts[state] = list;
                 }
 
@@ -878,10 +897,10 @@ namespace CodeX.Games.RDR1
                 return;
             }
 
-            StateOptions = [];
+            StateOptions = new Dictionary<string, string[]>();
             foreach (var kvp in opts)
             {
-                StateOptions[kvp.Key] = [.. kvp.Value];
+                StateOptions[kvp.Key] = kvp.Value.ToArray();
             }
         }
 
@@ -900,22 +919,24 @@ namespace CodeX.Games.RDR1
             }
             return Fields;
         }
-
-        public override void GetFieldValue(BaseField field, out object value)
+        public override void GetFieldValue(BaseField field, out BaseValue value)
         {
-            value = null;
+            value = default;
             if (States == null) return;
             States.TryGetValue(field.Name, out var str);
-            value = str;
+            value = new(str);
         }
-
-        public override void SetFieldValue(BaseField field, object value)
+        public override void SetFieldValue(BaseField field, in BaseValue value)
         {
+            var str = value.String;
             Map.StreamInvoke(() =>
             {
-                States ??= [];
-                States[field.Name] = value as string;
-                Map.EnableMapStateGroup(this, Enabled); //need to refresh this group
+                if (States == null)
+                {
+                    States = new Dictionary<string, string>();
+                }
+                States[field.Name] = str;
+                Map.EnableMapStateGroup(this, Enabled);//need to refresh this group
             });
         }
     }
@@ -1013,7 +1034,7 @@ namespace CodeX.Games.RDR1
                 g.BuildStateOptions();
                 currGroups.Add(g);
             }
-            CurrentGroups = [.. currGroups];
+            CurrentGroups = currGroups.ToArray();
         }
 
         private enum Section
@@ -1052,40 +1073,33 @@ namespace CodeX.Games.RDR1
                 var scopedSectors = childGroup.Sectors.Items;
                 var scopedParents = childGroup.SectorsParents.Items;
                 var imax = Math.Min(scopedSectors?.Length ?? 0, scopedParents?.Length ?? 0);
-                
                 for (int i = 0; i < imax; i++)
                 {
                     var sector = scopedSectors[i];
                     var parent = scopedParents[i]?.Parent.Item;
                     if (sector == null) continue;
-                    
                     var mapSector = new RDR1MapSector(this, wsi, sector, parent, true);
                     sectors.Add(mapSector);
-                    
                     if (parent == SectorInfo) roots.Add(mapSector);
                     childLists.TryGetValue(parent, out var pchildren);
-                    
                     if (pchildren == null)
                     {
-                        pchildren = [];
+                        pchildren = new List<RDR1MapSector>();
                         childLists[parent] = pchildren;
                     }
                     pchildren.Add(mapSector);
                 }
-
                 foreach (var sector in sectors)
                 {
                     var s = sector?.Sector;
                     if (s == null) continue;
                     childLists.TryGetValue(s, out var childList);
-                    
                     if (childList != null)
                     {
                         sector.ChildSectors = childList.ToArray();
                     }
                 }
             }
-
             if (childSectors != null)
             {
                 foreach (var childSector in childSectors)
@@ -1096,11 +1110,10 @@ namespace CodeX.Games.RDR1
                     roots.Add(mapSector);
                 }
             }
-
             if (sectors.Count == 0) return;
 
-            Sectors = [.. sectors];
-            RootSectors = [.. roots];
+            Sectors = sectors.ToArray();
+            RootSectors = roots.ToArray();
         }
     }
 
@@ -1131,7 +1144,8 @@ namespace CodeX.Games.RDR1
             BoundingBox = currentSector.Bounds;
             IsScopedSector = scoped;
 
-            var dist = new Vector3(BoundingBox.Size.Length());
+            var width = BoundingBox.Width;
+            var dist = new Vector3(BoundingBox.Size.Length());//(width > 700.0f) ? width : 700.0f);
             StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
 
             if (scoped)
@@ -1139,7 +1153,6 @@ namespace CodeX.Games.RDR1
                 var name = currentSector.Name.Value?.ToLowerInvariant();
                 var dfm = mapNode.Map.FileManager.DataFileMgr;
                 var wvdentry = dfm.TryGetStreamEntry(NameHash, Rpf6FileExt.wvd);
-                
                 if (wvdentry != null)
                 {
                     ScopedEntity = new WsiEntity()
@@ -1148,7 +1161,8 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
-
+                else
+                { }
                 var wvdmedentry = dfm.TryGetStreamEntry(name + "_med", Rpf6FileExt.wvd);
                 if (wvdmedentry != null)
                 {
@@ -1158,7 +1172,8 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
-
+                else
+                { }
                 var wvdvlowentry = dfm.TryGetStreamEntry(name + "_vlow", Rpf6FileExt.wvd);
                 if (wvdvlowentry != null)
                 {
@@ -1168,6 +1183,8 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
+                else
+                { }
             }
 
             GetEntities();
@@ -1177,19 +1194,18 @@ namespace CodeX.Games.RDR1
         {
             if (Wsi == null) return;
             if (Wsi.SectorInfo == null) return;
-            
             var name = Sector.Name.Value?.ToLowerInvariant() ?? "";
             if (name == Wsi.SectorInfo.Scope.Value ||
                 name.Contains("_ffa01x") ||
                 name.Contains("_base01x")) return; //Deathmatch props
 
-            if (Wsi.FileEntry?.Archive?.Name == "swterrain.rpf") //IsTerrainSector())
+            if (Wsi.FileEntry?.Archive?.Name == "swterrain.rpf")//IsTerrainSector())
             {
                 name += "_non-terrain";
             }
 
-            AddEntitiesFromSector(name); //Add the sector's entities
-            AddLightsFromSector(); //Add the sector's lights
+            AddEntitiesFromSector(name);//Add the sector's entities
+            AddLightsFromSector();//Add the sector's lights
         }
 
         public override void PreSaveUpdate()
@@ -1270,7 +1286,7 @@ namespace CodeX.Games.RDR1
             var entities = new List<WsiEntity>();
             foreach (var ent in Entities)
             {
-                if (ent is WsiLightEntity) continue; //TODO: handle lights and DrawableInstances
+                if (ent is WsiLightEntity) continue;//TODO: handle lights and DrawableInstances
                 if (ent is not WsiEntity wsiEnt) continue;
                 entities.Add(wsiEnt);
             }
@@ -1282,14 +1298,14 @@ namespace CodeX.Games.RDR1
                 if (ent.ParentName == null) continue;
                 if (!parentEntitiesDict.TryGetValue(ent.ParentName, out var parentEntities))
                 {
-                    parentEntities = [];
+                    parentEntities = new List<Rsc6PropInstanceInfo>();
                     parentEntitiesDict[ent.ParentName] = parentEntities;
                 }
 
                 parentEntities.Add(new Rsc6PropInstanceInfo()
                 {
                     EntityName = new(ent.Name),
-                    RotationX = ent.PropInstance.RotationX, //TODO: use current entity quaternion
+                    RotationX = ent.PropInstance.RotationX,//TODO: use current entity quaternion
                     RotationY = ent.PropInstance.RotationY,
                     RotationZ = ent.PropInstance.RotationZ,
                     Flags = ent.Flags,
@@ -1351,7 +1367,7 @@ namespace CodeX.Games.RDR1
             var name = entity.EntityName.Value?.ToLowerInvariant();
             if (name.Contains('/'))
             {
-                name = name[(name.LastIndexOf('/') + 1)..];
+                name = name[(name.LastIndexOf("/") + 1)..];
             }
 
             var yaw = (float)entity.RotationZ; //green
@@ -1462,13 +1478,13 @@ namespace CodeX.Games.RDR1
             var innerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
             var outerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
             var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
-            Lights = [l];
+            Lights = new Light[] { l };
         }
     }
 
     public class RDR1Grid
     {
-        public Vector2 WorldOffset = new(-6144, -6144); //grid (0,0) corner in world space.
+        public Vector2 WorldOffset = new Vector2(-6144, -6144);//grid (0,0) corner in world space.
         public int CellSize;
         public string Path;
         public string LevelName;
@@ -1477,8 +1493,8 @@ namespace CodeX.Games.RDR1
         public string ValidInstMasterObjectFile;
         public int ValidInstCount;
         public int ValidInstVersion;
-        public Dictionary<Vector2I, Rpf6FileEntry> CellEntries = []; //NOTE:(Y,X)!
-        public List<(Vector2I, Rpf6FileEntry)> VisibleCells = []; //NOTE:(Y,X)!
+        public Dictionary<Vector2I, Rpf6FileEntry> CellEntries = new();//NOTE:(Y,X)!
+        public List<(Vector2I, Rpf6FileEntry)> VisibleCells = new();//NOTE:(Y,X)!
 
         public RDR1Grid(Rpf6FileManager fileMan, int cellSize, string path, string levelName, string entryFormat)
         {
@@ -1494,38 +1510,39 @@ namespace CodeX.Games.RDR1
 
             var hexnum = System.Globalization.NumberStyles.HexNumber;
             var invcul = System.Globalization.CultureInfo.InvariantCulture;
-            
             foreach (var line in validinstlines)
             {
                 if (string.IsNullOrEmpty(line)) continue;
                 var colind = line.IndexOf(':');
                 if (colind > 0)
                 {
-                    var fname = line[..colind];
-                    var fval = line[colind..].Trim();
-
+                    var fname = line.Substring(0, colind);
+                    var fval = line.Substring(colind).Trim();
                     switch (fname)
                     {
                         case "Dir": ValidInstDir = fval; break;
                         case "MasterObjectFile": ValidInstMasterObjectFile = fval; break;
-                        case "Count": _ = int.TryParse(fval, out ValidInstCount); break;
-                        case "Version": _ = int.TryParse(fval, out ValidInstVersion); break;
+                        case "Count": int.TryParse(fval, out ValidInstCount); break;
+                        case "Version": int.TryParse(fval, out ValidInstVersion); break;
                         default: break;
                     }
                 }
                 else
                 {
-                    var xstr = line[..4].ToLowerInvariant();
-                    var ystr = line[4..].Trim().ToLowerInvariant();
+                    var xstr = line.Substring(0, 4).ToLowerInvariant();
+                    var ystr = line.Substring(4).Trim().ToLowerInvariant();
                     int.TryParse(xstr, hexnum, invcul, out var x);
                     int.TryParse(ystr, hexnum, invcul, out var y);
                     var coord = new Vector2I(x, y);
                     var entryName = entryFormat.Replace("XXXX", xstr).Replace("YYYY", ystr);
                     var entryPath = $"{path}\\{entryName}";
-                    if (fileMan.GetEntry(entryPath) is not Rpf6FileEntry entry) continue;
+                    var entry = fileMan.GetEntry(entryPath) as Rpf6FileEntry;
+                    if (entry == null) continue;
                     CellEntries[coord] = entry;
                 }
             }
+            if ((ValidInstCount != 0) && (ValidInstCount != CellEntries.Count))
+            { }
 
             //in validinstance file:
             //Dir: $\treeRes
@@ -1555,10 +1572,10 @@ namespace CodeX.Games.RDR1
             VisibleCells.Clear();
 
             var rngvec = new Vector2(range);
-            var worldmin = spos.XY() - rngvec;
-            var worldmax = spos.XY() + rngvec;
-            var cellmin = (worldmin - WorldOffset) / CellSize;
-            var cellmax = (worldmax - WorldOffset) / CellSize;
+            var worldmin = (spos.XY() - rngvec);
+            var worldmax = (spos.XY() + rngvec);
+            var cellmin = ((worldmin - WorldOffset) / CellSize);
+            var cellmax = ((worldmax - WorldOffset) / CellSize);
             var gridmin = new Vector2I(cellmin.Floor());
             var gridmax = new Vector2I(cellmax.Ceiling());
 
@@ -1574,7 +1591,7 @@ namespace CodeX.Games.RDR1
             }
         }
 
-        public BoundingBox GetVisibleBox(Vector3 spos, float range)
+        public static BoundingBox GetVisibleBox(Vector3 spos, float range)
         {
             var srng = new Vector3(range);
             var sbox = new BoundingBox(spos - srng, spos + srng);
@@ -1627,13 +1644,10 @@ namespace CodeX.Games.RDR1
 
             var wtbbnds = wtb.TileBounds;
             if (wtbbnds == null) return;
-
             var wtbrd = wtbbnds.ResourceDict.Item;
             if (wtbrd == null) return;
-
             var hashes = wtbrd.Codes.Items;
             if (hashes == null) return;
-
             var entries = wtbrd.Entries.Items;
             if (entries == null) return;
 
@@ -1646,51 +1660,44 @@ namespace CodeX.Games.RDR1
                 if (bounds == null) continue;
 
                 //create a piece for this bounds
-                var piece = new Piece
-                {
-                    Name = bounds.Name ?? (Name + "_0x" + hash.Hex),
-                    FilePack = wtb,
-                    Collider = bounds
-                };
+                var piece = new Piece();
+                piece.Name = bounds.Name ?? (Name + "_0x" + hash.Hex);
+                piece.FilePack = wtb;
+                piece.Collider = bounds;
                 piece.UpdateBounds();
                 BoundPieces[hash] = piece;
 
                 var instdict = entry.InstanceDict.Item;
                 if (instdict == null) continue;
-
                 var ihashes = instdict.Codes.Items;
                 if (ihashes == null) continue;
-
                 var ientries = instdict.Entries.Items;
                 if (ientries == null) continue;
-
                 for (int j = 0; j < ientries.Length; j++)
                 {
                     var ihash = ihashes[j];
                     var ientry = ientries[j];
                     if (ientry == null) continue;
-
                     var iinst = ientry.Instance.Item;
                     if (iinst == null) continue;
-
                     var mat = iinst.Matrix;
+
                     var pos = mat.Translation;
+                    if (pos != Vector3.Zero)
+                    { }
                     var r1 = mat.Row3();
                     var r2 = mat.Row1();
                     var r3 = mat.Row2();
-
                     mat.Row1(new Vector4(r1.Z, r1.X, r1.Y, r1.W));
                     mat.Row2(new Vector4(r2.Z, r2.X, r2.Y, r2.W));
                     mat.Row3(new Vector4(r3.Z, r3.X, r3.Y, r3.W));
                     mat.Row4(new Vector4(0, 0, 0, 1));
                     mat.Decompose(out var sca, out var ori, out var pos2);
 
-                    //Create an entity for this instance
-                    var ent = new Entity
-                    {
-                        Name = piece.Name + "_0x" + ihash.Hex,
-                        FilePack = wtb
-                    };
+                    //create an entity for this instance
+                    var ent = new Entity();
+                    ent.Name = piece.Name + "_0x" + ihash.Hex;
+                    ent.FilePack = wtb;
                     ent.SetTransform(pos, ori, sca, false);
                     ent.SetPiece(piece);
 
@@ -1729,10 +1736,8 @@ namespace CodeX.Games.RDR1
 
             var treenames = wspgrid.TreeNames.Items;
             if (treenames == null) return;
-            
             var names = new string[treenames.Length];
             var hashes = new JenkHash[treenames.Length];
-            
             for (int i = 0; i < treenames.Length; i++)
             {
                 var name = treenames[i].Value;
@@ -1742,23 +1747,18 @@ namespace CodeX.Games.RDR1
                 hashes[i] = new JenkHash(name.ToLowerInvariant() + "x");
             }
 
+            var currentcell = (Rsc6TreeForestGridCell)null;
             var currentbatches = new Dictionary<int, RDR1TreeGridBatch>();
             var batchlist = new List<RDR1TreeGridBatch>();
-
-            Rsc6TreeForestGridCell currentcell;
             RDR1TreeGridBatch getBatch(int id)
             {
                 if (currentbatches.TryGetValue(id, out var batch)) return batch;
                 if ((id < 0) || (id > names.Length)) return null;
-                
-                batch = new RDR1TreeGridBatch
-                {
-                    Tile = this,
-                    Cell = currentcell,
-                    Name = names[id],
-                    ModelHash = hashes[id]
-                };
-
+                batch = new RDR1TreeGridBatch();
+                batch.Tile = this;
+                batch.Cell = currentcell;
+                batch.Name = names[id];
+                batch.ModelHash = hashes[id];
                 batchlist.Add(batch);
                 currentbatches[id] = batch;
                 return batch;
@@ -1766,7 +1766,6 @@ namespace CodeX.Games.RDR1
 
             var cells = wspgrid.GridCells.Items;
             if (cells == null) return;
-            
             foreach (var cell in cells)
             {
                 if (cell == null) continue;
@@ -1781,14 +1780,11 @@ namespace CodeX.Games.RDR1
                         if (position == null) continue;
                         var batch = getBatch(position.TreeIndex);
                         if (batch == null) continue;
-                        var inst = new EntityBatchInstance1
-                        {
-                            Matrix = Matrix3x4.CreateTranslation(position.Position)
-                        };
+                        var inst = new EntityBatchInstance1();
+                        inst.Matrix = Matrix3x4.CreateTranslation(position.Position);
                         batch.Instances.Add(inst);
                     }
                 }
-
                 var matrices = cell.CombinedInstanceListMatrix.Items;
                 if (matrices != null)
                 {
@@ -1818,7 +1814,7 @@ namespace CodeX.Games.RDR1
                 Add(gridbatch);
             }
 
-            Batches = [.. batchlist];
+            Batches = batchlist.ToArray();
         }
 
         public override void PreSaveUpdate()
@@ -1842,29 +1838,25 @@ namespace CodeX.Games.RDR1
             var insts = Instances.ToArray();
             if (insts.Length == 0)
             {
-                Enabled = false; //empty batch - don't bother with it
+                Enabled = false;//empty batch - don't bother with it
                 return false;
             }
 
             var min = new Vector3(float.MaxValue);
             var max = new Vector3(float.MinValue);
-            
             for (int i = 0; i < insts.Length; i++)
             {
                 var trans = insts[i].Matrix.Translation;
                 min = Vector3.Min(min, trans);
                 max = Vector3.Max(max, trans);
             }
-
             var bmin = new Vector4(min, 0);
             var bsiz = new Vector4(Vector3.Max(max - min, Vector3.One), 0);
             var sparams = new Vector4(1, 1, 0, 0);
             var entbatch = new EntityBatch(this, insts.Length, 1, bmin, bsiz, sparams);
             BufferUtil.WriteArray(entbatch.Data, 0, insts);
-            
-            var gridscale = 0.2; //inverse of min cell size
+            var gridscale = 0.2;//inverse of min cell size
             var maxgs = (int)Math.Min(Math.Max(Math.Max(bsiz.X, bsiz.Y) * gridscale, 2), 32);
-            
             entbatch.InitGrid(maxgs);
             SetBatch(entbatch);
 
@@ -1890,19 +1882,18 @@ namespace CodeX.Games.RDR1
             var changed = (p != Piece);
             if (p != null) PieceBox = p.BoundingBox;
             base.SetPiece(p);
-            
-            if (p == null || !changed) return;
-            if (p is not Rsc6Drawable d) return;
+            if ((p == null) || (changed == false)) return;
 
-            var hdist = 9999f; //d.LodDistHigh;
+            var d = p as Rsc6Drawable;
+            if (d == null) return;
+            var hdist = 9999f;//d.LodDistHigh;
             var mdist = d.LodDistMed;
-
             Batch.InitLods(hdist, mdist);
             Batch.Lods[0].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[0], p, 0);
+            //Batch.Lods[1].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[1], p, 1);
 
             ////lod1 of RDR1 trees is missing the trunk for some reason.
             ////TODO: use a proper billboarding/impostor system for these
-            ////Batch.Lods[1].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[1], p, 1);
         }
 
         public override void ApplyTransforms()
@@ -1945,13 +1936,11 @@ namespace CodeX.Games.RDR1
                 var ghash = gitem.NameHash;
                 var mname = "p_" + gname + "x";
 
-                var batch = new RDR1GrassGridBatch
-                {
-                    Tile = this,
-                    GrassField = gitem,
-                    Name = mname,
-                    ModelHash = new JenkHash(mname)
-                };
+                var batch = new RDR1GrassGridBatch();
+                batch.Tile = this;
+                batch.GrassField = gitem;
+                batch.Name = mname;
+                batch.ModelHash = new JenkHash(mname);
 
                 var ok = batch.BuildFromGrassField();
                 if (ok == false) continue;
@@ -1960,7 +1949,7 @@ namespace CodeX.Games.RDR1
                 Add(batch);
             }
 
-            Batches = [.. batchlist];
+            Batches = batchlist.ToArray();
         }
     }
 
@@ -1977,27 +1966,27 @@ namespace CodeX.Games.RDR1
         {
             var vbuf = GrassField?.VertexBuffer.Item;
             if (vbuf == null) return false;
-
             var vfmt = vbuf.Layout.Item;
             if (vfmt == null) return false;
-
             var vdata = vbuf.VertexData.Items;
             if (vdata == null) return false;
-
             var cnt = (int)vbuf.VertexCount;
             if (cnt == 0) return false;
-
             if (vdata.Length != cnt * 4) return false;
 
             var min = GrassField.AABBMin.XYZ();
             var max = GrassField.AABBMax.XYZ();
             var rng = GrassField.AABBScale.XYZ();
+            if (rng != (max - min))
+            { }
+            if (rng == Vector3.Zero)
+            { }
             var bmin = new Vector4(min, 0);
             var bsiz = new Vector4(rng, 1);
             var sparams = new Vector4(1, 1, 0, 0);
             var batch = new EntityBatch(this, cnt, 2, bmin, bsiz, sparams);
-            var insts = new EntityBatchInstance2[cnt];
 
+            var insts = new EntityBatchInstance2[cnt];
             for (var i = 0; i < cnt; i++)
             {
                 ref var inst = ref insts[i];
@@ -2012,12 +2001,9 @@ namespace CodeX.Games.RDR1
                 inst.ColourG = 0x7F;
                 inst.ColourB = 0x7F;
             }
-
             BufferUtil.WriteArray(batch.Data, 0, insts);
-          
-            var gridscale = 0.5; //inverse of min cell size
+            var gridscale = 0.5;//inverse of min cell size
             var maxgs = (int)Math.Min(Math.Max(Math.Max(bsiz.X, bsiz.Y) * gridscale, 2), 32);
-            
             batch.InitGrid(maxgs);
             SetBatch(batch);
 
@@ -2073,10 +2059,10 @@ namespace CodeX.Games.RDR1
             Level = batch.Level;
             Piece = p;
             PieceLodOverride = pieceLod;
-            CurrentDistance = lod.LodDist; //this isn't great...
+            CurrentDistance = lod.LodDist;//this isn't great...
             BoundingBox = batch.BoundingBox;
             BoundingSphere = batch.BoundingSphere;
-            Position = batch.Position; //BoundingBox.Center;
+            Position = batch.Position;// BoundingBox.Center;
             Orientation = Quaternion.Identity;
             Scale = Vector3.One;
             ParentIndex = -1;
@@ -2094,7 +2080,7 @@ namespace CodeX.Games.RDR1
         public override void ApplyTransforms()
         {
             //base.ApplyTransforms();
-            ParentBatch.ApplyTransforms(); //need to bounce this because we're actually rendering/editing this object
+            ParentBatch.ApplyTransforms();//need to bounce this because we're actually rendering/editing this object
         }
     }
 
@@ -2550,6 +2536,7 @@ namespace CodeX.Games.RDR1
         private readonly StreamingCacheDict<Rpf6FileEntry> TreeGridTileCache;
         private readonly StreamingCacheDict<Rpf6FileEntry> GrassGridTileCache;
         private readonly StreamingCacheDict<JenkHash> SectorBoundsCache;
+        private readonly StreamingCacheDict<JenkHash> NavmeshCache;
 
         public RDR1MapFileCache(RDR1Map map, Rpf6FileManager fman)
         {
@@ -2560,6 +2547,7 @@ namespace CodeX.Games.RDR1
             TreeGridTileCache = new StreamingCacheDict<Rpf6FileEntry>(this);
             GrassGridTileCache = new StreamingCacheDict<Rpf6FileEntry>(this);
             SectorBoundsCache = new StreamingCacheDict<JenkHash>(this);
+            NavmeshCache = new StreamingCacheDict<JenkHash>(this);
         }
 
         private Dictionary<JenkHash, StreamingCacheEntry> GetCache(Rpf6FileExt ext)
@@ -2585,6 +2573,7 @@ namespace CodeX.Games.RDR1
             TreeGridTileCache.RemoveOldItems();
             GrassGridTileCache.RemoveOldItems();
             SectorBoundsCache.RemoveOldItems();
+            NavmeshCache.RemoveOldItems();
         }
 
         public TexturePack GetTexturePack(JenkHash hash)
@@ -2740,7 +2729,7 @@ namespace CodeX.Games.RDR1
             if (!SectorBoundsCache.TryGetValue(hash, out var cacheItem))
             {
                 cacheItem = new StreamingCacheEntry();
-                var pack = GetPiecePack(hash, Rpf6FileExt.wbd_wcdt);
+                var pack = GetPiecePack(hash, Rpf6FileExt.wbd_wcdt_wnm);
                 var pieces = pack?.Pieces;
 
                 if (pieces != null)
@@ -2758,6 +2747,31 @@ namespace CodeX.Games.RDR1
             cacheItem.LastUseFrame = CurrentFrame;
             SectorBoundsCache[hash] = cacheItem;
             return cacheItem.Object as Entity[];
+        }
+
+        public Entity GetNavmesh(Rpf6FileEntry entry)
+        {
+            if (entry == null) return null;
+            var hash = entry.ShortNameHash;
+
+            if (!NavmeshCache.TryGetValue(hash, out var cacheItem))
+            {
+                cacheItem = new StreamingCacheEntry();
+                Core.Engine.Console.Write("RDR1Map", entry.Name);
+
+                var wnm = FileManager.LoadFilePack<WnmFile>(entry);
+                var piece = wnm?.Piece;
+
+                if (piece != null)
+                {
+                    var ent = new Entity(piece);
+                    cacheItem.Object = ent;
+                }
+            }
+
+            cacheItem.LastUseFrame = CurrentFrame;
+            NavmeshCache[hash] = cacheItem;
+            return cacheItem.Object as Entity;
         }
 
         private void LoadDependencies(PiecePack pack)
@@ -2789,7 +2803,7 @@ namespace CodeX.Games.RDR1
                     var hash = new JenkHash(smicname);
                     var wtd = GetTexturePack(hash) as WtdFile;
                     var txd = wtd?.TextureDictionary;
-                    
+
                     if (txd != null)
                     {
                         foreach (var kvp in pack.Pieces)
@@ -2817,9 +2831,13 @@ namespace CodeX.Games.RDR1
             Cache.TryGetValue(ext, out var cache);
             cache?.Remove(hash);
 
-            if (ext == Rpf6FileExt.wbd_wcdt)
+            if (ext == Rpf6FileExt.wbd_wcdt_wnm)
             {
                 SectorBoundsCache.Remove(hash);
+            }
+            else if (ext == Rpf6FileExt.wnm)
+            {
+                NavmeshCache.Remove(hash);
             }
 
             //TODO:
@@ -2837,9 +2855,13 @@ namespace CodeX.Games.RDR1
             Cache.TryGetValue(ext, out var cache);
             cache?.SetPinned(hash, pinned);
 
-            if (ext == Rpf6FileExt.wbd_wcdt)
+            if (ext == Rpf6FileExt.wbd_wcdt_wnm)
             {
                 SectorBoundsCache.SetPinned(hash, pinned);
+            }
+            else if (ext == Rpf6FileExt.wnm)
+            {
+                NavmeshCache.SetPinned(hash, pinned);
             }
 
             //TODO:

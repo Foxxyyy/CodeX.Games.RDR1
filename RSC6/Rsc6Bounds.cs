@@ -2051,7 +2051,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             if (Materials != null)
             {
-                return Materials.ToArray();
+                return [.. Materials];
             }
 
             var list = new List<Rsc6BoundsMaterialData>();
@@ -2072,7 +2072,7 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
             Materials = list;
-            return list.ToArray();
+            return [.. list];
         }
 
         public static List<string> ParseMaterialList(string txt, Rpf6FileManager fman, GameArchive rpf)
@@ -2084,11 +2084,11 @@ namespace CodeX.Games.RDR1.RSC6
             foreach (var line in lines)
             {
                 var str = line.Replace("\r", "");
-                if (!str.StartsWith("#"))
+                if (!str.StartsWith('#'))
                     list.Add(str);
                 else
                 {
-                    var matToLoad = str[(str.IndexOf(" ") + 1)..];
+                    var matToLoad = str[(str.IndexOf(' ') + 1)..];
                     var matList = rpf.AllEntries.FirstOrDefault(e => e.Name == matToLoad);
                     string matTxt = fman.GetFileUTF8Text(matList.Path);
                     list.AddRange(ParseMaterialList(matTxt, fman, rpf)); //Recurse and add seperated materials

@@ -1487,7 +1487,7 @@ namespace CodeX.Games.RDR1.RPF6
         wsg_wgd = 18,
         wcg = 26,
         wat = 30,
-        wbd_wcdt = 31,
+        wbd_wcdt_wnm = 31,
         wsf_wnm = 33,
         wtb = 36,
         wpdt = 39,

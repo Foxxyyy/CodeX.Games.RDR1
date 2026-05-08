@@ -1,0 +1,233 @@
+group:bridges enabled:true
+states:
+	butter_bridge b
+	dixon_crossing after
+	frontera_bridge after
+	mason_bridge after
+	ramita_baya after
+	tanners_span after
+wsis:
+	butterbridgea butter_bridge:a
+	butterbridgeb butter_bridge:b
+	butterbridgec butter_bridge:c
+	butterbridged butter_bridge:d
+
+	dixoncrossingbefore dixon_crossing:before
+	dixoncrossingafter dixon_crossing:after
+
+	fronterabridgebefore frontera_bridge:before
+	fronterabridgeafter frontera_bridge:after
+
+	masonbridgebefore mason_bridge:before
+	masonbridgeafter mason_bridge:after
+
+	ramitabayabefore ramita_baya:before
+	ramitabayaafter ramita_baya:after
+
+	tannersspanbefore tanners_span:before
+	tannersspanafter tanners_span:after
+
+	//We need to make sure these assets are loaded, especially after unloading the DLC assets
+	hennigansranch/hen_barn01x
+	hennigansranch/hen_barn01props01x
+	armadillo/arm_saloon01props01x
+	beechershope/beh_silo02x
+	torquemada/tor_militarycamp02x
+	dlc06x/dlc_esc_zombiecave02x
+	escalera/esc_flags01
+	escalera/esc_bullring01x
+	escalera/esc_bullring01props01x
+	escalera/esc_villawall04x
+	morningstar
+	blackwater/blk_barge01props01x
+	blackwater/blk_barge01x
+	blackwater/mor_morningstar01_int_props01x
+	blackwater/mor_morningstar_int_01x
+	blackwater/mor_morningstar_int_shade_01x
+	blackwater/blk_gunshop_int_shade_01x
+	blackwater/blk_tailor_int_shade_01x
+	blackwater/blk_doctorsoffice_int_shade_01x
+	blackwater/blk_hotel01props01x
+	blackwater/blk_generalstore_int_shade_01x
+	blackwater/blk_bank_int_shade_01x
+	blackwater/blk_policestation_int_shades01x
+	ridgewoodfarm/rwf_barn01xprops01x
+	ridgewoodfarm/rwf_livingroom01props01x
+	campomiradabefore
+
+group:multiplayer enabled:false
+wsis:
+	//Coop missions
+	dlc01x/mp_fom_coop01x
+	dlc01x/mp_nos_coop01ax
+	dlc01x/mp_nos_coop01bx
+	dlc01x/mp_nos_coop01cx
+	dlc01x/mp_nos_coop01dx
+	dlc01x/mp_nos_coop01ex
+	dlc01x/mp_scr_coop01x
+	dlc01x/mp_tes_coop01ax
+	dlc01x/mp_tes_coop01bx
+	dlc01x/mp_tes_coop01cx
+	dlc01x/mp_tes_coop02x
+
+	//Deathmatchs, FFAs, etc.
+	dlc02x/mp_blk_base01x
+	dlc02x/mp_esc_ffa02x
+	dlc02x/mp_fom_base02x
+	dlc02x/mp_fom_ffa02x
+	dlc02x/mp_mtp_base02x
+	dlc02x/mp_thi_base01x
+	dlc02x/mp_thi_ffa01x
+	dlc02x/mp_tor_base01x
+	dlc02x/mp_upr_ffa02x
+
+	//Races
+	dlc05x/dlc_arm_race01x
+	dlc05x/dlc_blk_strhld01x
+	dlc05x/dlc_dzc_race01x
+	dlc05x/dlc_esc_postreleasefix01x
+	dlc05x/dlc_esc_strhld01x
+	dlc05x/dlc_fom_atkdef01x
+	dlc05x/dlc_gap_race01x
+	dlc05x/dlc_grt_race01x
+	dlc05x/dlc_han_race01x
+	dlc05x/dlc_lsh_race01x
+	dlc05x/dlc_prd_race01x
+	dlc05x/dlc_rio_race01x
+	dlc05x/dlc_swg_race01x
+	dlc05x/dlc_tal_race01x
+	dlc05x/dlc_thi_strhld01x
+	dlc05x/mp_blk_base01x
+	dlc05x/mp_thi_base01x
+
+group:undead enabled:false
+wsis:
+	//Ranch barn undead/sp burned
+	hennigansranch/hen_barn01x disabled
+	hennigansranch/hen_barn01props01x disabled
+	hennigansranch/hen_barn02x
+	hennigansranch/hen_barn02props01x
+	
+	//Armadillo modified
+	armadillo/arm_saloon01props01x disabled
+	dlc06x/dlc_arm_saloon01props01x
+	dlc06x/dlc_arm_sheriffsoffice01props01x
+	dlc06x/dlc_arm_corralpens01props01x
+	
+	//Beecher's Hope modified
+	beechershope/beh_silo02x disabled
+	beechershope/beh_grave02x
+	beechershope/beh_grave03x
+	beechershope/beh_silo01x
+	beechershope/beh_silo01props01x
+	dlc06x/dlc_beh_catacombs01x
+	dlc06x/dlc_beh_catacombs01props01x
+	dlc06x/dlc_beh_house01props01x
+	dlc06x/dlc_beh_fireplace01x
+
+	//Torquemada military camp modified
+	torquemada/tor_militarycamp02x disabled
+	torquemada/tor_militarycamp01x
+
+	//Catacombs enabled
+	dlc06x/dlc_esc_zombiecave02x disabled
+	dlc06x/dlc_esc_zombiecave01x
+	dlc06x/dlc_esc_zombiecave01props01x
+	dlc06x/dlc_esc_zombiecave01props02x
+	dlc06x/dlc_esc_zombiecave01props03x
+	dlc06x/dlc_esc_bullring02x
+	dlc06x/dlc_esc_bullring02props01x
+	escalera/esc_flags01 disabled
+	escalera/esc_bullring01x disabled
+	escalera/esc_bullring01props01x disabled
+	escalera/esc_villawall04x disabled
+	escalera/esc_villawall05x
+	
+	//Misc
+	dlc06x/dlc_blk_generalbuilding03props01x
+	dlc06x/dlc_blk_generalbuilding09props01x
+	dlc06x/dlc_blk_zombiegraffiti01x
+	dlc06x/dlc_blk_flagstorn01x
+	dlc06x/dlc_bac_swampcabin01props01x
+	dlc06x/dlc_l_15x
+	dlc06x/dlc_fod_ladders01x
+	dlc06x/dlc_cas_whorehouse01props01x
+	dlc06x/icarus
+	dlc06x/dlc_fom_guardtowerprops01x
+	dlc06x/dlc_ple_house01props01x
+	dlc06x/dlc_sol_houseprops01x
+	dlc06x/dlc_pln_tents01props01x
+	dlc06x/dlc_tan_residence01props01x
+	dlc06x/dlc_lsh_walls01props01x
+	dlc06x/dlc_lsh_trainstation01props01x
+	dlc06x/dlc_lsh_church01props01x
+	dlc06x/dlc_hen_flagstorn01x
+	dlc06x/dlc_ben_trainstation01props01x
+	dlc06x/dlc_fom_ladders01x
+	
+	//Blackwater shades enabled
+	blackwater/blk_forgemill_int_shade_01x
+	blackwater/blk_sawmill_int_shade_01x
+	
+	//Morning star boat disabled
+	morningstar disabled
+	blackwater/blk_barge01props01x disabled
+	blackwater/blk_barge01x disabled
+	blackwater/mor_morningstar01_int_props01x disabled
+	blackwater/mor_morningstar_int_01x disabled
+	blackwater/mor_morningstar_int_shade_01x disabled
+	
+	//Blackwater gunshop enabled
+	blackwater/blk_gunshop_int_shade_01x disabled
+	blackwater/blk_gunshop_int_props01x
+	blackwater/blk_gunshop_int_01x
+	
+	//Blackwater tailor enabled
+	blackwater/blk_tailor_int_shade_01x disabled
+	dlc06x/dlc_blk_tailor01_int_props01x
+	blackwater/blk_tailor01_int_props01x
+	blackwater/blk_tailor_int_01x
+	
+	//Singleplayer train station enabled
+	blackwater/blk_trainstation_int_01x
+	blackwater/blk_trainstation_int_props01x
+	
+	//Doctor's office enabled
+	blackwater/blk_doctorsoffice_int_shade_01x disabled
+	blackwater/blk_doctorsoffice_int_01x
+	blackwater/blk_doctorsofice_int_props01x
+	
+	//Hotel modified
+	blackwater/blk_hotel01props01x disabled
+	dlc06x/dlc_blk_hotel01props01x
+	blackwater/blk_hotel_int_01x
+	blackwater/blk_hotel_int_shade_01x
+	
+	//General store enabled
+	blackwater/blk_generalstore_int_shade_01x disabled
+	blackwater/blk_generalstore_int_01x
+	blackwater/blk_generalstore_int_props02x
+	blackwater/blk_generalstore_int_props01x
+
+	//Bank 2nd floor enabled
+	blackwater/blk_bank_int_shade_01x disabled
+	blackwater/blk_bank_int_02x
+	dlc06x/dlc_blk_bank01_int_props02x
+
+	//Police station 2nd enabled
+	blackwater/blk_policestation_int_shades01x disabled
+	blackwater/blk_policestation_int_02x
+	blackwater/blk_policestation01_int_props02x
+
+	//Anthropology enable
+    blackwater/blk_archeologist01props01x
+
+	//Ridgewood Farm modifed
+	ridgewoodfarm/rwf_barn01xprops01x disabled
+	ridgewoodfarm/rwf_barn01xprops02x
+	ridgewoodfarm/rwf_livingroom01props01x disabled
+	ridgewoodfarm/rwf_livingroom01props02x
+
+	//Campo mirada
+	campomiradabefore disabled
+	campomiradaafter

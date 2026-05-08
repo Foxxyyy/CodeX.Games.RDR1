@@ -12,8 +12,6 @@ namespace CodeX.Games.RDR1.Files
         public Rsc6AnimationSet AnimSet;
         public JenkHash Hash;
         public string Name;
-        public bool HasHumanAnim;
-        public bool HasAnimalAnim;
 
         public WasFile()
         {
@@ -37,14 +35,6 @@ namespace CodeX.Games.RDR1.Files
                 Position = (ulong)e.FlagInfos.RSC85_ObjectStart + Rsc6DataReader.VIRTUAL_BASE
             };
             AnimSet = r.ReadBlock<Rsc6AnimationSet>();
-
-            foreach (var type in AnimSet?.ClipDictionary.Item?.AnimDict.Item?.AnimTypes)
-            {
-                if (type == "human")
-                    HasHumanAnim = true;
-                else if (type == "animal")
-                    HasAnimalAnim = true;
-            }
         }
 
         public override byte[] Save()

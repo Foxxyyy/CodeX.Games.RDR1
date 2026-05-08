@@ -17,12 +17,12 @@ namespace CodeX.Games.RDR1.Prefabs
     public class RDR1Animals
     {
         public string[] AnimalNames;
-        public string[] WasNames;
         public string[] ClipsNames;
         public object CacheSyncRoot = new();
         public Rpf6FileManager FileManager;
-        public Dictionary<string, RDR1AnimalPrefab> Prefabs = new();
+        public Dictionary<string, RDR1AnimalPrefab> Prefabs = [];
         public SimpleCache<JenkHash, WasFile> WasCache = new();
+        public RDR1AnimListFile AnimListFile;
 
         public void Init(Rpf6FileManager fman)
         {
@@ -32,41 +32,29 @@ namespace CodeX.Games.RDR1.Prefabs
 
             FileManager = fman;
             var dfm = fman?.DataFileMgr;
-            dfm.StreamEntries.TryGetValue(Rpf6FileExt.wft, out var fragments);
+            dfm.StreamEntries.TryGetValue(Rpf6FileExt.was, out var anims);
 
             Console.Write("RDR1Animals", "Building Prefabs...");
 
-            var animals = fragments
-                .Where(e => e.Value.Name.EndsWith(".wft")
-                        && !e.Value.Name.EndsWith("x.wft")
-                        && !e.Value.Name.Contains("anim.wft")
-                        && !e.Value.Name.Contains("hat")
-                        && !e.Value.Name.Contains("p_gen")
-                        && !e.Value.Name.Contains("rocks")
-                        && !e.Value.Name.Contains('_'))
-                .Select(e => e.Value.Name.Replace(".wft", ""))
-                .ToList();
+            AnimListFile = new RDR1AnimListFile();
+            var animals = new List<string>();
 
-            AnimalNames = animals.ToArray();
+            foreach (var group in AnimListFile.CurrentGroups ?? [])
+            {
+                if (group.Name != "animals") continue;
+                foreach (var entry in group.Entries)
+                {
+                    if (entry == null) continue;
+                    if (string.IsNullOrEmpty(entry.Name)) continue;
+                    animals.Add(entry.Name);
+                }
+            }
+
+            AnimalNames = [.. animals.Distinct().OrderBy(x => x)];
             foreach (var name in AnimalNames)
             {
                 Prefabs[name] = new RDR1AnimalPrefab(this, name);
             }
-
-            //var wasEntries = dfm.WasFiles; //TODO: load animations on demand
-            //if (wasEntries != null)
-            //{
-            //    var wasList = new List<string>() { "" };
-            //    foreach (var kv in wasEntries)
-            //    {
-            //        var was = kv.Value;
-            //        if (was == null) continue;
-            //        if (!was.HasAnimalAnim) continue;
-            //        wasList.Add(kv.Key.ToString());
-            //    }
-            //    wasList.Sort();
-            //    WasNames = wasList.ToArray();
-            //}
 
             stopwatch.Stop();
             var totaltime = stopwatch.Elapsed.TotalMilliseconds;
@@ -79,11 +67,16 @@ namespace CodeX.Games.RDR1.Prefabs
             return prefab;
         }
 
+        public string[] GetAnimSets(string name)
+        {
+            return AnimListFile?.GetAnimSets(name);
+        }
+
         public void LoadClipsNames(Rpf6FileManager fman, GameArchiveEntry entry)
         {
             var txt = fman.GetFileUTF8Text(entry.Path);
             var clips = txt.Split('\0');
-            ClipsNames = clips.Where(e => e != string.Empty).ToArray();
+            ClipsNames = [.. clips.Where(e => e != string.Empty)];
         }
 
         public WftFile LoadWft(Rpf6FileEntry entry)
@@ -108,7 +101,7 @@ namespace CodeX.Games.RDR1.Prefabs
             var entry = FileManager.DataFileMgr.TryGetStreamEntry(hash, Rpf6FileExt.was);
             if (entry == null) return null;
 
-            Console.Write("RDR1Peds", entry.Name);
+            Console.Write("RDR1Animals", entry.Name);
             var was = FileManager.LoadFilePack<WasFile>(entry);
 
             lock (CacheSyncRoot)
@@ -132,6 +125,11 @@ namespace CodeX.Games.RDR1.Prefabs
         public JenkHash NameHash;
         public RDR1Animals Animals;
         public Rpf6FileEntry WftEntry;
+        public string[] AnimSets;
+
+        public List<RDR1VariableMeshComponent> Components = [];
+        public Dictionary<byte, HashSet<int>> ComponentBoneIndexes = [];
+        public string DefaultAnimSet => AnimSets?.FirstOrDefault();
 
         public RDR1AnimalPrefab(RDR1Animals animals, string name)
         {
@@ -145,20 +143,95 @@ namespace CodeX.Games.RDR1.Prefabs
 
             var hash = new JenkHash(name);
             WftEntry = dfman.TryGetStreamEntry(hash, Rpf6FileExt.wft);
+            AnimSets = Animals.GetAnimSets(name);
 
-            var slots = new List<PrefabSlot>();
-            var wasSlot = new PrefabSlot("WAS", PrefabSlotType.String, "Animations");
-            var clipSlot = new PrefabSlot("Clip", PrefabSlotType.String, "Animations") { DependentOnSlot = wasSlot };
-            var animSlot = new PrefabSlot("Anim", PrefabSlotType.String, "Animations") { DependentOnSlot = clipSlot };
-            slots.Add(wasSlot);
-            slots.Add(clipSlot);
-            slots.Add(animSlot);
-            Slots = slots.ToArray();
+            BuildSlots();
         }
 
         public override Entity CreateInstance(bool preview, string preset)
         {
             return new RDR1Animal(this);
+        }
+
+        private void BuildSlots()
+        {
+            var slots = new List<PrefabSlot>();
+            var wasSlot = new PrefabSlot("WAS", PrefabSlotType.String, "Animations");
+            var clipSlot = new PrefabSlot("Clip", PrefabSlotType.String, "Animations") { DependentOnSlot = wasSlot };
+
+            slots.Add(wasSlot);
+            slots.Add(clipSlot);
+
+            Components.Clear();
+            ComponentBoneIndexes.Clear();
+
+            if (WftEntry != null)
+            {
+                var wft = Animals?.LoadWft(WftEntry);
+                var frag = wft?.Fragment;
+                var vma = frag?.VariableMeshArray;
+
+                if (vma != null)
+                {
+                    var names = vma.UsedComponents;
+                    var indices = vma.UsedIndices;
+                    var count = System.Math.Min(names.Length, indices.Length);
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        var comp = new RDR1VariableMeshComponent
+                        {
+                            Name = names[i],
+                            Index = indices[i],
+                            Enabled = true
+                        };
+
+                        Components.Add(comp);
+                        ComponentBoneIndexes[comp.Index] = [];
+                        slots.Add(new PrefabSlot(comp.Name, PrefabSlotType.String, "Components"));
+                    }
+                    BuildComponentBoneIndexMap(frag);
+                }
+            }
+            Slots = [.. slots];
+        }
+
+        private void BuildComponentBoneIndexMap(Rsc6Fragment frag)
+        {
+            ComponentBoneIndexes.Clear();
+            foreach (var comp in Components)
+            {
+                ComponentBoneIndexes[comp.Index] = [];
+            }
+
+            var drawable = frag?.Drawable.Item;
+            var allModels = drawable?.AllModels;
+            if (allModels == null) return;
+
+            for (int i = 0; i < allModels.Length; i++)
+            {
+                var model = allModels[i];
+                if (model?.Meshes == null) continue;
+
+                if (!ComponentBoneIndexes.TryGetValue((byte)i, out var boneSet)) continue;
+                foreach (var mesh in model.Meshes)
+                {
+                    if (mesh?.Rig?.BoneIndexes != null)
+                    {
+                        foreach (var boneIndex in mesh.Rig.BoneIndexes)
+                        {
+                            if (boneIndex >= 0)
+                            {
+                                boneSet.Add(boneIndex);
+                            }
+                        }
+                    }
+                    else if (mesh != null && mesh.BoneIndex >= 0)
+                    {
+                        boneSet.Add(mesh.BoneIndex);
+                    }
+                }
+            }
         }
     }
 
@@ -168,13 +241,14 @@ namespace CodeX.Games.RDR1.Prefabs
         public WftFile Wft;
         public WasFile Was;
         public string ClipName;
-        public static string PreviousWas;
+
+        public HashSet<int> TurnOffBoneIndexes { get; set; } = [];
+        public Dictionary<byte, bool> SelectedComponents { get; set; } = [];
 
         public RDR1Animal(RDR1AnimalPrefab prefab) : base(false)
         {
             PhysicsType = PhysicsObjectType.Static;
             DisableMouseSelect = false;
-
             Prefab = prefab;
             Name = prefab.Name;
 
@@ -183,30 +257,112 @@ namespace CodeX.Games.RDR1.Prefabs
                 Target = this
             };
 
-            //Turn peds to the sun and the camera
-            SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, FloatUtil.HalfPi), false);
-
+            SetOrientation(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, FloatUtil.HalfPi), false); //Turn peds to the sun and the camera
             BuildPiece();
         }
 
         public void BuildPiece()
         {
-            var peds = Prefab?.Animals;
-            if (peds == null) return;
+            var animals = Prefab?.Animals;
+            if (animals == null) return;
 
-            Wft = peds.LoadWft(Prefab.WftEntry);
-
+            Wft = animals.LoadWft(Prefab.WftEntry);
             var skel = Wft?.Fragment?.Drawable.Item?.Skeleton;
+
             SetSkeleton(skel);
+            InitComponents();
+            UpdateTurnOffBones();
 
             var piece = Wft.Piece;
             piece.ImmediateLoad = true;
             piece.UpdateAllModels();
             piece.UpdateBounds();
 
+            LoadWas(Prefab.DefaultAnimSet);
             SetPiece(piece);
             UpdateBounds();
-            LoadWas(PreviousWas ?? "stand_ambient");
+        }
+
+        public void InitComponents()
+        {
+            SelectedComponents.Clear();
+            foreach (var comp in Prefab.Components)
+            {
+                if (!SelectedComponents.ContainsKey(comp.Index))
+                {
+                    SelectedComponents[comp.Index] = true;
+                }
+            }
+        }
+
+        public void UpdateTurnOffBones()
+        {
+            TurnOffBoneIndexes.Clear();
+            foreach (var kvp in SelectedComponents)
+            {
+                var compIndex = kvp.Key;
+                var enabled = kvp.Value;
+                if (enabled) continue;
+
+                if (Prefab.ComponentBoneIndexes.TryGetValue(compIndex, out var boneSet))
+                {
+                    foreach (var boneIndex in boneSet)
+                    {
+                        TurnOffBoneIndexes.Add(boneIndex);
+                    }
+                }
+            }
+            ApplyTurnOffBones();
+        }
+
+        public void ApplyTurnOffBones()
+        {
+            var lods = Piece?.Lods;
+            if (lods == null) return;
+
+            foreach (var lod in lods)
+            {
+                if (lod?.Models == null) continue;
+                for (int modelIndex = 0; modelIndex < lod.Models.Length; modelIndex++)
+                {
+                    var model = lod.Models[modelIndex];
+                    if (model?.Meshes == null) continue;
+
+                    HashSet<int> modelDisabledBones = null;
+                    var modelEnabled = true;
+
+                    if (SelectedComponents.TryGetValue((byte)modelIndex, out var enabled) && !enabled)
+                    {
+                        modelEnabled = false;
+                        Prefab.ComponentBoneIndexes.TryGetValue((byte)modelIndex, out modelDisabledBones);
+                    }
+
+                    foreach (var mesh in model.Meshes)
+                    {
+                        if (mesh == null) continue;
+
+                        //Rigid meshes
+                        if (mesh.Rig == null)
+                        {
+                            mesh.Enabled = modelEnabled;
+                            continue;
+                        }
+
+                        //Skinned meshes
+                        mesh.Enabled = true;
+                        mesh.Rig.DisableBoneIndexes = modelEnabled ? null : modelDisabledBones;
+                    }
+                }
+            }
+
+            Skeleton.UpdateThisFrame = true;
+            UpdateRenderable = true;
+        }
+
+        public bool IsVariableMeshEnabled(byte index)
+        {
+            if (SelectedComponents.TryGetValue(index, out var enabled)) return enabled;
+            return true;
         }
 
         public string[] GetWasClipNames(out string defaultval)
@@ -242,24 +398,22 @@ namespace CodeX.Games.RDR1.Prefabs
         {
             defaultval = null;
 
-            var anims = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.Animations;
-            var animTypes = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.AnimTypes;
-            if (anims == null) return null;
+            var dict = Was?.AnimSet?.ClipDictionary.Item?.Dict;
+            if (dict == null) return null;
 
-            var list = new List<string>();
-            for (int i = 0; i < anims.Length; i++)
+            var list = new List<string>() { "" };
+            foreach (var kvp in dict)
             {
-                var anim = anims[i];
-                if (anim == null) continue;
-
-                var type = animTypes[i];
-                if (type != "animal") continue;
-
-                var name = anim.RefactoredName.ToString();
-                list.Add(name);
+                if (kvp.Value == null) continue;
+                var name = kvp.Value.Name;
+                list.Add(Path.GetFileName(name));
             }
+
+            defaultval = GetDefaultClipName();
+            ClipName = defaultval;
+
             list.Sort();
-            return list.ToArray();
+            return [.. list];
         }
 
         public void LoadWas(string name)
@@ -275,12 +429,19 @@ namespace CodeX.Games.RDR1.Prefabs
 
             animals.BeginWasCacheFrame();
             Was = animals.LoadStreamWas(new JenkHash(name));
-            PreviousWas = name;
 
             var clipdict = Was?.AnimSet?.ClipDictionary.Item?.Dict;
-            var firstClip = clipdict.Keys.First();
-            var clipName = clipdict[firstClip].ClipName.Value;
+            if (clipdict == null || clipdict.Count == 0)
+            {
+                if (Animator is RDR1Animator nullAnim)
+                {
+                    nullAnim.Clip = null;
+                    nullAnim.Anim = null;
+                }
+                return;
+            }
 
+            var clipName = GetDefaultClipName();
             PlayClip(clipName);
         }
 
@@ -308,19 +469,22 @@ namespace CodeX.Games.RDR1.Prefabs
             animator.Anim = null;
         }
 
-        public void PlayAnim(string animName)
+        public string GetDefaultClipName()
         {
-            if (Animator is not RDR1Animator animator) return;
-            var animdict = Was?.AnimSet?.ClipDictionary.Item?.AnimDict.Item?.Dict;
-            var anim = (Rsc6Animation)null;
+            var dict = Was?.AnimSet?.ClipDictionary.Item?.Dict;
+            if (dict == null || dict.Count == 0) return null;
 
-            foreach (var kv in animdict)
+            var clips = dict.Values.Where(c => c != null && !string.IsNullOrEmpty(c.Name)).ToList();
+            if (clips.Count == 0) return null;
+
+            static string getName(Rsc6Clip c) => Path.GetFileName(c.Name).ToLowerInvariant();
+            foreach (var suffix in new[] { "nor_stn", "grd_stn", "_stn", "_idl", "_nor" })
             {
-                if (kv.Value.RefactoredName != animName) continue;
-                anim = kv.Value;
+                var clip = clips.FirstOrDefault(c => getName(c).EndsWith(suffix));
+                if (clip != null)
+                    return clip.ClipName.Value;
             }
-            animator.Anim = anim;
-            animator.Clip = null;
+            return clips[0].ClipName.Value;
         }
 
         public Prefab GetPrefab()
@@ -342,18 +506,27 @@ namespace CodeX.Games.RDR1.Prefabs
             {
                 if (slot.Name == "WAS")
                 {
-                    options = animals.WasNames;
-                    defaultOption = PreviousWas ?? "stand_ambient";
+                    options = Prefab.AnimSets;
+                    defaultOption = Prefab.DefaultAnimSet;
                 }
                 else if (slot.Name == "Clip")
                 {
-                    //options = GetWasClipNames(out var defaultstr);
-                    //defaultOption = Path.GetFileName(defaultstr);
+                    options = GetWasClipNames(out var defaultstr);
+                    defaultOption = Path.GetFileName(defaultstr);
                 }
-                else if (slot.Name == "Anim")
+            }
+            else if (slot.Group == "Components")
+            {
+                options = ["Off", "On"];
+                var comp = Prefab.Components.FirstOrDefault(c => c.Name == slot.Name);
+
+                if (comp != null && SelectedComponents.TryGetValue(comp.Index, out var enabled))
                 {
-                    options = GetWasAnimNames(out var defaultstr);
-                    defaultOption = defaultstr;
+                    defaultOption = enabled ? "On" : "Off";
+                }
+                else
+                {
+                    defaultOption = "On";
                 }
             }
         }
@@ -373,18 +546,33 @@ namespace CodeX.Games.RDR1.Prefabs
                 }
                 else if (slot.Name == "Clip")
                 {
-                    //PlayClip(option as string);
+                    PlayClip(option as string);
                 }
-                else if (slot.Name == "Anim")
-                {
-                    PlayAnim(option as string);
-                }
+            }
+            else if (slot.Group == "Components")
+            {
+                var comp = Prefab.Components.FirstOrDefault(c => c.Name == slot.Name);
+                if (comp == null) return;
+                SelectedComponents[comp.Index] = string.Equals(option as string, "On", System.StringComparison.OrdinalIgnoreCase);
+                UpdateTurnOffBones();
             }
         }
 
         public string GetPresetString()
         {
             return null;
+        }
+    }
+
+    public class RDR1VariableMeshComponent
+    {
+        public string Name { get; set; }
+        public byte Index { get; set; }
+        public bool Enabled { get; set; } = true;
+
+        public override string ToString()
+        {
+            return $"{Name} ({Index})";
         }
     }
 }

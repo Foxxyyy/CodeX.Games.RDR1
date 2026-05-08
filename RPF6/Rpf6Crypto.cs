@@ -130,6 +130,16 @@ namespace CodeX.Games.RDR1.RPF6
             }
         }
 
+        public static bool NearlyEqual(float a, float b, float eps = 0.001f)
+        {
+            return MathF.Abs(a - b) <= eps;
+        }
+
+        public static bool SamePosition(Vector3 a, Vector3 b, float eps = 0.001f)
+        {
+            return NearlyEqual(a.X, b.X, eps) && NearlyEqual(a.Y, b.Y, eps) && NearlyEqual(a.Z, b.Z, eps);
+        }
+
         ///<summary>Swap the axis from XYZ to ZXY</summary>
         [MI(MO.AggressiveInlining)]
         public static Vector3 ToZXY(Vector3 vec)
@@ -579,6 +589,7 @@ namespace CodeX.Games.RDR1.RPF6
             return new Matrix4x4(FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN, FNaN);
         }
 
-        public static readonly float FNaN = BufferUtil.GetUintFloat(0x7F800001); //NaN as 0x0100807F (float.NaN = 0x0000C0FF).
+        public static readonly float FNaN = BufferUtil.GetUintFloat(0x7F800001);
+        public static readonly Vector3 DebugVector = new(BufferUtil.GetUintFloat(0xCDCDCDCD));
     }
 }

@@ -1,0 +1,237 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "CodeX.Games.RDR1/1.0.0": {
+        "dependencies": {
+          "CodeX.Core": "1.0.0"
+        },
+        "runtime": {
+          "CodeX.Games.RDR1.dll": {}
+        }
+      },
+      "BepuPhysics/2.5.0-beta.29": {
+        "dependencies": {
+          "BepuUtilities": "2.5.0-beta.29"
+        },
+        "runtime": {
+          "lib/net8.0/BepuPhysics.dll": {
+            "assemblyVersion": "2.5.0.0",
+            "fileVersion": "2.5.0.0"
+          }
+        }
+      },
+      "BepuUtilities/2.5.0-beta.29": {
+        "runtime": {
+          "lib/net8.0/BepuUtilities.dll": {
+            "assemblyVersion": "2.5.0.0",
+            "fileVersion": "2.5.0.0"
+          }
+        }
+      },
+      "SharpDX/4.2.0": {
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.D3DCompiler/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.D3DCompiler.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.Direct2D1/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0",
+          "SharpDX.DXGI": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.Direct2D1.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.Direct3D11/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0",
+          "SharpDX.DXGI": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.Direct3D11.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.DXGI/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.DXGI.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.XAudio2/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.XAudio2.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "SharpDX.XInput/4.2.0": {
+        "dependencies": {
+          "SharpDX": "4.2.0"
+        },
+        "runtime": {
+          "lib/netstandard1.1/SharpDX.XInput.dll": {
+            "assemblyVersion": "4.2.0.0",
+            "fileVersion": "4.2.0.0"
+          }
+        }
+      },
+      "System.Diagnostics.EventLog/10.0.1": {
+        "runtime": {
+          "lib/net10.0/System.Diagnostics.EventLog.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.125.57005"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.125.57005"
+          }
+        }
+      },
+      "CodeX.Core/1.0.0": {
+        "dependencies": {
+          "BepuPhysics": "2.5.0-beta.29",
+          "BepuUtilities": "2.5.0-beta.29",
+          "SharpDX": "4.2.0",
+          "SharpDX.D3DCompiler": "4.2.0",
+          "SharpDX.Direct2D1": "4.2.0",
+          "SharpDX.Direct3D11": "4.2.0",
+          "SharpDX.XAudio2": "4.2.0",
+          "SharpDX.XInput": "4.2.0",
+          "System.Diagnostics.EventLog": "10.0.1"
+        },
+        "runtime": {
+          "CodeX.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CodeX.Games.RDR1/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BepuPhysics/2.5.0-beta.29": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+/MSXnRpK3dPWQmVKL+dfO05gXcbqDlOUmHIvy2sAUiLFuSOga7E9AfcEwMMHn76Rdlz9ZKWYE+WyJJLIqmGbg==",
+      "path": "bepuphysics/2.5.0-beta.29",
+      "hashPath": "bepuphysics.2.5.0-beta.29.nupkg.sha512"
+    },
+    "BepuUtilities/2.5.0-beta.29": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-FF+QQpNQ3bP1PBzTp/rbRgIcSLNTbUjNU0KQAjl9aQ/zXGnwkh9oGcMFCO5Q/E9cMr0HOZlGkvhs4+SIgXFq5g==",
+      "path": "bepuutilities/2.5.0-beta.29",
+      "hashPath": "bepuutilities.2.5.0-beta.29.nupkg.sha512"
+    },
+    "SharpDX/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-3pv0LFMvfK/dv1qISJnn8xBeeT6R/FRvr0EV4KI2DGsL84Qlv6P7isWqxGyU0LCwlSVCJN3jgHJ4Bl0KI2PJww==",
+      "path": "sharpdx/4.2.0",
+      "hashPath": "sharpdx.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.D3DCompiler/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Rnsd6Ilp127xbXqhTit8WKFQUrXwWxqVGpglyWDNkIBCk0tWXNQEjrJpsl0KAObzyZaa33+EXAikLVt5fnd3GA==",
+      "path": "sharpdx.d3dcompiler/4.2.0",
+      "hashPath": "sharpdx.d3dcompiler.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.Direct2D1/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Qs8LzDMaQf1u3KB8ArHu9pDv6itZ++QXs99a/bVAG+nKr0Hx5NG4mcN5vsfE0mVR2TkeHfeUm4PksRah6VUPtA==",
+      "path": "sharpdx.direct2d1/4.2.0",
+      "hashPath": "sharpdx.direct2d1.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.Direct3D11/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-oTm/iT5X/IIuJ8kNYP+DTC/MhBhqtRF5dbgPPFgLBdQv0BKzNTzXQQXd7SveBFjQg6hXEAJ2jGCAzNYvGFc9LA==",
+      "path": "sharpdx.direct3d11/4.2.0",
+      "hashPath": "sharpdx.direct3d11.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.DXGI/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-UjKqkgWc8U+SP+j3LBzFP6OB6Ntapjih7Xo+g1rLcsGbIb5KwewBrBChaUu7sil8rWoeVU/k0EJd3SMN4VqNZw==",
+      "path": "sharpdx.dxgi/4.2.0",
+      "hashPath": "sharpdx.dxgi.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.XAudio2/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Q3fFjN8iumvCjIXioHYqfGKUNGFN8FjdmAtRfyZ+7KHnWjeA22WOKeeVxdm429le+gOTgN+9P51wfAJjwAPdHQ==",
+      "path": "sharpdx.xaudio2/4.2.0",
+      "hashPath": "sharpdx.xaudio2.4.2.0.nupkg.sha512"
+    },
+    "SharpDX.XInput/4.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-mH3soea+aVUaTuFrkwx+zohklDvCczcgtuTiZJbOCyS5GZ/F9se4BsRJ86xTA9baf0drXYbZQj152PN7lnjiwg==",
+      "path": "sharpdx.xinput/4.2.0",
+      "hashPath": "sharpdx.xinput.4.2.0.nupkg.sha512"
+    },
+    "System.Diagnostics.EventLog/10.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-xfaHEHVDkMOOZR5S6ZGezD0+vekdH1Nx/9Ih8/rOqOGSOk1fxiN3u94bYkBW/wigj0Uw2Wt3vvRj9mtYdgwEjw==",
+      "path": "system.diagnostics.eventlog/10.0.1",
+      "hashPath": "system.diagnostics.eventlog.10.0.1.nupkg.sha512"
+    },
+    "CodeX.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

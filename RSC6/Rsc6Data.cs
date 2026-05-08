@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
@@ -363,9 +364,9 @@ namespace CodeX.Games.RDR1.RSC6
             return arr;
         }
 
-        public Rsc6RawArr<T> ReadRawArrItems<T>(Rsc6RawArr<T> arr, uint count) where T : unmanaged
+        public Rsc6RawArr<T> ReadRawArrItems<T>(Rsc6RawArr<T> arr, uint count, bool usePool = true) where T : unmanaged
         {
-            arr.ReadItems(this, count);
+            arr.ReadItems(this, count, usePool);
             return arr;
         }
 
@@ -478,6 +479,7 @@ namespace CodeX.Games.RDR1.RSC6
                     bblock.Align = 16;
                 }
             }
+
             if (vblocks.Count > 0)
             {
                 vblocks[0].IsRoot = true;
@@ -531,6 +533,19 @@ namespace CodeX.Games.RDR1.RSC6
                             bblock = kv.Value;
                         }
                     }
+                    else if (pref.Object is Rsc6Portal objPortal)
+                    {
+                        var kv = blocks.FirstOrDefault(e =>
+                            e.Key is Rsc6Portal[] p &&
+                            p.Any(portal => Rsc6Portal.SamePortal(portal, objPortal)));
+
+                        if (kv.Key is Rsc6Portal[] arr)
+                        {
+                            int index = Array.FindIndex(arr, portal => Rsc6Portal.SamePortal(portal, objPortal));
+                            pref.EmbedOffset = (ulong)(index * 224);
+                            bblock = kv.Value;
+                        }
+                    }
                     else if (pref.Object is Rsc6DrawableInstance)
                     {
                         var found = false;
@@ -573,6 +588,30 @@ namespace CodeX.Games.RDR1.RSC6
                                 foreach (var inst in array)
                                 {
                                     if (inst.Node == instBase.Node)
+                                    {
+                                        bblock = kv.Value;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (pref.Object is Rsc6PropInstanceInfo propInst)
+                    {
+                        var found = false;
+                        var kvs = blocks.Where(e => e.Key is Rsc6PropInstanceInfo[]).ToArray();
+
+                        for (int i = 0; i < kvs.Length; i++)
+                        {
+                            if (found) break;
+                            var kv = kvs[i];
+
+                            if (kv.Key is Rsc6PropInstanceInfo[] array)
+                            {
+                                foreach (var inst in array)
+                                {
+                                    if (Rpf6Crypto.SamePosition(inst.EntityPosition.XYZ(), propInst.EntityPosition.XYZ()))
                                     {
                                         bblock = kv.Value;
                                         found = true;
@@ -817,6 +856,11 @@ namespace CodeX.Games.RDR1.RSC6
             ptr.Write(this, inverseCapacity);
         }
 
+        public void WritePtrsEmbedArr<T>(Rsc6PtrArr<T> ptr, IList<object> owners) where T : IRsc6Block, new()
+        {
+            ptr.WritePtrsEmbed(this, owners);
+        }
+
         public void WriteRawArr<T>(Rsc6RawArr<T> ptr) where T : unmanaged
         {
             ptr.Write(this);
@@ -1032,14 +1076,14 @@ namespace CodeX.Games.RDR1.RSC6
         public uint ElementMax { get; set; }
         public uint[] Items { get; set; }
 
-        public static uint[] MaskTable = new uint[]
-        {
+        public static readonly uint[] MaskTable =
+        [
             0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F, 0x7F, 0xFF, 0x1FF, 0x3FF,
             0x7FF, 0xFFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF, 0x1FFFF,
             0x3FFFF, 0x7FFFF, 0xFFFFF, 0x1FFFFF, 0x3FFFFF, 0x7FFFFF,
             0xFFFFFF, 0x1FFFFFF, 0x3FFFFFF, 0x7FFFFFF, 0xFFFFFFF,
             0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, 0xFFFFFFFF
-        };
+        ];
 
         public Rsc6PackedArr(uint[] items)
         {
@@ -1093,7 +1137,7 @@ namespace CodeX.Games.RDR1.RSC6
             set => Items[index] = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return "Count: " + GetElementCount().ToString();
         }
@@ -1352,13 +1396,17 @@ namespace CodeX.Games.RDR1.RSC6
             reader.Position = p;
         }
 
+        //Writes a pointer container and serializes its items as blocks
         public readonly void Write(Rsc6DataWriter writer, bool inverseCapacity = false)
         {
-            var ptrs = new uint[inverseCapacity ? Count : Capacity];
+            var length = inverseCapacity ? Count : Capacity;
+            var ptrs = new uint[length];
+
             if (Count > 0)
             {
                 writer.AddPointerRef(ptrs);
             }
+
             writer.WriteUInt32(Position);
             writer.WriteUInt16(Count);
             writer.WriteUInt16(Capacity);
@@ -1367,12 +1415,43 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 var data = writer.WriteArray(ptrs);
                 var offset = 0u;
-                for (int i = 0; i < (inverseCapacity ? Count : Capacity); i++)
+
+                for (int i = 0; i < length; i++)
                 {
                     var item = (i < Items.Length) ? Items[i] : default;
                     if (item != null)
                     {
                         writer.WriteBlock(item);
+                        writer.AddPointerRef(item, data, offset);
+                    }
+                    offset += 4;
+                }
+            }
+        }
+
+        //Writes a pointer container whose entries reference objects that are already serialized elsewhere
+        public readonly void WritePtrsEmbed(Rsc6DataWriter writer, IList<object> owners)
+        {
+            var ptrs = new uint[Capacity];
+            if (Count > 0)
+            {
+                writer.AddPointerRef(ptrs);
+            }
+
+            writer.WriteUInt32(Position);
+            writer.WriteUInt16(Count);
+            writer.WriteUInt16(Capacity);
+
+            if (owners != null)
+            {
+                var data = writer.WriteArray(ptrs);
+                var offset = 0u;
+
+                for (int i = 0; i < Capacity; i++)
+                {
+                    var item = (i < owners.Count) ? owners[i] : default;
+                    if (item != null)
+                    {
                         writer.AddPointerRef(item, data, offset);
                     }
                     offset += 4;
@@ -1456,11 +1535,11 @@ namespace CodeX.Games.RDR1.RSC6
             Position = reader.ReadUInt32();
         }
 
-        public void ReadItems(Rsc6DataReader reader, uint count)
+        public void ReadItems(Rsc6DataReader reader, uint count, bool usePool = true)
         {
             var p = reader.Position;
             reader.Position = Position;
-            Items = reader.ReadArray<T>(count);
+            Items = reader.ReadArray<T>(count, usePool);
             Rpf6Crypto.TransformToZXY(Items);
             reader.Position = p;
         }
@@ -1472,7 +1551,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArray(Items);
         }
 
-        public readonly T this[int index]
+        public readonly T this[int index] //Readonly will cancel TransformToZXY
         {
             get => Items[index];
             set => Items[index] = value;
@@ -1857,7 +1936,7 @@ namespace CodeX.Games.RDR1.RSC6
             reader.Position = p;
         }
 
-        public void Write(Rsc6DataWriter writer)
+        public readonly void Write(Rsc6DataWriter writer)
         {
             writer.AddPointerRef(Items);
             writer.WriteUInt32(Position);
@@ -1871,13 +1950,13 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArray(Items);
         }
 
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => Items[index];
             set => Items[index] = value;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return "Count: " + Count.ToString();
         }
@@ -1983,7 +2062,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             if (numbuckets < 0)
             {
-                if (numkeys < 11) numbuckets = 11;
+                if (numkeys < 15) numbuckets = 15;
                 else if (numkeys < 29) numbuckets = 29;
                 else if (numkeys < 59) numbuckets = 59;
                 else if (numkeys < 107) numbuckets = 107;
@@ -2009,7 +2088,7 @@ namespace CodeX.Games.RDR1.RSC6
                 var bucket = buckets[b];
                 if (bucket == null)
                 {
-                    bucket = new List<T>();
+                    bucket = [];
                     buckets[b] = bucket;
                 }
                 bucket.Add(entry);
@@ -2033,15 +2112,17 @@ namespace CodeX.Games.RDR1.RSC6
                             else
                             {
                                 b.Sort((a, b) => a.MapKey.CompareTo(b.MapKey));
-                            }
+                        }
                         }
                         else if (reversebuckets)
                         {
                             b.Reverse();
                         }
                     }
+
                     result.Add(b[0]);
                     var p = b[0];
+
                     for (int i = 1; i < b.Count; i++)
                     {
                         var c = b[i];
@@ -2093,6 +2174,13 @@ namespace CodeX.Games.RDR1.RSC6
             }
             return result;
         }
+    }
+
+    public sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T> where T : class
+    {
+        public static readonly ReferenceEqualityComparer<T> Instance = new();
+        public bool Equals(T x, T y) => ReferenceEquals(x, y);
+        public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
     }
 
     public interface IRsc6Block : BlockBase

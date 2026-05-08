@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFramework>net8.0-windows</TargetFramework>
+	  <TargetFramework>net10.0-windows7.0</TargetFramework>
 	  <Nullable>disable</Nullable>
 	  <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
@@ -11,6 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="CodeX.Games.RDR1.animlist.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="CodeX.Games.RDR1.mapstates.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

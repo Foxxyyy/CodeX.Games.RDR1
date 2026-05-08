@@ -3,8 +3,6 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
@@ -36,7 +34,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 BoundMax { get; set; }
         public Rsc6Ptr<Rsc6PlacedLightsGroup> PlacedLightsGroup { get; set; } //m_PlacedLightsGroup
         public Rsc6ManagedArr<Rsc6PropInstanceInfo> Props { get; set; } //m_Props
-        public Rsc6PtrArr<Rsc6MapAttribute> DoorsAttributes { get; set; }
+        public Rsc6PtrArr<Rsc6MapAttribute> MapAttributes { get; set; }
         public uint Unknown_E4h { get; set; } = 0x00CDCDCD; //Padding
         public Rsc6ManagedArr<Rsc6SectorChild> Children { get; set; } //m_Children, 'swAll.wsi' only
         public Rsc6Ptr<Rsc6ScopedSectors> ChildGroup { get; set; } //m_ChildGroup
@@ -45,18 +43,17 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6ManagedArr<Rsc6DrawableInstance> DrawableInstances2 { get; set; }
         public Rsc6ManagedArr<Rsc6Portal> Portals { get; set; } //m_Portals
         public Rsc6PtrArr<Rsc6Attribute> Attributes { get; set; } //m_Attributes
-        public Rsc6StreamableBase VisualDictionary { get; set; }
-        public Rsc6StreamableBase MedVisualDictionary { get; set; }
-        public uint Unknown_140h { get; set; } //Always 0
-        public uint Unknown_144h { get; set; } //Always 0
-        public uint Unknown_148h { get; set; } //Always 0
-        public uint Unknown_14Ch { get; set; } //Always 0
+        public Rsc6StreamableBase VisualDictionary0 { get; set; } //rage::pgStreamable<rdrVisualDictionary>[0]
+        public Rsc6StreamableBase VisualDictionary1 { get; set; } //rage::pgStreamable<rdrVisualDictionary>[1]
+        public ulong StreamingVolumes { get; set; } //m_StreamingVolumes, always 0
+        public float StreamingPriority0 { get; set; } //m_StreamingPriority[0], always 0
+        public float StreamingPriority1 { get; set; }//m_StreamingPriority[1], always 0
         public Rsc6StreamableBase VLowVisualDictionary { get; set; }
         public Rsc6StreamableBase BoundDictionary { get; set; }
         public uint Unknown_16Ch { get; set; } //Always 0
         public uint Unknown_170h { get; set; } //Always 0
         public float LowLODFade { get; set; } = 1.0f; //m_VLowLODFade, always 1.0f
-        public JenkHash NameHash { get; set; } //m_NameHash   (SectorNameLower)
+        public JenkHash NameHash { get; set; } //m_NameHash (SectorNameLower)
         public Rsc6ManagedArr<Rsc6Portal> Occluders { get; set; } //m_Occluders
         public uint LastVisibleMarker { get; set; } //m_LastVisibleMarker, always 0
         public uint ResidentStatus { get; set; } = 85; //m_ResidentStatus - 0 or 85
@@ -76,7 +73,7 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort LODReferences { get; set; } //m_LODReferences, always 0
         public ushort Unknown_1B8h { get; set; } //Always 0
         public ushort Unknown_1BAh { get; set; } //Always 0
-        public byte CurrentLOD { get; set; } = 0xFF; //m_CurrentLOD
+        public byte CurrentLOD { get; set; } = 0xFF; //m_CurrentLOD, always -1
         public bool District { get; set; } //m_District
         public byte IsTerrain { get; set; } = 0xCD; //m_IsTerrain
         public byte TotallyAllInstancesLoaded { get; set; } = 0xCD; //m_TotallyAllInstancesLoaded
@@ -84,16 +81,17 @@ namespace CodeX.Games.RDR1.RSC6
         public byte InstanceAge { get; set; } = 0xCD; //m_InstanceAge
         public byte BoundAge { get; set; } = 0xCD; //m_BoundAge
         public byte PropsAge { get; set; } = 0xCD; //m_PropsAge
-        public byte RefCount { get; set; } //m_RefCount
+        public byte RefCount { get; set; } //m_RefCount, always 0 except for some terrain/raiload sectors
         public byte ParentChildIndex { get; set; } //m_ParentChildIndex, always 0
-        public uint Flags { get; set; } //m_Flags
-        public bool InnerPropsInstantiated { get; set; } = true; //m_InnerPropsInstantiated, always TRUE
-        public byte InnerPropsAge { get; set; } //m_InnerPropsAge, always 0
-        public byte RawPropsGroup { get; set; } //m_RawPropsGroup, always 0
-        public byte GroupFileFlags { get; set; } //m_GroupFileFlags, always 0
+        public uint Unknown_1C8h { get; set; }
+        public uint Unknown_1CCh { get; set; }
         public Rsc6Ptr<Rsc6BoundInstance> BoundInstances { get; set; } //m_BoundInstances
-        public uint Unknown_1D4h { get; set; } //0 or 268435456 ???
-        public ulong NamedNodeMap { get; set; } //m_NamedNodeMap, something like (u16)m_Slots + (rage::atMap<int,rage::datRef<RDR2NameAttribute>>)m_Hash + (u16)m_Used + (byte)m_AllowReCompute
+        public uint Flags { get; set; } //m_Flags, always 0, except for hc/terrain sectors which have 0x10000000
+        public bool InnerPropsInstantiated { get; set; } //m_InnerPropsInstantiated, always FALSE
+        public byte InnerPropsAge { get; set; } = 0xCD; //m_InnerPropsAge, always 0xCD
+        public bool RawPropsGroup { get; set; } //m_RawPropsGroup, true if the sector is a props group, otherwise false
+        public byte GroupFileFlags { get; set; } //m_GroupFileFlags
+        public uint NamedNodeMap { get; set; } //m_NamedNodeMap, always 0
 
         public BoundingBox Bounds { get; set; }
         public static Rsc6SectorInfo Root { get; set; }
@@ -125,7 +123,7 @@ namespace CodeX.Games.RDR1.RSC6
             BoundMax = reader.ReadVector4();
             PlacedLightsGroup = reader.ReadPtr<Rsc6PlacedLightsGroup>();
             Props = reader.ReadArr<Rsc6PropInstanceInfo>();
-            DoorsAttributes = reader.ReadPtrArr<Rsc6MapAttribute>();
+            MapAttributes = reader.ReadPtrArr<Rsc6MapAttribute>();
             Unknown_E4h = reader.ReadUInt32();
             Children = reader.ReadArr<Rsc6SectorChild>();
             ChildGroup = reader.ReadPtr<Rsc6ScopedSectors>();
@@ -134,12 +132,11 @@ namespace CodeX.Games.RDR1.RSC6
             DrawableInstances2 = reader.ReadArr<Rsc6DrawableInstance>();
             Portals = reader.ReadArr<Rsc6Portal>();
             Attributes = reader.ReadPtrArr(Rsc6Attribute.Create);
-            VisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
-            MedVisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
-            Unknown_140h = reader.ReadUInt32();
-            Unknown_144h = reader.ReadUInt32();
-            Unknown_148h = reader.ReadUInt32();
-            Unknown_14Ch = reader.ReadUInt32();
+            VisualDictionary0 = reader.ReadStruct<Rsc6StreamableBase>();
+            VisualDictionary1 = reader.ReadStruct<Rsc6StreamableBase>();
+            StreamingVolumes = reader.ReadUInt64();
+            StreamingPriority0 = reader.ReadSingle();
+            StreamingPriority1 = reader.ReadSingle();
             VLowVisualDictionary = reader.ReadStruct<Rsc6StreamableBase>();
             BoundDictionary = reader.ReadStruct<Rsc6StreamableBase>();
             Unknown_16Ch = reader.ReadUInt32();
@@ -175,26 +172,29 @@ namespace CodeX.Games.RDR1.RSC6
             PropsAge = reader.ReadByte();
             RefCount = reader.ReadByte();
             ParentChildIndex = reader.ReadByte();
+            Unknown_1C8h = reader.ReadUInt32();
+            Unknown_1CCh = reader.ReadUInt32();
+            BoundInstances = reader.ReadPtr<Rsc6BoundInstance>();
             Flags = reader.ReadUInt32();
             InnerPropsInstantiated = reader.ReadBoolean();
             InnerPropsAge = reader.ReadByte();
-            RawPropsGroup = reader.ReadByte();
+            RawPropsGroup = reader.ReadBoolean();
             GroupFileFlags = reader.ReadByte();
-            BoundInstances = reader.ReadPtr<Rsc6BoundInstance>();
-            Unknown_1D4h = reader.ReadUInt32();
-            NamedNodeMap = reader.ReadUInt64();
+            NamedNodeMap = reader.ReadUInt32();
             Bounds = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
 
             if (ChildGroup.Item != null)
             {
                 Root = this;
             }
+
+            AssignRoomIndices();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
-            VisualDictionary = new Rsc6StreamableBase(false);
-            MedVisualDictionary = new Rsc6StreamableBase(false);
+            VisualDictionary0 = new Rsc6StreamableBase(false);
+            VisualDictionary1 = new Rsc6StreamableBase(false);
             VLowVisualDictionary = new Rsc6StreamableBase(false);
             BoundDictionary = new Rsc6StreamableBase(false);
 
@@ -247,7 +247,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4(BoundMax);
             writer.WritePtr(PlacedLightsGroup);
             writer.WriteArr(Props);
-            writer.WritePtrArr(DoorsAttributes, true);
+            writer.WritePtrArr(MapAttributes, true);
             writer.WriteUInt32(Unknown_E4h);
             writer.WriteArr(Children);
             writer.WritePtr(ChildGroup);
@@ -256,12 +256,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteArr(DrawableInstances2);
             writer.WriteArr(Portals);
             writer.WritePtrArr(Attributes);
-            writer.WriteStruct(VisualDictionary);
-            writer.WriteStruct(MedVisualDictionary);
-            writer.WriteUInt32(Unknown_140h);
-            writer.WriteUInt32(Unknown_144h);
-            writer.WriteUInt32(Unknown_148h);
-            writer.WriteUInt32(Unknown_14Ch);
+            writer.WriteStruct(VisualDictionary0);
+            writer.WriteStruct(VisualDictionary1);
+            writer.WriteUInt64(StreamingVolumes);
+            writer.WriteSingle(StreamingPriority0);
+            writer.WriteSingle(StreamingPriority1);
             writer.WriteStruct(VLowVisualDictionary);
             writer.WriteStruct(BoundDictionary);
             writer.WriteUInt32(Unknown_16Ch);
@@ -297,14 +296,15 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(PropsAge);
             writer.WriteByte(RefCount);
             writer.WriteByte(ParentChildIndex);
+            writer.WriteUInt32(Unknown_1C8h);
+            writer.WriteUInt32(Unknown_1CCh);
+            writer.WritePtr(BoundInstances);
             writer.WriteUInt32(Flags);
             writer.WriteBoolean(InnerPropsInstantiated);
             writer.WriteByte(InnerPropsAge);
-            writer.WriteByte(RawPropsGroup);
+            writer.WriteBoolean(RawPropsGroup);
             writer.WriteByte(GroupFileFlags);
-            writer.WritePtr(BoundInstances);
-            writer.WriteUInt32(Unknown_1D4h);
-            writer.WriteUInt64(NamedNodeMap);
+            writer.WriteUInt32(NamedNodeMap);
         }
 
         public void Read(MetaNodeReader reader)
@@ -324,23 +324,34 @@ namespace CodeX.Games.RDR1.RSC6
             BoundMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMax"));
             PlacedLightsGroup = new(reader.ReadNode<Rsc6PlacedLightsGroup>("PlacedLightsGroup"));
             Props = new(reader.ReadNodeArray<Rsc6PropInstanceInfo>("Entities"));
-            //Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
-
-            var dAttr = reader.ReadNodeArray<Rsc6MapAttribute>("DoorsAttributes");
-            if (dAttr != null)
-            {
-                DoorsAttributes = new(dAttr, (ushort)dAttr.Where(a => a != null).ToArray().Length, (ushort)dAttr.Length);
-            }
-
+            Attributes = new(reader.ReadNodeArray("Attributes", Rsc6Attribute.Create));
+            BuildMapAttributes(Attributes.Items, reader.ReadNodeArray<Rsc6MapAttribute>("MapAttributes"));
             Children = new(reader.ReadNodeArray<Rsc6SectorChild>("ItemMapChilds"));
             ChildGroup = new(reader.ReadNode<Rsc6ScopedSectors>("ItemChilds"));
             ChildPtrs = new(reader.ReadNodeArray<Rsc6SectorInfo>("ChildPtrs"));
             DrawableInstances = new(reader.ReadNodeArray<Rsc6DrawableInstanceBase>("DrawableInstances"));
+            Portals = new(reader.ReadNodeArray<Rsc6Portal>("Portals"));
             NameHash = new JenkHash(reader.ReadString("SectorNameLower"));
             Occluders = new(reader.ReadNodeArray<Rsc6Portal>("Occluders"));
             ResidentStatus = reader.ReadUInt32("ResidentStatus");
+            Locators = new(reader.ReadNodeArray<Rsc6LocatorStatic>("Locators"));
+            AnyHighInstanceLoaded = reader.ReadBool("AnyHighInstanceLoaded");
+            HasVLowLODResource = reader.ReadBool("HasVLowLODResource");
+            Scope = new(reader.ReadString("Scope"));
+            District = reader.ReadBool("District");
+            RefCount = reader.ReadByte("RefCount");
+            Unknown_1C8h = reader.ReadByte("Unknown_1C8h");
+            Unknown_1CCh = reader.ReadByte("Unknown_1CCh");
+            Flags = reader.ReadUInt32("Flags");
+            GroupFileFlags = reader.ReadByte("GroupFileFlags");
+            BoundInstances = new(reader.ReadNode<Rsc6BoundInstance>("BoundInstances"));
+            RawPropsGroup = ToString().Contains("props", StringComparison.CurrentCultureIgnoreCase);
 
             var propNames = reader.ReadStringArray("PropNames");
+            var secondaryInstances = reader.ReadNodeArray<Rsc6DrawableInstance>("Unknown_104h");
+            var roomMap = BuildRoomDictionary();
+
+            //Build props name array
             if (propNames != null)
             {
                 var propStr = new Rsc6Str[propNames.Length];
@@ -351,68 +362,116 @@ namespace CodeX.Games.RDR1.RSC6
                 PropNames = new(propStr);
             }
 
-            Locators = new(reader.ReadNodeArray<Rsc6LocatorStatic>("Locators"));
-            AnyHighInstanceLoaded = reader.ReadBool("AnyHighInstanceLoaded");
-            HasVLowLODResource = reader.ReadBool("HasVLowLODResource");
-            Scope = new(reader.ReadString("Scope"));
-            District = reader.ReadBool("District");
-            RefCount = reader.ReadByte("RefCount");
-            Flags = reader.ReadUInt32("Flags");
-            BoundInstances = new(reader.ReadNode<Rsc6BoundInstance>("BoundInstances"));
-            Unknown_1D4h = reader.ReadUInt32("Unknown_1D4h");
-            NamedNodeMap = reader.ReadUInt64("NamedNodeMap");
-
-            if (Attributes.Items != null && DoorsAttributes.Items != null)
+            if (Props.Items != null)
             {
-                for (int i = 0; i < DoorsAttributes.Count; i++)
+                for (int i = 0; i < Props.Count; i++)
                 {
-                    var d = DoorsAttributes[i];
-                    if (d == null) continue;
+                    var prop = Props[i];
+                    if (prop == null || string.IsNullOrEmpty(prop.LinkedPortalName)) continue;
 
-                    foreach (var attr in Attributes.Items)
+                    for (int child = 0; child < ChildGroup.Item?.Sectors.Count; child++)
                     {
-                        var hash = new JenkHash(attr.ToString());
-                        if (hash == d.TargetHash)
+                        var sector = ChildGroup.Item.Sectors[child];
+                        if (sector == null) continue;
+
+                        var portals = sector.Portals.Items;
+                        for (int p = 0; p < portals.Length; p++)
                         {
-                            d.Target = new(attr);
-                            break;
+                            var portal = portals[p];
+                            if (portal == null || portal.ToString() != prop.LinkedPortalName) continue;
+                            if (portal.FrontRoom.Item != null)
+                            {
+
+                            }
                         }
                     }
                 }
             }
 
-            var secondaryInstances = reader.ReadNodeArray<Rsc6DrawableInstance>("Unknown_104h");
-            if (DrawableInstances.Items != null)
+            //Bound instances means we should have childs containing occluders, portals and/or drawable instances with linked rooms
+            if (BoundInstances.Item != null)
             {
-                var portals = new List<Rsc6Portal>();
-                foreach (var inst in DrawableInstances.Items)
+                var parentRooms = BoundInstances.Item.DrawableRoot;
+                for (int child = 0; child < ChildGroup.Item?.Sectors.Count; child++)
                 {
-                    var room = inst.Room.Item;
-                    if (room == null) continue;
-                    foreach (var prt in room.Portals.Items)
-                    {
-                        portals.Add(prt);
-                    }
-                }
+                    var sector = ChildGroup.Item.Sectors[child];
+                    if (sector == null) continue;
 
-                var instCount = DrawableInstances.Count;
-                for (int i = 0; i < instCount; i++)
-                {
-                    var inst1 = DrawableInstances[i];
-                    inst1.Index = i;
-
-                    if (secondaryInstances != null)
+                    //Resolve drawable instance room pointers
+                    for (int i = 0; i < sector.DrawableInstances.Count; i++)
                     {
-                        for (int i1 = 0; i1 < secondaryInstances.Length; i1++)
+                        var inst = sector.DrawableInstances[i];
+                        if (inst == null) continue;
+
+                        inst.Index = i;
+                        inst.ParentRooms = parentRooms;
+
+                        if (!string.IsNullOrEmpty(inst.RoomName) && roomMap.TryGetValue(inst.RoomName, out var roomInfo))
                         {
-                            var u = secondaryInstances[i1];
-                            if (u == null) continue;
-                            if (u.InstanceNodeUsed != inst1.Node) continue;
-                            u.InstanceNode = inst1;
+                            inst.RoomIndex = roomInfo.Index;
+                        }
+                    }
+
+                    //Resolve portal room pointers
+                    if (sector.Portals.Items != null)
+                    {
+                        for (int i = 0; i < sector.Portals.Count; i++)
+                        {
+                            var portal = sector.Portals[i];
+                            if (portal == null) continue;
+
+                            var frontRoomName = portal.FrontRoom.Item?.ToString();
+                            var backRoomName = portal.BackRoom.Item?.ToString();
+                            portal.ParentRooms = parentRooms;
+
+                            if (!string.IsNullOrEmpty(frontRoomName) && roomMap.TryGetValue(frontRoomName, out var frontRoom))
+                            {
+                                portal.FrontRoomIndex = frontRoom.Index;
+                            }
+
+                            if (!string.IsNullOrEmpty(backRoomName) && roomMap.TryGetValue(backRoomName, out var backRoom))
+                            {
+                                portal.BackRoomIndex = backRoom.Index;
+                            }
+                        }
+
+                        //Rebuild each room's portal list from LinkedPortals
+                        if (parentRooms.Items != null)
+                        {
+                            foreach (var room in parentRooms.Items)
+                            {
+                                if (room == null) continue;
+                                if (room.RscName.ToString() != sector.ToString()) continue;
+
+                                room.PortalOwners = [.. sector.Portals.Items];
+                                if (room.LinkedPortals == null || room.LinkedPortals.Length == 0) continue;
+
+                                var links = new HashSet<string>(room.LinkedPortals, StringComparer.Ordinal);
+                                var linkedPortals = sector.Portals.Items.Where(p => p != null && links.Contains(p.ToString())).ToArray();
+
+                                room.Portals = new(linkedPortals);
+                            }
                         }
                     }
                 }
-                Portals = new([.. portals]);
+            }
+
+            //Resolve secondary drawable instances back to their primary instance nodes
+            if (DrawableInstances.Items != null && secondaryInstances != null)
+            {
+                for (int i = 0; i < DrawableInstances.Items.Length; i++)
+                {
+                    var inst1 = DrawableInstances[i];
+                    if (inst1 == null) continue;
+
+                    for (int i1 = 0; i1 < secondaryInstances.Length; i1++)
+                    {
+                        var u = secondaryInstances[i1];
+                        if (u == null) continue;
+                        if (u.InstanceNodeUsed != inst1.Node) continue;
+                        u.InstanceNode = inst1;
+                    }
+                }
             }
             DrawableInstances2 = new(secondaryInstances);
         }
@@ -434,13 +493,17 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("BoundMax", BoundMax);
             writer.WriteNode("PlacedLightsGroup", PlacedLightsGroup.Item);
             if (Props.Count > 0) writer.WriteNodeArray("Entities", Props.Items);
-            if (Attributes.Capacity > 0) writer.WriteNodeArray("DoorsAttributes", DoorsAttributes.Items);
+            if (Attributes.Count > 0) writer.WriteNodeArray("Attributes", Attributes.Items);
+
+            var mapAttr = MapAttributes.Items.Where(e => e?.Target.Item != null);
+            writer.WriteNodeArray("MapAttributes", mapAttr.ToArray());
+
             if (Children.Count > 0) writer.WriteNodeArray("ItemMapChilds", Children.Items);
             writer.WriteNode("ItemChilds", ChildGroup.Item);
             if (ChildPtrs.Count > 0 && ChildPtrs.Items[0] != null) writer.WriteNodeArray("ChildPtrs", ChildPtrs.Items);
             if (DrawableInstances.Count > 0) writer.WriteNodeArray("DrawableInstances", DrawableInstances.Items);
             if (DrawableInstances2.Count > 0) writer.WriteNodeArray("Unknown_104h", DrawableInstances2.Items);
-            if (Attributes.Count > 0) writer.WriteNodeArray("Attributes", Attributes.Items);
+            if (Portals.Count > 0) writer.WriteNodeArray("Portals", Portals.Items);
             writer.WriteString("SectorNameLower", NameHash.ToString());
             if (Occluders.Count > 0) writer.WriteNodeArray("Occluders", Occluders.Items);
             writer.WriteUInt32("ResidentStatus", ResidentStatus);
@@ -451,10 +514,149 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteString("Scope", Scope.Value);
             writer.WriteBool("District", District);
             writer.WriteByte("RefCount", RefCount);
+            writer.WriteUInt32("Unknown_1C8h", Unknown_1C8h);
+            writer.WriteUInt32("Unknown_1CCh", Unknown_1CCh);
             writer.WriteUInt32("Flags", Flags);
+            writer.WriteByte("GroupFileFlags", GroupFileFlags);
             if (BoundInstances.Item != null) writer.WriteNode("BoundInstances", BoundInstances.Item);
-            if (Unknown_1D4h != 0) writer.WriteUInt32("Unknown_1D4h", Unknown_1D4h);
-            if (NamedNodeMap != 0) writer.WriteUInt64("NamedNodeMap", NamedNodeMap);
+        }
+
+        private void AssignRoomIndicesForSector(Rsc6BoundInstance boundInstances)
+        {
+            var drawables = DrawableInstances.Items;
+            var portals = Portals.Items;
+            var occluders = Occluders.Items;
+            var parentRooms = boundInstances.DrawableRoot;
+            var rooms = parentRooms.Items;
+
+            if (rooms == null || (portals?.Length == 0 && occluders?.Length == 0 && drawables?.Length == 0)) return;
+
+            var roomIndexMap = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < rooms.Length; i++)
+            {
+                var room = rooms[i];
+                if (room == null) continue;
+
+                var name = room.ToString();
+                if (!string.IsNullOrEmpty(name) && !roomIndexMap.ContainsKey(name))
+                {
+                    roomIndexMap[name] = i;
+                }
+            }
+
+            static void assignRoomIndexToDrawableArray(Rsc6DrawableInstanceBase[] instances, Rsc6ManagedArr<Rsc6Room> parentRooms, Dictionary<string, int> roomIndexMap)
+            {
+                if (instances == null) return;
+                for (int i = 0; i < instances.Length; i++)
+                {
+                    var inst = instances[i];
+                    if (inst == null) continue;
+
+                    inst.ParentRooms = parentRooms;
+                    var roomName = inst.Room.Item?.ToString();
+
+                    if (!string.IsNullOrEmpty(roomName) && roomIndexMap.TryGetValue(roomName, out var roomIndex))
+                    {
+                        inst.RoomIndex = roomIndex;
+                    }
+                }
+            }
+
+            static void assignRoomIndexToPortalArray<T>(T[] portals, Rsc6ManagedArr<Rsc6Room> parentRooms, Dictionary<string, int> roomIndexMap) where T : Rsc6Portal
+            {
+                if (portals == null) return;
+                for (int i = 0; i < portals.Length; i++)
+                {
+                    var portal = portals[i];
+                    if (portal == null) continue;
+
+                    portal.ParentRooms = parentRooms;
+                    portal.FrontRoomIndex = -1;
+                    portal.BackRoomIndex = -1;
+
+                    var frontRoomName = portal.FrontRoom.Item?.ToString();
+                    if (!string.IsNullOrEmpty(frontRoomName) && roomIndexMap.TryGetValue(frontRoomName, out var frontIndex))
+                    {
+                        portal.FrontRoomIndex = frontIndex;
+                    }
+
+                    var backRoomName = portal.BackRoom.Item?.ToString();
+                    if (!string.IsNullOrEmpty(backRoomName) && roomIndexMap.TryGetValue(backRoomName, out var backIndex))
+                    {
+                        portal.BackRoomIndex = backIndex;
+                    }
+                }
+            }
+
+            assignRoomIndexToDrawableArray(drawables, parentRooms, roomIndexMap);
+            assignRoomIndexToPortalArray(portals, parentRooms, roomIndexMap);
+            assignRoomIndexToPortalArray(occluders, parentRooms, roomIndexMap);
+        }
+
+        public void AssignRoomIndices()
+        {
+            var sectors = ChildGroup.Item?.Sectors.Items;
+            var boundInstances = BoundInstances.Item;
+
+            if (sectors != null && boundInstances != null)
+            {
+                for (int i = 0; i < sectors.Length; i++)
+                {
+                    var sector = sectors[i];
+                    if (sector == null) continue;
+                    sector.AssignRoomIndicesForSector(boundInstances);
+                }
+            }
+        }
+
+        public void BuildMapAttributes(Rsc6Attribute[] attributes, Rsc6MapAttribute[] mapAttr)
+        {
+            if (attributes != null && mapAttr != null)
+            {
+                var newMapAttr = Rsc6DataMap.Build(mapAttr.ToList());
+                if (newMapAttr == null) return;
+
+                for (int i = 0; i < newMapAttr?.Count; i++)
+                {
+                    var d = newMapAttr[i];
+                    if (d == null) continue;
+
+                    foreach (var attr in attributes)
+                    {
+                        var hash = new JenkHash(attr.ToString());
+                        if (hash == d.TargetHash)
+                        {
+                            d.Target = new(attr); //TODO: Make sure it links to the existing ptr and that it doesn't create a new one
+                            break;
+                        }
+                    }
+                }
+
+                MapAttributes = new([.. newMapAttr])
+                {
+                    Capacity = (ushort)mapAttr.Length
+                };
+            }
+        }
+
+        public Dictionary<string, (Rsc6Room Room, int Index)> BuildRoomDictionary()
+        {
+            var rooms = BoundInstances.Item?.DrawableRoot.Items;
+            if (rooms == null) return null;
+
+            var roomMap = new Dictionary<string, (Rsc6Room Room, int Index)>(StringComparer.Ordinal);
+            for (int i = 0; i < rooms.Length; i++)
+            {
+                var room = rooms[i];
+                if (room == null) continue;
+
+                var name = room.ToString();
+                if (!string.IsNullOrEmpty(name) && !roomMap.ContainsKey(name))
+                {
+                    roomMap[name] = (room, i);
+                }
+            }
+            return roomMap;
         }
 
         public void SetDisabled(bool disable) //sagSectorInfo::SetDisabled
@@ -477,7 +679,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Arr<ushort> SectorsIndices { get; set; } //m_ScopedSectorsIndices
         public Rsc6Str ScopeName { get; set; } //m_ScopeName
 
-        public List<string> ParentsNames; //For writing purposes
+        public List<string> ParentsNames { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -584,13 +786,14 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => 224;
         public override uint VFT { get; set; } = 0x01913300;
 
-        //Start of rage::rmpNode & sagWorldNode
+        //Start of rage::rmpNode
         public float TimeLastVisible { get; set; } //m_TimeLastVisible
 
         public ulong Unknown_8h { get; set; } //Always 0
-        public Vector4 LastKnownPositionAndFlags { get; set; } //m_LastKnownPositionAndFlags, w is a flags field, if Matrix.Translation != Vector3.Zero then w |= 0x800 (Forces update in next frame)
+        public Vector4 LastKnownPositionAndFlags { get; set; } //m_LastKnownPositionAndFlags, w is a flag
         //End of rage::rmpNode
 
+        //Start of sagWorldNode
         public int Node { get; set; } //m_Node
         public uint Unknown_24h { get; set; } //Always 0
         public int Next { get; set; } //Next, always 0
@@ -604,7 +807,7 @@ namespace CodeX.Games.RDR1.RSC6
         //End of sagWorldNode
 
         public Matrix4x4 Matrix { get; set; } //m_Mtx
-        public Vector4 BoundingBoxMin { get; set; } //m_BoundingBoxMin
+        public Vector4 BoundingBoxMin { get; set; } //m_BoundingBoxMin, if w is >= 10.0f the game skips room assignment
         public Vector4 BoundingBoxMax { get; set; } //m_BoundingBoxMax
         public JenkHash InstanceHash { get; set; } //m_InstHashCode
         public uint RoomFlags1 { get; set; } //m_RoomBits[0]
@@ -627,8 +830,11 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_D8h { get; set; } //Always 0
         public uint Unknown_DCh { get; set; } //Always 0
 
-        public bool HasNextDrawable; //For writing purposes
-        public int Index; //For writing purposes
+        public Rsc6ManagedArr<Rsc6Room> ParentRooms { get; set; }
+        public string RoomName { get; set; }
+        public int RoomIndex { get; set; } = -1;
+        public bool HasNextDrawable { get; set; }
+        public int Index { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -701,7 +907,14 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(Pad);
             writer.WriteUInt32(DebugVisibility);
             writer.WriteStr(Name);
-            writer.WritePtr(Room);
+
+            if (Room.Item != null)
+                writer.WritePtr(Room);
+            else if (RoomIndex >= 0)
+                writer.WritePtrEmbed(ParentRooms.Items, ParentRooms.Items, (ulong)(RoomIndex * 144)); //Point directly to the room in BoundInstances.DrawableRoot
+            else
+                writer.WriteUInt32(0); //No room
+
             writer.WriteInt32(Drawable);
             writer.WriteUInt32(Unknown_C4h);
             writer.WriteUInt32(Unknown_C8h);
@@ -734,23 +947,8 @@ namespace CodeX.Games.RDR1.RSC6
             Flags = reader.ReadInt16("Flags");
             AO = reader.ReadByte("AO");
             Name = new(reader.ReadString("Name"));
-            Room = new(reader.ReadNode<Rsc6Room>("Room"));
-            InstanceHash = new(Name.ToString());
-
-            if (Room.Item != null)
-            {
-                var room = Room.Item;
-                if (room.Portals.Items != null && room.Portals.Count > 0)
-                {
-                    foreach (var portal in room.Portals.Items)
-                    {
-                        if (portal.FrontRoomName == room.Name.ToString())
-                            portal.FrontRoom = Room;
-                        if (portal.BackRoomName == room.Name.ToString())
-                            portal.BackRoom = Room;
-                    }
-                }
-            }
+            RoomIndex = reader.ReadInt32("RoomIndex", -1);
+            InstanceHash = new(ToString().ToLower());
         }
 
         public void Write(MetaNodeWriter writer)
@@ -769,8 +967,8 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte("Unknown_AF", Unknown_AF);
             writer.WriteInt16("Flags", Flags);
             writer.WriteByte("AO", AO);
-            writer.WriteString("Name", Name.Value);
-            writer.WriteNode("Room", Room.Item);
+            writer.WriteString("Name", ToString());
+            writer.WriteInt32("RoomIndex", RoomIndex);
         }
 
         public override string ToString()
@@ -806,6 +1004,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint StreamingVolume { get; set; } //m_StreamingVolume, always 0
         public uint Unknown_8Ch { get; set; } //Always 0
 
+        public string[] LinkedPortals { get; set; }
+        public List<Rsc6Portal> PortalOwners { get; set; }
+
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
@@ -827,6 +1028,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            IList<object> owners = null;
+            if (PortalOwners != null && Portals.Items != null)
+            {
+                owners = [.. Portals.Items.Select(p => PortalOwners.FirstOrDefault(o => o?.ToString() == p?.ToString())).Cast<object>()];
+            }
+
             base.Write(writer);
             writer.WriteStr(Name);
             writer.WriteStr(RscName);
@@ -835,7 +1042,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4(Matrix);
             writer.WriteArr(Polygons);
             writer.WriteArr(StaticObjects);
-            writer.WritePtrArr(Portals);
+            writer.WritePtrsEmbedArr(Portals, owners);
             writer.WriteUInt32(Flags);
             writer.WriteUInt32(Unknown_7Ch);
             writer.WriteStr(ReverbName);
@@ -852,7 +1059,7 @@ namespace CodeX.Games.RDR1.RSC6
             Bounds = Rpf6Crypto.ToXYZ(reader.ReadVector4("Bounds"));
             Matrix = Rpf6Crypto.ToXYZ(reader.ReadMatrix4x4("Matrix"), true);
             StaticObjects = new(reader.ReadUInt16Array("StaticObjects"));
-            Portals = new(reader.ReadNodeArray<Rsc6Portal>("Portals"));
+            LinkedPortals = reader.ReadStringArray("LinkedPortals");
             Flags = reader.ReadUInt32("Flags");
             ReverbName = new Rsc6Str(reader.ReadString("ReverbName"));
             VisibleTimestamp = reader.ReadInt32("VisibleTimestamp");
@@ -880,7 +1087,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4("Matrix", Matrix);
             writer.WriteNodeArray("Polygons", Polygons.Items);
             writer.WriteUInt16Array("StaticObjects", StaticObjects.Items);
-            writer.WriteNodeArray("Portals", Portals.Items);
+            writer.WriteStringArray("LinkedPortals", [.. Portals.Items.Select(p => p.ToString())]);
             writer.WriteUInt32("Flags", Flags);
             writer.WriteString("ReverbName", ReverbName.Value);
             writer.WriteInt32("VisibleTimestamp", VisibleTimestamp);
@@ -889,7 +1096,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override string ToString()
         {
-            return Name.Value;
+            return Name.ToString();
         }
     }
 
@@ -917,10 +1124,12 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort Unknown_D2 { get; set; } //Always 0?
         public Rsc6Ptr<Rsc6PropInstanceInfo> PropInstance { get; set; } //m_PropInstance
         public uint Unknown_D8 { get; set; } //Always 0?
-        public uint Unknown_DC { get; set; } //Padding
+        public uint Unknown_DC { get; set; } = 0xCDCDCDCD; //Padding
 
-        public string FrontRoomName; //For writing purposes
-        public string BackRoomName; //For writing purposes
+        public Rsc6ManagedArr<Rsc6Room> ParentRooms { get; set; }
+        public int FrontRoomIndex { get; set; } = -1;
+        public int BackRoomIndex { get; set; } = -1;
+        public static Dictionary<Rsc6Portal, Rsc6PropInstanceInfo> Linked { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -939,6 +1148,13 @@ namespace CodeX.Games.RDR1.RSC6
             PropInstance = reader.ReadPtr<Rsc6PropInstanceInfo>();
             Unknown_D8 = reader.ReadUInt32();
             Unknown_DC = reader.ReadUInt32();
+
+            Linked ??= [];
+
+            if (PropInstance.Item != null)
+            {
+                Linked[this] = PropInstance.Item;
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -948,8 +1164,21 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4(Matrix);
             writer.WriteVector3(Bounds);
             writer.WriteSingle(Radius);
-            writer.WritePtrEmbed(FrontRoom.Item, FrontRoom.Item, 0);
-            writer.WritePtrEmbed(BackRoom.Item, BackRoom.Item, 0);
+
+            if (FrontRoom.Item != null)
+                writer.WritePtrEmbed(FrontRoom.Item, FrontRoom.Item, 0);
+            else if (FrontRoomIndex >= 0)
+                writer.WritePtrEmbed(ParentRooms.Items, ParentRooms.Items, (ulong)(FrontRoomIndex * 144));
+            else
+                writer.WriteUInt32(0); //No frontroom
+
+            if (BackRoom.Item != null)
+                writer.WritePtrEmbed(BackRoom.Item, BackRoom.Item, 0);
+            else if (BackRoomIndex >= 0)
+                writer.WritePtrEmbed(ParentRooms.Items, ParentRooms.Items, (ulong)(BackRoomIndex * 144));
+            else
+                writer.WriteUInt32(0); //No backroom
+
             writer.WriteStr(Name);
             writer.WriteBoolean(Opened);
             writer.WriteBoolean(Interior);
@@ -970,21 +1199,14 @@ namespace CodeX.Games.RDR1.RSC6
             Opened = reader.ReadBool("Opened");
             Interior = reader.ReadBool("Interior");
             PropInstance = new(reader.ReadNode<Rsc6PropInstanceInfo>("PropInstance"));
-
-            FrontRoom = new(reader.ReadNode<Rsc6Room>("FrontRoom"));
-            BackRoom = new(reader.ReadNode<Rsc6Room>("BackRoom"));
-
-            if (FrontRoom.Item != null)
-                FrontRoomName = FrontRoom.Item.Name.ToString();
-            else
-                FrontRoomName = reader.ReadString("FrontRoomName");
-
-            if (BackRoom.Item != null)
-                BackRoomName = BackRoom.Item.Name.ToString();
-            else
-                BackRoomName = reader.ReadString("BackRoomName");
-
+            FrontRoomIndex = reader.ReadInt32("FrontRoomIndex", -1);
+            BackRoomIndex = reader.ReadInt32("BackRoomIndex", -1);
             Polygons.Target = this;
+
+            if (PropInstance.Item != null)
+            {
+                PropInstance.Item.LinkedPortal = this;
+            }
         }
 
         public void Write(MetaNodeWriter writer)
@@ -993,17 +1215,32 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteMatrix4x4("Matrix", Matrix);
             writer.WriteVector3("Bounds", Bounds);
             writer.WriteSingle("Radius", Radius);
-            if (FrontRoom.Item != null) writer.WriteString("FrontRoomName", FrontRoom.Item.Name.ToString());
-            if (BackRoom.Item != null) writer.WriteString("BackRoomName", BackRoom.Item.Name.ToString());
+            if (FrontRoom.Item != null) writer.WriteInt32("FrontRoomIndex", FrontRoomIndex);
+            if (BackRoom.Item != null) writer.WriteInt32("BackRoomIndex", BackRoomIndex);
             writer.WriteString("Name", Name.Value);
             writer.WriteBool("Opened", Opened);
             writer.WriteBool("Interior", Interior);
             writer.WriteNode("PropInstance", PropInstance.Item);
         }
 
+        public static bool SamePortal(Rsc6Portal a, Rsc6Portal b)
+        {
+            if (a == null || b == null) return false;
+            if (a.ToString() != b.ToString()) return false;
+
+            var aFront = a.FrontRoom.Item?.ToString();
+            var aBack = a.BackRoom.Item?.ToString();
+            var bFront = b.FrontRoom.Item?.ToString();
+            var bBack = b.BackRoom.Item?.ToString();
+            var frontMatches = string.IsNullOrEmpty(aFront) || string.IsNullOrEmpty(bFront) || aFront == bFront;
+            var backMatches = string.IsNullOrEmpty(aBack) || string.IsNullOrEmpty(bBack) || aBack == bBack;
+
+            return frontMatches && backMatches;
+        }
+
         public override string ToString()
         {
-            return Name.Value;
+            return Name.ToString();
         }
     }
 
@@ -1035,8 +1272,8 @@ namespace CodeX.Games.RDR1.RSC6
         public JenkHash Unknown_88h { get; set; }
         public Rsc6Ptr<Rsc6DrawableInstanceBase> Unknown_8Ch { get; set; }
 
-        public object InstanceNode { get; set; } //For writing purposes
-        public int InstanceNodeUsed { get; set; } //For writing purposes
+        public object InstanceNode { get; set; }
+        public int InstanceNodeUsed { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1162,25 +1399,18 @@ namespace CodeX.Games.RDR1.RSC6
         public int EdgeVisibleFrame { get; set; } = -1; //m_EdgeVisFrame, always -1
         public int Data { get; set; } = -1; //Always -1, for Rockstar's tools
         public int RefNumber { get; set; } = -1; //Always -1, for Rockstar's tools
-
-        //rage::spdPolyNode
-        //'Next/Prev' actually refers to (atDNode<spdPolyNode*> m_PolyNode, a dictionary for mapping different nodes), but since they are not being used I'm not bothering to implement them.
         public uint Unknown_10h { get; set; }
-
-        public int Next { get; set; } //Always 0
-        public int Prev { get; set; } //Always 0
+        public int Next { get; set; } //Always 0, part of atDNode<spdPolyNode*> m_PolyNode, unused
+        public int Prev { get; set; } //Always 0, part of atDNode<spdPolyNode*> m_PolyNode, unused
         public int Polygon { get; set; } //m_Polygon, offset to the current spdPolygon
         public float Dist { get; set; } //m_Dist2, always 0.0f
         public uint Unknown_24h { get; set; } = 0xCDCDCDCD; //m_Pad1, Padding
         public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //m_Pad2, Padding
         public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //m_Pad3, Padding
-
-        //rage::spdPlane
         public Vector4 PlaneCoeffs { get; set; } //m_Plane, W represents the distance of the plane from the origin
-
         public Vector4 Center { get; set; } //m_Center
         public Rsc6Arr<Vector4> Points { get; set; } //m_Points
-        public Rsc6Arr<byte> VisibleEdges { get; set; } //m_VisibleEdges, capacity always set to 16, used to set visibility bits on the polygon's edges
+        public Rsc6Arr<byte> VisibleEdges { get; set; } //m_VisibleEdges, used to set visibility bits on the polygon's edges
         public bool SingleSided { get; set; } //m_SingleSided
         public uint Unknown_61h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_65h { get; set; } = 0xCDCDCDCD; //Padding
@@ -1188,8 +1418,8 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort Unknown_6Dh { get; set; } = 0xCDCD; //Padding
         public byte Unknown_6Fh { get; set; } = 0xCD; //Padding
 
-        public int PolygonIndex; //For writing purposes
-        public object Target; //For writing purposes
+        public int PolygonIndex { get; set; }
+        public object Target { get; set; }
 
         public void Read(Rsc6DataReader reader)
         {
@@ -1421,13 +1651,10 @@ namespace CodeX.Games.RDR1.RSC6
             CRC = reader.ReadUInt32("CRC");
 
             if (Knots.Items != null)
-            {
                 KnotsCount = Knots.Items.Length;
-            }
+
             if (ControlledVertices.Items != null)
-            {
                 CVCount = (ushort)(ControlledVertices.Items.Length - 1);
-            }
         }
 
         public void Write(MetaNodeWriter writer)
@@ -1473,8 +1700,12 @@ namespace CodeX.Games.RDR1.RSC6
         public byte NetworkingFlags { get; set; } //m_NetworkingFlags
         public byte RotationType { get; set; } //m_RotationType
         public byte ClassTypeAndExtraFlags { get; set; } //m_ClassTypeAndExtraFlags
-        public uint PortalOffset { get; set; } //m_Portal
+        public Rsc6Ptr<Rsc6Portal> Portal { get; set; } //m_Portal
         public uint Unknown_2Ch { get; set; } //Always 0
+
+        public string LinkedPortalName { get; set; }
+        public Rsc6Portal LinkedPortal { get; set; }
+        public static Dictionary<Rsc6PropInstanceInfo, Rsc6Portal> Linked { get; set; }
 
         public override void Read(Rsc6DataReader reader) //propInstanceInfo
         {
@@ -1491,8 +1722,16 @@ namespace CodeX.Games.RDR1.RSC6
             NetworkingFlags = reader.ReadByte();
             RotationType = reader.ReadByte();
             ClassTypeAndExtraFlags = reader.ReadByte();
-            PortalOffset = reader.ReadUInt32();
+            Portal = reader.ReadPtr<Rsc6Portal>();
             Unknown_2Ch = reader.ReadUInt32();
+            LinkedPortalName = Portal.ToString();
+
+            Linked ??= [];
+
+            if (Portal.Item != null)
+            {
+                Linked[this] = Portal.Item;
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -1510,7 +1749,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte(NetworkingFlags);
             writer.WriteByte(RotationType);
             writer.WriteByte(ClassTypeAndExtraFlags);
-            writer.WriteUInt32(PortalOffset);
+            writer.WritePtrEmbed(LinkedPortal, LinkedPortal, 0);
             writer.WriteUInt32(Unknown_2Ch);
         }
 
@@ -1526,7 +1765,7 @@ namespace CodeX.Games.RDR1.RSC6
             NetworkingFlags = reader.ReadByte("NetworkingFlags");
             RotationType = reader.ReadByte("RotationType");
             EntityPosition = Rpf6Crypto.ToXYZ(reader.ReadVector4("EntityPosition"));
-            PortalOffset = reader.ReadUInt32("PortalOffset");
+            LinkedPortalName = reader.ReadString("LinkedPortalName");
         }
 
         public void Write(MetaNodeWriter writer)
@@ -1541,7 +1780,11 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte("NetworkingFlags", NetworkingFlags);
             writer.WriteByte("RotationType", RotationType);
             writer.WriteVector4("EntityPosition", EntityPosition);
-            writer.WriteUInt32("PortalOffset", PortalOffset);
+
+            if (!string.IsNullOrEmpty(LinkedPortalName))
+            {
+                writer.WriteString("LinkedPortalName", LinkedPortalName);
+            }
         }
 
         public override string ToString()
@@ -1554,74 +1797,45 @@ namespace CodeX.Games.RDR1.RSC6
     public class Rsc6Attribute : Rsc6FileBase, MetaNode //RDR2AttribBase
     {
         public override ulong BlockLength => 16;
-        public override uint VFT { get; set; } //TODO: finish writing
+        public override uint VFT { get; set; } = 0x01909530;
         public uint TargetPointer { get; set; } //m_TargetPointer
-        public uint TargetType { get; set; } //m_eTargetType, mostly 1, sometimes 3 when ClassID is equal to 2 or 5
-        public uint ClassID { get; set; } //m_ClassID, 1, 2 or 5
+        public Rsc6AttributeTargetType TargetType { get; set; } //m_eTargetType, what kind of object the attribute points to
+        public Rsc6AttributeClassType ClassID { get; set; } //m_ClassID, what kind of attribute object it is
 
-        public string TargetedProp; //For writing purposes
-        public Rsc6AttributeType Type; //For writing purposes
+        public string TargetedPropName;
+        public Vector3 TargetedPropPosition;
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
             TargetPointer = reader.ReadUInt32();
-            TargetType = reader.ReadUInt32();
-            ClassID = reader.ReadUInt32();
-
-            if (TargetType == 1 && ClassID == 1)
-                Type = Rsc6AttributeType.PROPS_DOORS_1;
-            else if (TargetType == 3 && ClassID == 2)
-                Type = Rsc6AttributeType.PROPS_GRINGOS;
-            else
-                Type = Rsc6AttributeType.PROPS_DOORS_2;
+            TargetType = (Rsc6AttributeTargetType)reader.ReadUInt32();
+            ClassID = (Rsc6AttributeClassType)reader.ReadUInt32();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
             writer.WriteUInt32(TargetPointer);
-            writer.WriteUInt32(TargetType);
-            writer.WriteUInt32(ClassID);
+            writer.WriteUInt32((uint)TargetType);
+            writer.WriteUInt32((uint)ClassID);
         }
 
-        public void Read(MetaNodeReader reader)
+        public virtual void Read(MetaNodeReader reader)
         {
-            Type = reader.ReadEnum("@type", Rsc6AttributeType.PROPS_DOORS_1);
-            switch (Type)
-            {
-                case Rsc6AttributeType.PROPS_DOORS_1:
-                    TargetType = 1;
-                    ClassID = 1;
-                    break;
-                case Rsc6AttributeType.PROPS_GRINGOS:
-                    TargetType = 3;
-                    ClassID = 2;
-                    break;
-                case Rsc6AttributeType.PROPS_DOORS_2:
-                    TargetType = 1;
-                    ClassID = 2;
-                    break;
-            }
-
-            if (Type == Rsc6AttributeType.PROPS_DOORS_2)
-            {
-                ClassID = reader.ReadUInt32("ClassID");
-            }
+            ClassID = reader.ReadEnum<Rsc6AttributeClassType>("@type");
+            TargetType = reader.ReadEnum<Rsc6AttributeTargetType>("TargetType");
         }
 
-        public void Write(MetaNodeWriter writer)
+        public virtual void Write(MetaNodeWriter writer)
         {
-            writer.WriteString("@type", Type.ToString());
-            if (Type == Rsc6AttributeType.PROPS_DOORS_2)
-            {
-                writer.WriteUInt32("ClassID", ClassID);
-            }
+            writer.WriteString("@type", ClassID.ToString());
+            writer.WriteString("TargetType", TargetType.ToString());
         }
 
         public static Rsc6Attribute Create(string typeName)
         {
-            if (Enum.TryParse(typeName, out Rsc6AttributeType type))
+            if (Enum.TryParse(typeName, out Rsc6AttributeClassType type))
             {
                 return Create(type);
             }
@@ -1631,42 +1845,79 @@ namespace CodeX.Games.RDR1.RSC6
         public static Rsc6Attribute Create(Rsc6DataReader r)
         {
             r.Position += 8;
-            var targetType = r.ReadUInt32();
-            var classID = r.ReadUInt32();
+            var targetType = (Rsc6AttributeTargetType)r.ReadUInt32();
+            var classID = (Rsc6AttributeClassType)r.ReadUInt32();
             r.Position -= 16;
 
-            switch (classID)
+            return classID switch
             {
-                case 1: return new Rsc6AttributeInstancedProp(); //Prop & doors
-                case 2:
-                case 5:
-                {
-                    if (targetType == 3) return new Rsc6AttributeDrawableInstanceProp(); //Prop & gringos
-                    else return new Rsc6AttributeInstancedProp2();
-                }
-                default: throw new NotImplementedException("Unknown RDRAttribute type");
-            }
+                Rsc6AttributeClassType.NAME_ATTRIBUTE => new Rsc6AttributeInstancedProp(),
+                Rsc6AttributeClassType.GRINGO_ATTRIBUTE => new Rsc6AttributeGringo(),
+                Rsc6AttributeClassType.DOOR_LOCK_ATTRIBUTE => new Rsc6AttributeDoorLock(),
+                _ => throw new NotImplementedException($"Unknown attribute class: {classID}, targetType: {targetType}")
+            };
         }
 
-        public static Rsc6Attribute Create(Rsc6AttributeType type)
+        public static Rsc6Attribute Create(Rsc6AttributeClassType type)
         {
             return type switch
             {
-                Rsc6AttributeType.PROPS_DOORS_1 => new Rsc6AttributeInstancedProp(),
-                Rsc6AttributeType.PROPS_GRINGOS => new Rsc6AttributeDrawableInstanceProp(),
-                Rsc6AttributeType.PROPS_DOORS_2 => new Rsc6AttributeInstancedProp2(),
-                _ => throw new NotImplementedException("Unknown RDRAttribute type"),
+                Rsc6AttributeClassType.NAME_ATTRIBUTE => new Rsc6AttributeInstancedProp(),
+                Rsc6AttributeClassType.GRINGO_ATTRIBUTE => new Rsc6AttributeGringo(),
+                Rsc6AttributeClassType.DOOR_LOCK_ATTRIBUTE => new Rsc6AttributeDoorLock(),
+                _ => throw new NotImplementedException($"Unknown attribute class {type}")
             };
+        }
+
+        public static (Rsc6DrawableInstanceBase[] array, int index) GetTargetedPropMatrix(Rsc6DataWriter writer, Vector3 pos, string name)
+        {
+            foreach (var array in writer.BlockList.OfType<Rsc6DrawableInstanceBase[]>())
+            {
+                for (int i = 0; i < array.Length; i++)
+                {
+                    var inst = array[i];
+                    if (inst == null) continue;
+                    if (inst.Name.ToString() != name) continue;
+
+                    if (Rpf6Crypto.SamePosition(inst.Matrix.Translation, pos)) //Make sure inst.EntityPosition has the correct XYZ format during import
+                    {
+                        return (array, i);
+                    }
+                }
+            }
+            return (null, -1);
+        }
+
+        public static (Rsc6PropInstanceInfo[] array, int index) GetTargettedPropInstance(Rsc6DataWriter writer, Vector3 pos, string name)
+        {
+            foreach (var array in writer.BlockList.OfType<Rsc6PropInstanceInfo[]>())
+            {
+                for (int i = 0; i < array.Length; i++)
+                {
+                    var inst = array[i];
+                    if (inst == null) continue;
+                    if (inst.EntityName.ToString() != name) continue;
+
+                    if (Rpf6Crypto.SamePosition(inst.EntityPosition.XYZ(), pos)) //Make sure inst.EntityPosition has the correct XYZ format during import
+                    {
+                        return (array, i);
+                    }
+                }
+            }
+            return (null, -1);
         }
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6MapAttribute : Rsc6BlockBase, MetaNode
+    public class Rsc6MapAttribute : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6MapAttribute>, MetaNode
     {
         public override ulong BlockLength => 12;
-        public JenkHash TargetHash { get; set; } //The name of the attribute
+        public JenkHash TargetHash { get; set; } //The name hash of the targeted attribute
         public Rsc6Ptr<Rsc6Attribute> Target { get; set; }
-        public Rsc6Ptr<Rsc6MapAttribute> Next { get; set; } //Next attribute...
+        public Rsc6Ptr<Rsc6MapAttribute> Next { get; set; }
+
+        public Rsc6MapAttribute MapNext { get => Next.Item; set => Next = new(value); }
+        public uint MapKey { get => TargetHash; }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1684,14 +1935,19 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            TargetHash = new(reader.ReadString("Target"));
+            TargetHash = reader.ReadJenkHash("TargetHash");
             Next = new(reader.ReadNode<Rsc6MapAttribute>("Next"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            if (Target.Item != null) writer.WriteString("Target", Target.Item.ToString());
-            if (Next.Item != null) writer.WriteNode("Next", Next.Item);
+            writer.WriteJenkHash("TargetHash", TargetHash);
+            writer.WriteNode("Next", Next.Item);
+        }
+
+        public override string ToString()
+        {
+            return TargetHash.ToString();
         }
     }
 
@@ -1701,7 +1957,7 @@ namespace CodeX.Games.RDR1.RSC6
         public override ulong BlockLength => base.BlockLength + 16;
         public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp { get; set; }
         public Rsc6Str Name { get; set; }
-        public Vector3 Unknown_14h { get; set; } = new Vector3(-431602080f); //Usually NULL
+        public Vector3 Unknown_14h { get; set; } = Rpf6Crypto.DebugVector;
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -1715,23 +1971,16 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var enumerable = writer.BlockList.FirstOrDefault(s => s is Rsc6PropInstanceInfo[]);
-            if (enumerable != null && enumerable is Rsc6PropInstanceInfo[] instances)
+            var (array, index) = GetTargettedPropInstance(writer, TargetedPropPosition, TargetedPropName);
+            if (array != null)
             {
-                for (int i = 0; i < instances.Length; i++)
-                {
-                    var inst = instances[i];
-                    if (inst == null) continue;
-                    if (inst.EntityName.ToString() != TargetedProp) continue;
-                    TargetProp = new(inst);
-                    break;
-                }
+                TargetProp = new(array[index]);
             }
 
             writer.WriteUInt32(0x019094C0);
             writer.WritePtr(TargetProp);
-            writer.WriteUInt32(TargetType);
-            writer.WriteUInt32(ClassID);
+            writer.WriteUInt32((uint)TargetType);
+            writer.WriteUInt32((uint)ClassID);
             writer.WriteStr(Name);
             writer.WriteVector3(Unknown_14h);
         }
@@ -1739,21 +1988,23 @@ namespace CodeX.Games.RDR1.RSC6
         public new void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            TargetedProp = reader.ReadString("TargetProp");
+            TargetedPropName = reader.ReadString("TargetedPropName");
+            TargetedPropPosition = Rpf6Crypto.ToXYZ(reader.ReadVector3("TargetedPropPosition"));
             Name = new(reader.ReadString("Name"));
-            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
+            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h", Rpf6Crypto.DebugVector));
         }
 
         public new void Write(MetaNodeWriter writer)
         {
             base.Write(writer);
-            writer.WriteString("TargetProp", TargetProp.Item?.EntityName.ToString());
-            writer.WriteString("Name", Name.ToString());
-
-            if (Unknown_14h != new Vector3(-431602080f))
+            if (TargetProp.Item != null)
             {
-                writer.WriteVector3("Unknown_14h", Unknown_14h);
+                writer.WriteString("TargetedPropName", TargetProp.Item?.EntityName.ToString());
+                writer.WriteVector3("TargetedPropPosition", TargetProp.Item.EntityPosition.XYZ());
             }
+
+            writer.WriteString("Name", Name.ToString());
+            if (Unknown_14h != Rpf6Crypto.DebugVector) writer.WriteVector3("Unknown_14h", Unknown_14h);
         }
 
         public override string ToString()
@@ -1763,20 +2014,112 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6AttributeInstancedProp2 : Rsc6Attribute, MetaNode
+    public class Rsc6AttributeGringo : Rsc6Attribute, MetaNode //RDR2GringoAttribute
     {
-        public override ulong BlockLength => base.BlockLength + 20; //TODO: confirm this is +20 and not +16
-        public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp { get; set; }
-        public uint Unknown_10h { get; set; }
-        public Vector3 Unknown_14h { get; set; } = new Vector3(-431602080f); //Usually NULL
-        public uint Unknown_20h { get; set; }
+        public override ulong BlockLength => base.BlockLength + 20;
+        public bool IsMatrixProvider => TargetType == Rsc6AttributeTargetType.MATRIX_PROVIDER;
+        public JenkHash TagID { get; set; } //m_TagID
+        public uint GringoHandle { get; set; } //Always 0
+        public uint Unknown_18h { get; set; } //Always 0
+        public uint Unknown_1Ch { get; set; } //Always 0
+        public uint Unknown_20h { get; set; } //Always 0
+
+        //Goes somewhere else?
+        public JenkHash LinkedAttributeHash { get; set; }
+        public uint LinkedAttributePointer { get; set; }
+        public uint Unknown_2Ch { get; set; }
+
+        public Rsc6Ptr<Rsc6DrawableInstanceBase> TargetPropMatrix;
+        public Rsc6Ptr<Rsc6PropInstanceInfo> TargetPropInstance;
 
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Unknown_10h = reader.ReadUInt32();
-            Unknown_14h = reader.ReadVector3();
-            Unknown_20h = reader.ReadUInt32();//TODO: check this
+            TagID = reader.ReadUInt32();
+            GringoHandle = reader.ReadUInt32();
+            Unknown_18h = reader.ReadUInt32();
+            Unknown_1Ch = reader.ReadUInt32();
+            Unknown_20h = reader.ReadUInt32();
+
+            if (IsMatrixProvider)
+            {
+                TargetPropMatrix = new Rsc6Ptr<Rsc6DrawableInstanceBase> { Position = TargetPointer };
+                TargetPropMatrix = reader.ReadPtrItem(TargetPropMatrix);
+            }
+            else
+            {
+                TargetPropInstance = new Rsc6Ptr<Rsc6PropInstanceInfo> { Position = TargetPointer };
+                TargetPropInstance = reader.ReadPtrItem(TargetPropInstance);
+            }
+        }
+
+        public override void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteUInt32(VFT);
+
+            if (IsMatrixProvider)
+            {
+                var (array, index) = GetTargetedPropMatrix(writer, TargetedPropPosition, TargetedPropName);
+                writer.WritePtrEmbed(array[index], array[index], (ulong)(224 * index));
+            }
+            else
+            {
+                var (array, index) = GetTargettedPropInstance(writer, TargetedPropPosition, TargetedPropName);
+                writer.WritePtrEmbed(array[index], array[index], (ulong)(48 * index));
+            }
+
+            writer.WriteUInt32((uint)TargetType);
+            writer.WriteUInt32((uint)ClassID);
+            writer.WriteUInt32(TagID);
+            writer.WriteUInt32(GringoHandle);
+            writer.WriteUInt32(Unknown_18h);
+            writer.WriteUInt32(Unknown_1Ch);
+            writer.WriteUInt32(Unknown_20h);
+        }
+
+        public override void Read(MetaNodeReader reader)
+        {
+            base.Read(reader);
+            TagID = reader.ReadJenkHash("TagID");
+            TargetedPropName = reader.ReadString("TargetedPropName");
+            TargetedPropPosition = Rpf6Crypto.ToXYZ(reader.ReadVector3("TargetPropPosition"));
+        }
+
+        public override void Write(MetaNodeWriter writer)
+        {
+            base.Write(writer);
+            writer.WriteJenkHash("TagID", TagID);
+
+            if (IsMatrixProvider)
+            {
+                writer.WriteString("TargetedPropName", TargetPropMatrix.Item.Name.ToString());
+                writer.WriteVector3("TargetPropPosition", TargetPropMatrix.Item.Matrix.Translation);
+            }
+            else
+            {
+                writer.WriteString("TargetedPropName", TargetPropInstance.Item.EntityName.ToString());
+                writer.WriteVector3("TargetPropPosition", TargetPropInstance.Item.EntityPosition.XYZ());
+            }
+        }
+
+        public override string ToString()
+        {
+            return TagID.ToString();
+        }
+    }
+
+    [TC(typeof(EXP))]
+    public class Rsc6AttributeDoorLock : Rsc6Attribute, MetaNode //RDR2DoorLockAttribute
+    {
+        public override ulong BlockLength => base.BlockLength + 4;
+        public uint LockType { get; set; } //m_eType, mode passed to the door-lock system when the prop is created
+
+        public Rsc6Ptr<Rsc6PropInstanceInfo> TargetProp;
+
+        public override void Read(Rsc6DataReader reader)
+        {
+            base.Read(reader);
+            LockType = reader.ReadUInt32();
 
             TargetProp = new Rsc6Ptr<Rsc6PropInstanceInfo> { Position = TargetPointer };
             TargetProp = reader.ReadPtrItem(TargetProp);
@@ -1784,137 +2127,33 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var enumerable = writer.BlockList.FirstOrDefault(s => s is Rsc6PropInstanceInfo[]);
-            if (enumerable != null && enumerable is Rsc6PropInstanceInfo[] instances)
+            var (array, index) = GetTargettedPropInstance(writer, TargetedPropPosition, TargetedPropName);
+            if (array != null)
             {
-                for (int i = 0; i < instances.Length; i++)
-                {
-                    var inst = instances[i];
-                    if (inst == null) continue;
-                    if (inst.EntityName.ToString() != TargetedProp) continue;
-                    TargetProp = new(inst);
-                    break;
-                }
+                TargetProp = new(array[index]);
             }
 
-            writer.WriteUInt32(0x01909530);
+            writer.WriteUInt32(0x019094C0);
             writer.WritePtr(TargetProp);
-            writer.WriteUInt32(TargetType);
-            writer.WriteUInt32(ClassID);
-            writer.WriteUInt32(Unknown_10h);
-            writer.WriteVector3(Unknown_14h);
-            writer.WriteUInt32(Unknown_20h);//TODO: check this
+            writer.WriteUInt32((uint)TargetType);
+            writer.WriteUInt32((uint)ClassID);
+            writer.WriteUInt32(LockType);
         }
 
-        public new void Read(MetaNodeReader reader)
+        public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
-            TargetedProp = reader.ReadString("TargetProp");
-            Unknown_10h = reader.ReadUInt32("Unknown_10h");
-            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h"));
-            Unknown_20h = reader.ReadUInt32("Unknown_20h");
+            TargetedPropName = reader.ReadString("TargetedPropName");
+            TargetedPropPosition = Rpf6Crypto.ToXYZ(reader.ReadVector3("TargetPropPosition"));
+            LockType = reader.ReadUInt32("LockType");
         }
 
-        public new void Write(MetaNodeWriter writer)
+        public override void Write(MetaNodeWriter writer)
         {
             base.Write(writer);
-            writer.WriteString("TargetProp", TargetProp.Item?.EntityName.ToString());
-            writer.WriteUInt32("Unknown_10h", Unknown_10h);
-            if (Unknown_14h != new Vector3(-431602080f))
-            {
-                writer.WriteVector3("Unknown_14h", Unknown_14h);
-            }
-            writer.WriteUInt32("Unknown_20h", Unknown_20h);
-        }
-
-        public override string ToString()
-        {
-            return TargetProp.Item?.EntityName.ToString();
-        }
-    }
-
-    [TC(typeof(EXP))]
-    public class Rsc6AttributeDrawableInstanceProp : Rsc6Attribute, MetaNode
-    {
-        public override ulong BlockLength => base.BlockLength + 32;
-        public Rsc6Ptr<Rsc6DrawableInstanceBase> TargetProp { get; set; }
-        public JenkHash Name { get; set; }
-        public Vector3 Unknown_14h { get; set; } = new Vector3(-431602080f); //NULL or equal to Vector3.Zero
-        public uint Unknown_20h { get; set; } //Always 0
-        public uint Unknown_24h { get; set; } = 0xCDCDCDCD; //Seems to be a hash? Only used when 'Unknown_28h' and 'Unknown_2Ch' aren't NULL
-        public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //Actually a pointer...
-        public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //Actually a pointer...
-
-        public override void Read(Rsc6DataReader reader)
-        {
-            base.Read(reader);
-            Name = reader.ReadUInt32();
-            Unknown_14h = reader.ReadVector3();
-            Unknown_20h = reader.ReadUInt32();
-            Unknown_24h = reader.ReadUInt32();
-            Unknown_28h = reader.ReadUInt32();
-            Unknown_2Ch = reader.ReadUInt32();
-
-            TargetProp = new Rsc6Ptr<Rsc6DrawableInstanceBase> { Position = TargetPointer };
-            TargetProp = reader.ReadPtrItem(TargetProp);
-        }
-
-        public override void Write(Rsc6DataWriter writer)
-        {
-            var enumerable = writer.BlockList.FirstOrDefault(s => s is Rsc6DrawableInstanceBase[]);
-            if (enumerable != null && enumerable is Rsc6DrawableInstanceBase[] instances)
-            {
-                for (int i = 0; i < instances.Length; i++)
-                {
-                    var inst = instances[i];
-                    if (inst == null) continue;
-                    if (inst.Name.ToString() != TargetedProp) continue;
-                    TargetProp = new(inst);
-                    break;
-                }
-            }
-
-            writer.WriteUInt32(0x01909530);
-            writer.WritePtr(TargetProp);
-            writer.WriteUInt32(TargetType);
-            writer.WriteUInt32(ClassID);
-            writer.WriteUInt32(Name);
-            writer.WriteVector3(Unknown_14h);
-            writer.WriteUInt32(Unknown_20h);
-            writer.WriteUInt32(Unknown_24h);
-            writer.WriteUInt32(Unknown_28h);
-            writer.WriteUInt32(Unknown_2Ch);
-        }
-
-        public new void Read(MetaNodeReader reader)
-        {
-            base.Read(reader);
-            TargetedProp = reader.ReadString("TargetProp");
-            Name = reader.ReadUInt32("Name");
-            Unknown_14h = Rpf6Crypto.ToXYZ(reader.ReadVector3("Unknown_14h", new Vector3(-431602080f)));
-            Unknown_24h = reader.ReadUInt32("Unknown_24h", 0xCDCDCDCD);
-        }
-
-        public new void Write(MetaNodeWriter writer)
-        {
-            base.Write(writer);
-            writer.WriteString("TargetProp", TargetProp.Item?.Name.ToString());
-            writer.WriteUInt32("Name", Name);
-
-            if (Unknown_14h != new Vector3(-431602080f))
-            {
-                writer.WriteVector3("Unknown_14h", Unknown_14h);
-            }
-
-            if (Unknown_24h != 0xCDCDCDCD)
-            {
-                writer.WriteUInt32("Unknown_24h", Unknown_24h);
-            }
-        }
-
-        public override string ToString()
-        {
-            return Name.ToString();
+            writer.WriteString("TargetedPropName", TargetProp.Item.EntityName.ToString());
+            writer.WriteVector3("TargetPropPosition", TargetProp.Item.EntityPosition.XYZ());
+            writer.WriteUInt32("LockType", LockType);
         }
     }
 
@@ -1990,7 +2229,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override string ToString()
         {
-            return Name;
+            return Name.ToString();
         }
     }
 
@@ -2350,23 +2589,21 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6LocatorStatic : Rsc6BlockBase, MetaNode
+    public class Rsc6LocatorStatic : Rsc6BlockBase, MetaNode //rdrLocatorStatic
     {
         public override ulong BlockLength => 48;
-        public Vector4 Offset { get; set; }
-        public Vector4 Eulers { get; set; }
-        public Rsc6Str Name { get; set; }
-        public uint Unknown_24h { get; set; } //Padding
-        public uint Unknown_28h { get; set; } //Padding
-        public uint Unknown_2Ch { get; set; } //Padding
+        public Vector4 Offset { get; set; } //Offset
+        public Vector4 Eulers { get; set; } //Eulers
+        public Rsc6Str Name { get; set; } //Name
+        public Rsc6ManagedArr<Rsc6LocatorAttribute> Attributes { get; set; } //Attributes
+        public uint Unknown_2Ch { get; set; } //Padding, always 0
 
-        public override void Read(Rsc6DataReader reader) //rdrLocatorStatic
+        public override void Read(Rsc6DataReader reader)
         {
             Offset = reader.ReadVector4();
             Eulers = reader.ReadVector4();
             Name = reader.ReadStr();
-            Unknown_24h = reader.ReadUInt32();
-            Unknown_28h = reader.ReadUInt32();
+            Attributes = reader.ReadArr<Rsc6LocatorAttribute>();
             Unknown_2Ch = reader.ReadUInt32();
         }
 
@@ -2374,8 +2611,8 @@ namespace CodeX.Games.RDR1.RSC6
         {
             writer.WriteVector4(Offset);
             writer.WriteVector4(Eulers);
-            writer.WriteUInt32(Unknown_24h);
-            writer.WriteUInt32(Unknown_28h);
+            writer.WriteStr(Name);
+            writer.WriteArr(Attributes);
             writer.WriteUInt32(Unknown_2Ch);
         }
 
@@ -2383,33 +2620,89 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Offset = Rpf6Crypto.ToXYZ(reader.ReadVector4("Offset"));
             Eulers = Rpf6Crypto.ToXYZ(reader.ReadVector4("Eulers"));
+            Name = new(reader.ReadString("Name"));
+            Attributes = new(reader.ReadNodeArray<Rsc6LocatorAttribute>("Attributes"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteVector4("Offset", Offset);
             writer.WriteVector4("Eulers", Eulers);
+            writer.WriteString("Name", Name.ToString());
+            writer.WriteNodeArray("Attributes", Attributes.Items);
         }
 
         public override string ToString()
         {
-            return Name.Value;
+            return Name.ToString();
+        }
+
+        public class Rsc6LocatorAttribute : Rsc6BlockBase, MetaNode //rdrLocatorStatic::Attribute
+        {
+            public override ulong BlockLength => 20;
+            public Rsc6Str Name { get; set; } //Name
+            public Rsc6Str Value { get; set; } //Value
+            public Rsc6ManagedArr<Rsc6LocatorAttribute> Augments { get; set; } //Augments
+            public int Type { get; set; } //Type
+
+            public override void Read(Rsc6DataReader reader)
+            {
+                Name = reader.ReadStr();
+                Value = reader.ReadStr();
+                Augments = reader.ReadArr<Rsc6LocatorAttribute>();
+                Type = reader.ReadInt32();
+            }
+
+            public override void Write(Rsc6DataWriter writer)
+            {
+                writer.WriteStr(Name);
+                writer.WriteStr(Value);
+                writer.WriteArr(Augments);
+                writer.WriteInt32(Type);
+            }
+
+            public void Read(MetaNodeReader reader)
+            {
+                Name = new(reader.ReadString("Name"));
+                Value = new(reader.ReadString("Value"));
+                Augments = new(reader.ReadNodeArray<Rsc6LocatorAttribute>("Augments"));
+                Type = reader.ReadInt32("Type");
+            }
+
+            public void Write(MetaNodeWriter writer)
+            {
+                writer.WriteString("Name", Name.ToString());
+                writer.WriteString("Value", Value.ToString());
+                writer.WriteNodeArray("Augments", Augments.Items);
+                writer.WriteInt32("Type", Type);
+            }
+
+            public override string ToString()
+            {
+                return $"{Name} = {Value}";
+            }
         }
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance, TODO: finish this
+    public class Rsc6BoundInstance : Rsc6FileBase, MetaNode //sagBoundInstance
     {
+        /*
+         * Represents a sector-level bound instance.
+         * Holds global bounds and links to room data + spatial partition (InstanceDataMember).
+         * Acts as the root container for room assignment and spatial queries.
+         */
+
         public override ulong BlockLength => 80;
         public override uint VFT { get; set; } = 0x01909C20;
         public Rsc6Ptr<Rsc6FragArchetype> Archetype { get; set; } //m_archetype, always NULL
         public Rsc6Ptr<Rsc6FragArchetype> PhysInstance { get; set; } //m_physInstance, always NULL
-        public Rsc6Ptr<Rsc6InstanceDataMember> Data { get; set; } //m_data
+        public Rsc6Ptr<Rsc6InstanceDataMember> Data { get; set; } //m_data, instance-data member record associated with this bound instance
         public Vector4 BoundMin { get; set; }
         public Vector4 BoundMax { get; set; }
         public uint Code { get; set; } //Code, always 0
         public uint Unknown_34h { get; set; } = 0xCDCDCDCD; //Padding
-        public uint Unknown_38h { get; set; } = 0xCDCDCDCD; //Paddings
+        public uint Unknown_38h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_3Ch { get; set; } = 0xCDCDCDCD; //Padding
         public Rsc6ManagedArr<Rsc6Room> DrawableRoot { get; set; } //m_DrawableRoot
         public uint Unknown_48h { get; set; } = 0xCDCDCDCD; //Padding
@@ -2430,132 +2723,344 @@ namespace CodeX.Games.RDR1.RSC6
             DrawableRoot = reader.ReadArr<Rsc6Room>();
             Unknown_48h = reader.ReadUInt32();
             Unknown_4Ch = reader.ReadUInt32();
+
+            var point = new Vector3(2587.1296f, -2166.7903f, 17.200884f); //i_gen_bath01x
+            var room = QueryRoomInPoint(point, out var roomIndex);
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
+            writer.WritePtr(Archetype);
+            writer.WritePtr(PhysInstance);
+            writer.WritePtr(Data);
+            writer.WriteVector4(BoundMin);
+            writer.WriteVector4(BoundMax);
+            writer.WriteUInt32(Code);
+            writer.WriteUInt32(Unknown_34h);
+            writer.WriteUInt32(Unknown_38h);
+            writer.WriteUInt32(Unknown_3Ch);
+            writer.WriteArr(DrawableRoot);
+            writer.WriteUInt32(Unknown_48h);
+            writer.WriteUInt32(Unknown_4Ch);
         }
 
         public void Read(MetaNodeReader reader)
         {
-            Archetype = new(reader.ReadNode<Rsc6FragArchetype>("Archetype"));
-            PhysInstance = new(reader.ReadNode<Rsc6FragArchetype>("PhysInstance"));
+            Data = new(reader.ReadNode<Rsc6InstanceDataMember>("Data"));
+            BoundMin = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMin"));
+            BoundMax = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoundMax"));
+            DrawableRoot = new(reader.ReadNodeArray<Rsc6Room>("DrawableRoot"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            writer.WriteNode("Archetype", Archetype.Item);
-            writer.WriteNode("PhysInstance", PhysInstance.Item);
+            writer.WriteNode("Data", Data.Item);
             writer.WriteVector4("BoundMin", BoundMin);
             writer.WriteVector4("BoundMax", BoundMax);
-            writer.WriteStringArray("DrawableRoot", DrawableRoot.Items.Select(s => s.Name.Value).ToArray());
+            writer.WriteNodeArray("DrawableRoot", DrawableRoot.Items);
+        }
+
+        public Rsc6Room QueryRoomInPoint(Vector3 point, out uint roomIndex) //rage::rmpRoomGroupBase::QueryRoomInPoint
+        {
+            roomIndex = 0xFFFFFFFF;
+
+            var bb = new BoundingBox(BoundMin.XYZ(), BoundMax.XYZ());
+            if (bb.Contains(ref point) != ContainmentType.Contains) return null;
+
+            var root = Data.Item.InstTreeRoot.Item;
+            if (root == null) return null;
+            if (!root.GetLeafData(point, out roomIndex)) return null;
+
+            var rooms = DrawableRoot.Items;
+            if (roomIndex == 0xFFFFFFFE || roomIndex == 0xFFFF) return null;
+            if (roomIndex >= rooms.Length) return null;
+
+            return rooms[roomIndex];
         }
     }
 
     [TC(typeof(EXP))]
     public class Rsc6InstanceDataMember : Rsc6BlockBase, MetaNode //sagInstDataMember
     {
+        /*
+         * Contains the spatial partitioning data (BSP tree) for instances.
+         * Provides the root node used by rage::rmpRoomGroupBase::QueryRoomInPoint to resolve room indices.
+         * Also stores bucket/index arrays used by BSP leaf nodes.
+         */
+
         public override ulong BlockLength => 36;
         public int Unknown_0h { get; set; } //Always 0
-        public uint Unknown_4h { get; set; } //Total number of instances
-        public Rsc6Ptr<Rsc6UnknownInstData> Unknown_8h { get; set; }
+        public uint InstanceCount { get; set; }
+        public Rsc6Ptr<Rsc6RoomBspNode> InstTreeRoot { get; set; }
         public uint Unknown_Ch { get; set; }
-        public Rsc6RawArr<uint> Unknown_10h { get; set; }
-        public uint Unknown_14h { get; set; }
-        public float Unknown_18h { get; set; } //Always 0.03515625
+        public Rsc6RawArr<uint> BucketIndices { get; set; }
+        public uint IndexCount { get; set; }
+        public float Unknown_18h { get; set; } = 9.0f / 256.0f; //Always 0.03515625f
         public int Instance { get; set; } = -1; //Instance, always -1
         public byte ParentType { get; set; } //ParentType, always 0
-        public bool HasSplashed { get; set; } //m_bHasSplashed, always TRUE
+        public bool HasSplashed { get; set; } = true; //m_bHasSplashed, always TRUE
         public ushort AudEntityID { get; set; } = 0xCDCD; //m_AudEntityId, always 0xCDCD
+
+        public int InstTreeRootIndex { get; set; } = -1;
+        public Rsc6RoomBspNode[] InstNodes { get; set; }
 
         public override void Read(Rsc6DataReader reader)
         {
             Unknown_0h = reader.ReadInt32();
-            Unknown_4h = reader.ReadUInt32();
-            Unknown_8h = reader.ReadPtr<Rsc6UnknownInstData>();
+            InstanceCount = reader.ReadUInt32();
+            InstTreeRoot = reader.ReadPtr<Rsc6RoomBspNode>();
             Unknown_Ch = reader.ReadUInt32();
-            Unknown_10h = reader.ReadRawArrPtr<uint>();
-            Unknown_14h = reader.ReadUInt32();
+            BucketIndices = reader.ReadRawArrPtr<uint>();
+            IndexCount = reader.ReadUInt32();
             Unknown_18h = reader.ReadSingle();
             Instance = reader.ReadInt32();
             ParentType = reader.ReadByte();
             HasSplashed = reader.ReadBoolean();
             AudEntityID = reader.ReadUInt16();
+            BucketIndices = reader.ReadRawArrItems(BucketIndices, IndexCount, false);
 
-            Unknown_10h = reader.ReadRawArrItems(Unknown_10h, Unknown_14h);
-            var inst = GetAllInstances();
+            AssignNodeIndices();
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
+            writer.WriteInt32(Unknown_0h);
+            writer.WriteUInt32(InstanceCount);
+            writer.WritePtr(InstTreeRoot);
+            writer.WriteUInt32(Unknown_Ch);
+            writer.WriteRawArr(BucketIndices);
+            writer.WriteUInt32(IndexCount);
+            writer.WriteSingle(Unknown_18h);
+            writer.WriteInt32(Instance);
+            writer.WriteByte(ParentType);
+            writer.WriteBoolean(HasSplashed);
+            writer.WriteUInt16(AudEntityID);
         }
 
         public void Read(MetaNodeReader reader)
         {
+            Unknown_Ch = reader.ReadUInt32("Unknown_Ch");
+            BucketIndices = new(reader.ReadUInt32Array("BucketIndices"));
+            InstTreeRootIndex = reader.ReadInt32("InstTreeRootIndex");
+            InstNodes = reader.ReadNodeArray<Rsc6RoomBspNode>("InstNodes");
+
+            if (InstNodes != null)
+            {
+                for (int i = 0; i < InstNodes.Length; i++)
+                {
+                    var node = InstNodes[i];
+                    if (node == null) continue;
+
+                    node.RootIndices = BucketIndices;
+
+                    if (node.LeftIndex >= 0 && node.LeftIndex < InstNodes.Length)
+                        node.LeftChild = new(InstNodes[node.LeftIndex]);
+
+                    if (node.RightIndex >= 0 && node.RightIndex < InstNodes.Length)
+                        node.RightChild = new(InstNodes[node.RightIndex]);
+                }
+
+                if (InstTreeRootIndex >= 0 && InstTreeRootIndex < InstNodes.Length)
+                    InstTreeRoot = new(InstNodes[InstTreeRootIndex]);
+            }
+
+            InstanceCount = (uint)(InstNodes?.Length ?? 0);
+            IndexCount = (uint)(BucketIndices.Items?.Length ?? 0);
         }
 
         public void Write(MetaNodeWriter writer)
         {
+            writer.WriteUInt32("Unknown_Ch", Unknown_Ch);
+            writer.WriteUInt32Array("BucketIndices", BucketIndices.Items);
+            writer.WriteInt32("InstTreeRootIndex", InstTreeRootIndex);
+            writer.WriteNodeArray("InstNodes", InstNodes);
         }
 
-        public Rsc6UnknownInstData[] GetAllInstances()
+        public Rsc6RoomBspNode[] GetAllInstances()
         {
-            if (Unknown_8h.Item == null) return null;
-            var list = new List<Rsc6UnknownInstData>();
-            CollectInstances(Unknown_8h.Item, list);
-            return list.ToArray();
+            if (InstTreeRoot.Item == null) return null;
+
+            var list = new List<Rsc6RoomBspNode>();
+            var visited = new HashSet<Rsc6RoomBspNode>(ReferenceEqualityComparer<Rsc6RoomBspNode>.Instance);
+            CollectInstances(InstTreeRoot.Item, list, visited);
+            return [.. list];
         }
 
-        private static void CollectInstances(Rsc6UnknownInstData instance, List<Rsc6UnknownInstData> list)
+        private static void CollectInstances(Rsc6RoomBspNode instance, List<Rsc6RoomBspNode> list, HashSet<Rsc6RoomBspNode> visited)
         {
-            if (instance == null || list.Contains(instance)) return;
+            if (instance == null || !visited.Add(instance)) return;
             list.Add(instance);
 
-            CollectInstances(instance.Unknown_20h.Item, list);
-            CollectInstances(instance.Unknown_24h.Item, list);
+            CollectInstances(instance.LeftChild.Item, list, visited);
+            CollectInstances(instance.RightChild.Item, list, visited);
+        }
+
+        private void AssignNodeIndices()
+        {
+            InstNodes = GetAllInstances();
+            var nodeToIndex = new Dictionary<Rsc6RoomBspNode, int>(ReferenceEqualityComparer<Rsc6RoomBspNode>.Instance);
+
+            for (int i = 0; i < InstNodes.Length; i++)
+            {
+                nodeToIndex[InstNodes[i]] = i;
+            }
+
+            InstTreeRootIndex = nodeToIndex[InstTreeRoot.Item];
+            foreach (var node in InstNodes)
+            {
+                if (node.BucketSpanACount > 0)
+                    node.BucketStartIndexA = (int)((node.BucketIndexSpanA.Position - BucketIndices.Position) / 4);
+
+                if (node.BucketSpanBCount > 0)
+                    node.BucketStartIndexB = (int)((node.BucketIndexSpanB.Position - BucketIndices.Position) / 4);
+
+                node.RootIndices = BucketIndices;
+                node.LeftIndex = (node.LeftChild.Item != null) ? nodeToIndex[node.LeftChild.Item] : -1;
+                node.RightIndex = (node.RightChild.Item != null) ? nodeToIndex[node.RightChild.Item] : -1;
+            }
         }
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6UnknownInstData : Rsc6BlockBase, MetaNode
+    public class Rsc6RoomBspNode : Rsc6BlockBase, MetaNode
     {
+        /*
+         * Node of a BSP tree used for spatial queries.
+         * Stores a split plane, child nodes and leaf bucket index spans.
+         * Leaf spans resolve to room indices returned by rage::rmpRoomGroupBase::QueryRoomInPoint.
+         */
+
         public override ulong BlockLength => 48;
-        public Vector4 Unknown_0h { get; set; }
-        public Rsc6RawArr<uint> Unknown_10h { get; set; }
-        public uint Unknown_14h { get; set; } //Always 1?
-        public uint Unknown_18h { get; set; } //ptr
-        public uint Unknown_1Ch { get; set; } //Always 0?
-        public Rsc6Ptr<Rsc6UnknownInstData> Unknown_20h { get; set; } //ptr
-        public Rsc6Ptr<Rsc6UnknownInstData> Unknown_24h { get; set; } //ptr, sometimes NULL
+        public Vector4 SplitPlane { get; set; } //Plane XYZ + distance W
+        public Rsc6RawArr<uint> BucketIndexSpanA { get; set; }
+        public uint BucketSpanACount { get; set; }
+        public Rsc6RawArr<uint> BucketIndexSpanB { get; set; }
+        public uint BucketSpanBCount { get; set; }
+        public Rsc6Ptr<Rsc6RoomBspNode> LeftChild { get; set; }
+        public Rsc6Ptr<Rsc6RoomBspNode> RightChild { get; set; }
         public uint Unknown_28h { get; set; } = 0xCDCDCDCD; //Padding
         public uint Unknown_2Ch { get; set; } = 0xCDCDCDCD; //Padding
 
-        public int IntSize;
+        public Rsc6RawArr<uint> RootIndices { get; set; }
+        public int BucketStartIndexA { get; set; } = -1;
+        public int BucketStartIndexB { get; set; } = -1;
+        public int LeftIndex { get; set; } = -1;
+        public int RightIndex { get; set; } = -1;
 
         public override void Read(Rsc6DataReader reader)
         {
-            Unknown_0h = reader.ReadVector4();
-            Unknown_10h = reader.ReadRawArrPtr<uint>();
-            Unknown_14h = reader.ReadUInt32();
-            Unknown_18h = reader.ReadUInt32();
-            Unknown_1Ch = reader.ReadUInt32();
-            Unknown_20h = reader.ReadPtr<Rsc6UnknownInstData>();
-            Unknown_24h = reader.ReadPtr<Rsc6UnknownInstData>();
+            SplitPlane = reader.ReadVector4();
+            BucketIndexSpanA = reader.ReadRawArrPtr<uint>();
+            BucketSpanACount = reader.ReadUInt32();
+            BucketIndexSpanB = reader.ReadRawArrPtr<uint>();
+            BucketSpanBCount = reader.ReadUInt32();
+            LeftChild = reader.ReadPtr<Rsc6RoomBspNode>();
+            RightChild = reader.ReadPtr<Rsc6RoomBspNode>();
             Unknown_28h = reader.ReadUInt32();
             Unknown_2Ch = reader.ReadUInt32();
+
+            BucketIndexSpanA = reader.ReadRawArrItems(BucketIndexSpanA, BucketSpanACount);
+            BucketIndexSpanB = reader.ReadRawArrItems(BucketIndexSpanB, BucketSpanBCount);
         }
 
         public override void Write(Rsc6DataWriter writer)
         {
+            writer.WriteVector4(SplitPlane);
+
+            if (BucketSpanACount > 0 && BucketStartIndexA >= 0)
+                writer.WritePtrEmbed(RootIndices.Items, RootIndices.Items, (ulong)(BucketStartIndexA * 4));
+            else
+                writer.WriteUInt32(0);
+
+            writer.WriteUInt32(BucketSpanACount);
+
+            if (BucketSpanBCount > 0 && BucketStartIndexB >= 0)
+                writer.WritePtrEmbed(RootIndices.Items, RootIndices.Items, (ulong)(BucketStartIndexB * 4));
+            else
+                writer.WriteUInt32(0);
+
+            writer.WriteUInt32(BucketSpanBCount);
+            writer.WritePtr(LeftChild);
+            writer.WritePtr(RightChild);
+            writer.WriteUInt32(Unknown_28h);
+            writer.WriteUInt32(Unknown_2Ch);
         }
 
         public void Read(MetaNodeReader reader)
         {
+            SplitPlane = Rpf6Crypto.ToXYZ(reader.ReadVector4("SplitPlane"));
+            BucketIndexSpanA = new(reader.ReadUInt32Array("BucketIndexSpanA"));
+            BucketIndexSpanB = new(reader.ReadUInt32Array("BucketIndexSpanB"));
+            BucketStartIndexA = reader.ReadInt32("BucketStartIndexA", -1);
+            BucketStartIndexB = reader.ReadInt32("BucketStartIndexB", -1);
+            LeftIndex = reader.ReadInt32("LeftIndex", -1);
+            RightIndex = reader.ReadInt32("RightIndex", -1);
+
+            BucketSpanACount = (uint)(BucketIndexSpanA.Items?.Length ?? 0);
+            BucketSpanBCount = (uint)(BucketIndexSpanB.Items?.Length ?? 0);
         }
 
         public void Write(MetaNodeWriter writer)
         {
+            writer.WriteVector4("SplitPlane", SplitPlane);
+
+            if (BucketSpanACount > 0)
+            {
+                writer.WriteUInt32Array("BucketIndexSpanA", BucketIndexSpanA.Items);
+                writer.WriteInt32("BucketStartIndexA", BucketStartIndexA);
+            }
+
+            if (BucketSpanBCount > 0)
+            {
+                writer.WriteUInt32Array("BucketIndexSpanB", BucketIndexSpanB.Items);
+                writer.WriteInt32("BucketStartIndexB", BucketStartIndexB);
+            }
+
+            writer.WriteInt32("LeftIndex", LeftIndex);
+            writer.WriteInt32("RightIndex", RightIndex);
+        }
+
+        public bool GetLeafData(Vector3 point, out uint roomIndex) //rage::spdBspTree::GetLeafData
+        {
+            roomIndex = 0xFFFFFFFF;
+            var node = this;
+
+            while (node != null)
+            {
+                var side = (point.X * node.SplitPlane.X) + (point.Y * node.SplitPlane.Y) + (point.Z * node.SplitPlane.Z) - node.SplitPlane.W;
+                if (side < 0.0f)
+                {
+                    var left = node.LeftChild.Item;
+                    if (left == null)
+                    {
+                        var span = node.BucketIndexSpanA.Items;
+                        if (span != null && span.Length > 0)
+                        {
+                            roomIndex = span[0];
+                            return true;
+                        }
+                        return false;
+                    }
+                    node = left;
+                }
+                else
+                {
+                    var right = node.RightChild.Item;
+                    if (right == null)
+                    {
+                        var span = node.BucketIndexSpanB.Items;
+                        if (span != null && span.Length > 0)
+                        {
+                            roomIndex = span[0];
+                            return true;
+                        }
+                        return false;
+                    }
+                    node = right;
+                }
+            }
+            return false;
         }
     }
 
@@ -2575,7 +3080,7 @@ namespace CodeX.Games.RDR1.RSC6
         public short[] GridSubDivs { get; set; } //m_gridSubDivs[5]
         public int NumLODLevels { get; set; } //m_numLODlevels
 
-        public string[] TextureDicts => Rsc6DataMap.Flatten(TextureDictionaryLookup.Items, e => e.ToString()).ToArray(); //Array size equal to lookup capacity
+        public string[] TextureDicts => [.. Rsc6DataMap.Flatten(TextureDictionaryLookup.Items, e => e.ToString())]; //Array size equal to lookup capacity
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -3044,29 +3549,23 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public struct Rsc6StreamableBase //rage::pgStreamableBase
+    public struct Rsc6StreamableBase(bool fragment) //rage::pgStreamableBase
     {
         /*
          * A base class in RAGE Engine that seems to be used for handling streamed resources.
          * Manages assets such as models, textures and map elements that need to be loaded and unloaded dynamically (can track the residency state).
          *
          * Assets are scheduled for loading, a scheduler processes assets every frame, they're managed in priority queues.
-         * They can be evicted when no longer loading using pgStreamableBase::Shutdown()
+         * They can be evicted when no longer loading using pgStreamableBase::Shutdown().
          *
-         * Basic Scheduler (by default) loads assets every frame
+         * Basic Scheduler (by default) loads assets every frame.
          * pgQueueScheduler ensures assets are loaded only once.
          */
 
-        public uint VFT { get; set; } //Always 0, VFT placeholder
-        public int Handle { get; set; } = -1; //Always -1 (pgStreamer::Error), handle of a file
-        public uint Unknown_8h { get; set; } //0 for #ft, 64 for #tl/#si
-        public uint State { get; set; } //Always 0, (State &= 0xCFFFFFFF | _state) -> rage::pgStreamableBase::State
-
-        public Rsc6StreamableBase(bool fragment)
-        {
-            Handle = -1;
-            Unknown_8h = fragment ? 0U : 64U;
-        }
+        public uint VFT { get; set; } //Always 0, placeholder
+        public int Handle { get; set; } = -1;
+        public uint Unknown_8h { get; set; } = fragment ? 0u : 64u;
+        public uint State { get; set; } //Always 0
 
         public readonly int GetVirtualSize() //rage::pgStreamableBase::GetVirtualSize
         {
@@ -3077,13 +3576,45 @@ namespace CodeX.Games.RDR1.RSC6
         {
             return (Handle == -1) ? -1 : (Handle >> 4) & 0x7FFF000;
         }
+
+        public readonly string GetHandleName() //rage::pgStreamableBase::GetHandleName
+        {
+            /*
+             * uint8_t collectionIndex = (Handle >> 16) & 0xFF;
+             * rage::fiCollection* collection = rage::fiCollection::sm_Collections[collectionIndex];
+             * return collection->GetFullName(Handle);
+             */
+
+            if (Handle == -1)
+                return "[Invalid pgStreamable]";
+            else if ((Handle & 0x80000000) != 0)
+                return "Memory allocation";
+            else
+                return string.Format("Resource with handle 0x{0:X}", Handle);
+        }
+
+        public void SetState(uint state) //rage::pgStreamableBase::SetState
+        {
+            State = (State & 0xCFFFFFFF) | state;
+        }
     }
 
-    public enum Rsc6AttributeType : uint
+    public enum Rsc6AttributeClassType : uint
     {
-        PROPS_DOORS_1 = 1,
-        PROPS_GRINGOS = 3,
-        PROPS_DOORS_2 = 5
+        NAME_ATTRIBUTE = 1, //RDR2NameAttribute
+        GRINGO_ATTRIBUTE = 2, //RDR2GringoAttribute
+        DOOR_ATTRIBUTE = 3, //RDR2DoorAttribute, not used
+        PROP_INSTANCE_ATTRIBUTE = 4, //RDR2PropInstanceAttribute, not used
+        DOOR_LOCK_ATTRIBUTE = 5 //RDR2DoorLockAttribute
+    }
+
+    public enum Rsc6AttributeTargetType : uint
+    {
+        NONE = 0,
+        PROP_INSTANCE = 1,
+        MATRIX_AT_OFFSET80 = 2,
+        MATRIX_PROVIDER = 3,
+        MATRIX_PROVIIDER_ALT = 4
     }
 
     public enum Rsc6MayaCurveForm : short

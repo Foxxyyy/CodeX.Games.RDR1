@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using static CodeX.Core.Shaders.DefaultShader;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
 
@@ -279,9 +280,9 @@ namespace CodeX.Games.RDR1.RSC6
             Unknown_3Ch = reader.ReadUInt32();
             BoneIds = reader.ReadRawArrItems(BoneIds, BoneIdsCount);
 
-            if (VertexBuffer.Item != null) //hack to fix stupid "locked" things
+            if (VertexBuffer.Item != null) //Hack to fix stupid "locked" things
             {
-                VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout ?? new VertexLayout("P"); //TODO: how to handle null VertexBuffer.Layout?
+                VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout ?? new VertexLayout("P");
                 VertexData = VertexBuffer.Item.LockedData.Items ?? VertexBuffer.Item.VertexData.Items;
 
                 if (VertexCount == 0)
@@ -390,6 +391,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             var elems = VertexLayout.Elements;
             var elemcount = elems.Length;
+
             for (int index = 0; index < VertexData.Length; index += VertexStride)
             {
                 for (int i = 0; i < elemcount; i++)
@@ -427,12 +429,26 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6VertexComponentTypes.UpdateFVF(channel, ref fvf);
             }
 
+            var type = fvf switch
+            {
+                65 => Rsc6VertexDeclarationTypes.TERRAIN, //PT (rdr2_flattenterrain, rdr2_pond_water, rdr2_scope_lens, rdr2_binoculars_lens)
+                49369 => Rsc6VertexDeclarationTypes.TERRAIN, //PNCTTXX (rdr2_cliffwall, rdr2_cliffwall_ao, rdr2_cliffwall_ao_low_lod)
+                49401 => Rsc6VertexDeclarationTypes.TERRAIN, //PNCCTTXX (rdr2_terrain_blend, rdr2_flattenterrain_blend, rdr2_cliffwall_alpha)
+                _ => Rsc6VertexDeclarationTypes.DEFAULT,
+            };
+
+            //16473 (PNCTX) can be both default and terrain, so check by format here
+            if (elems.Any(e => e.Format == VertexElementFormat.Short2N))
+            {
+                type = Rsc6VertexDeclarationTypes.TERRAIN;
+            }
+
             var layout = new Rsc6VertexDeclaration()
             {
                 FVF = fvf,
                 FVFSize = (byte)VertexStride,
                 ChannelCount = (byte)VertexLayout.ElementCount,
-                Types = Rsc6VertexDeclarationTypes.DEFAULT
+                Types = type
             };
 
             var ibuf = new Rsc6IndexBuffer
@@ -529,6 +545,9 @@ namespace CodeX.Games.RDR1.RSC6
                     case 0x707EF967: //rdr2_flattenterrain_blend
                         SetFlatTerrainBlending(shader);
                         break;
+                    case 0xF9DD37D9: //rdr2_terrain_low_lod
+                        SetupLod4Terrain(shader);
+                        break;
                     case 0xB34AF114: //rdr2_layer_2_nospec_ambocc_decal, verify
                     case 0x5A170205: //rdr2_layer_2_nospec_ambocc
                     case 0x2e1239a8: //rdr2_low_lod
@@ -592,13 +611,13 @@ namespace CodeX.Games.RDR1.RSC6
                 switch (bucket)
                 {
                     default: throw new Exception("Unknown RenderBucket");
-                    case 0: ShaderBucket = ShaderBucket.Solid; break;  //Opaque
+                    case 0: ShaderBucket = ShaderBucket.Solid; break; //Opaque
                     case 1: ShaderBucket = ShaderBucket.Solid; break; //Double-sided opaque
                     case 2: ShaderBucket = ShaderBucket.Alpha1; break; //Hair
                     case 3: ShaderBucket = ShaderBucket.Alpha1; break; //AlphaMask
                     case 4: ShaderBucket = ShaderBucket.Alpha2; break; //Water
                     case 5: ShaderBucket = ShaderBucket.Alpha2; break; //Transparent
-                    case 6: ShaderBucket = ShaderBucket.Alpha2; break; //DistortionGlass
+                    case 6: ShaderBucket = ShaderBucket.Translucency; break; //DistortionGlass
                     case 8: ShaderBucket = ShaderBucket.Alpha1; ShaderInputs.SetUInt32(0x0188ECE8, 1u); break; //Alpha
                 }
 
@@ -628,23 +647,39 @@ namespace CodeX.Games.RDR1.RSC6
                         ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
                         break;
                     case 0xB71272EA: //rdr2_flattenterrain
-                        ShaderInputs.SetUInt32(0xE0D5A584, (uint)DefaultShader.NormalMapConfig.DirectWY); //"NormalMapConfig"
+                        ShaderInputs.SetUInt32(0xE0D5A584, (uint)NormalMapConfig.DirectWY); //NormalMapConfig
                         break;
                     case 0x4C03B90B: //rdr2_shadowonly
-                        ShaderInputs.SetUInt32(0x0188ECE8, 1U);  //DecalMode - Hack to remove useless meshes
+                        ShaderInputs.SetUInt32(0x0188ECE8, 1U); //DecalMode - Hack to remove useless meshes
                         break;
                     case 0x227C5611: //rdr2_cliffwall_alpha
                         ShaderInputs.SetFloat(0x7CB163F5, 1.5f); //BumpScales
+                        break;
+                    case 0xa042c1ce: //rdr2_diffuse
+                    case 0x2e9c4c9e: //rdr2_bump_ambocc
+                    case 0x387e0fde: //rdr2_low_lod_nodirt
+                    case 0xed7cd8d7: //rdr2_low_lod_nodirt_singlesided
+                        ShaderInputs.SetUInt32(0x2905BED7, 5); //ColourTintMode
+                        break;
+                    case 0x32A4918E: //rdr2_alpha
+                        ShaderInputs.SetFloat(0x4D52C5FF, 1.0f); //AlphaScale
+                        ShaderInputs.SetUInt32(0x2905BED7, 5); //ColourTintMode
+                        break;
+                    case 0x4bc61b93: //rdr2_glass_notint
+                    case 0x0018e2b6: //rdr2_glass_notint_shared
+                        ShaderInputs.SetFloat(0x4D52C5FF, 0.10f); //AlphaScale
+                        ShaderInputs.SetUInt32(0x2905BED7, 0); //ColourTintMode
                         break;
                 }
             }
         }
 
-        private void SetupDefaultShader(Rsc6ShaderFX s) //diffuse + bump + ambocc
+        private void SetupDefaultShader(Rsc6ShaderFX s) //diffuse + bump + (ambocc/aospec)
         {
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
+            ShaderInputs.SetUInt32(0xE0D5A584, (uint)NormalMapConfig.NormalmapYW); //NormalMapConfig
+            ShaderInputs.SetUInt32(0x2905BED7, 1); //ColourTintMode
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
@@ -672,6 +707,14 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0x46B7C64F: //bumpsampler
                             case 0x8AC11CB0: //normalsampler
                                 Textures[1] = tex;
+                                break;
+                            case 0x608799C6: //specsampler
+                                Textures[2] = tex;
+                                ShaderInputs.SetUInt32(0x249983FD, (uint)ParamsMapConfig.RDR1SpecAmbOcc); //ParamsMapConfig
+                                break;
+                            case 0xDB88014D: //amboccsampler
+                                Textures[2] = tex;
+                                ShaderInputs.SetUInt32(0x249983FD, (uint)ParamsMapConfig.RDR1BumpAmbOcc); //ParamsMapConfig
                                 break;
                         }
                     }
@@ -857,16 +900,49 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        private void SetupLod4Terrain(Rsc6ShaderFX s)
+        {
+            SetDefaultShader();
+            ShaderInputs = Shader.CreateShaderInputs();
+            ShaderInputs.SetUInt32(0x14AB52EB, 1); //MeshTransformMode
+
+            if (s == null) return;
+            var parms = s.ParametersList.Item?.Parameters;
+            if (parms == null) return;
+
+            for (int p = 0; p < parms.Length; p++)
+            {
+                var parm = parms[p];
+                if (parm.DataType != 0)
+                {
+                    switch (parm.Hash)
+                    {
+                        case 0x79D622FE: //tilecenterpos, xyz=center, w=scale
+                            var tc = parm.Vector;
+                            var m = Matrix3x4.CreateTransform(new Vector3(tc.Z, tc.X, tc.Y), new Vector3(tc.W, tc.W, tc.W));
+                            ShaderInputs.SetFloat3x4(0x467A3F64, m); //MeshTransform
+                            break;
+                    }
+                }
+            }
+        }
+
         private void SetupClifwallTerrainShader(Rsc6ShaderFX s)
         {
             SetCoreShader<BlendShader>(ShaderBucket.Solid);
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0x9B920BD, 24); //BlendMode
+            ShaderInputs.SetFloat4(0x7CB163F5, Vector4.Zero); //BumpScales
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
             Textures = new Texture[3];
+
+            if (s.Name == 0x227C5611) //rdr2_cliffwall_alpha
+            {
+                ShaderInputs.SetFloat4(0x7CB163F5, new Vector4(0, 1, 0, 0)); //BumpScales
+            }
 
             for (int k = 0; k < parms.Length; k++)
             {
@@ -922,7 +998,9 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[3];
+
+            var bumpScales = Vector4.Zero;
+            Textures = new Texture[4];
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -947,6 +1025,9 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0x46B7C64F: //bumpsampler
                                 Textures[2] = tex;
                                 break;
+                            case 0xDB88014D: //amboccsampler
+                                Textures[3] = tex;
+                                break;
                         }
                     }
                 }
@@ -955,11 +1036,15 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (parm.Hash)
                     {
                         case 0xF6712B81: //bumpiness
-                            ShaderInputs.SetFloat4(0x7CB163F5, parm.Vector * 0.5f); //BumpScales
+                            bumpScales.X = parm.Vector.X * 0.5f;
+                            break;
+                        case 0x5279419E: //dirtmapfactor
+                            bumpScales.Y = parm.Vector.X;
                             break;
                     }
                 }
             }
+            ShaderInputs.SetFloat4(0x7CB163F5, bumpScales); //BumpScales
         }
 
         private void SetDiffuse3Shader(Rsc6ShaderFX s) //diffuse + diffuse2 + diffuse3 + bump + ambocc
@@ -971,7 +1056,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[4];
+            Textures = new Texture[5];
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -998,17 +1083,26 @@ namespace CodeX.Games.RDR1.RSC6
                             case 0x46B7C64F: //bumpsampler
                                 Textures[3] = tex;
                                 break;
+                            case 0xDB88014D: //amboccsampler
+                                Textures[4] = tex;
+                                break;
                         }
                     }
                 }
                 else
                 {
+                    var bumpScales = Vector4.Zero;
                     switch (parm.Hash)
                     {
                         case 0xF6712B81: //bumpiness
-                            ShaderInputs.SetFloat4(0x7CB163F5, parm.Vector * 0.5f); //BumpScales
+                            bumpScales.X = parm.Vector.X * 0.5f;
+                            break;
+                        case 0x5279419E: //dirtmapfactor
+                            bumpScales.Y = parm.Vector.X;
                             break;
                     }
+
+                    ShaderInputs.SetFloat4(0x7CB163F5, bumpScales); //BumpScales
                 }
             }
         }
@@ -1073,7 +1167,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
+            ShaderInputs.SetUInt32(0xE0D5A584, (uint)NormalMapConfig.NormalmapYW); //NormalMapConfig
             ShaderInputs.SetUInt32(0x65DD2E63, 1); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 1); //MeshWindAmount
             ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode
@@ -1084,8 +1178,18 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
+
             Textures = new Texture[5];
             Textures[3] = Noise.Perm;
+
+            if (Rsc6DataWriter.UseProjectExplorer) //Use tint texture/instanced grass coords only in map viewer
+            {
+                ShaderInputs.SetUInt32(0x2905BED7, 4); //ColourTintMode
+                Textures[4] = new Texture() //TintSampler
+                {
+                    Name = "debriscolorboth.dds"
+                };
+            }
 
             for (int p = 0; p < parms.Length; p++)
             {
@@ -1124,7 +1228,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
-            ShaderInputs.SetUInt32(0xE0D5A584, 30); //NormalMapConfig
+            ShaderInputs.SetUInt32(0xE0D5A584, (uint)NormalMapConfig.NormalmapYW); //NormalMapConfig
             ShaderInputs.SetUInt32(0x65DD2E63, 5); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 0.5f); //MeshWindAmount
             ShaderInputs.SetFloat(0xB52CC88F, MathF.Max(MathF.Max(BoundingBox.Maximum.Z, BoundingBox.Size.Z) * 3, 5)); //MeshWindHeight
@@ -1132,7 +1236,7 @@ namespace CodeX.Games.RDR1.RSC6
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
             if (parms == null) return;
-            Textures = new Texture[5];
+            Textures = new Texture[4];
             Textures[3] = Noise.Perm;
 
             for (int p = 0; p < parms.Length; p++)
@@ -1170,7 +1274,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         private void SetupWaterShader(Rsc6ShaderFX s, Model model)
         {
-            var rippleSign = 1.0f;//use this to flip the direction of ripples up/down in case of handedness swap (currently won't do anything as ripples are just symmetrical sine waves! but for choppy waves this is important)
+            var rippleSign = 1.0f; //Use this to flip the direction of ripples up/down in case of handedness swap (currently won't do anything as ripples are just symmetrical sine waves! but for choppy waves this is important)
             SetCoreShader<RefractShader>(ShaderBucket.Translucency);
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0x047FEB72, 1); //NormalsMode - animated water
@@ -1609,7 +1713,7 @@ namespace CodeX.Games.RDR1.RSC6
          * models within the drawable.
          */
 
-        public virtual ulong BlockLength => 120;
+        public virtual ulong BlockLength => HasRiverWaterShader ? 144UL : 128UL;
         public ulong FilePosition { get; set; }
         public bool IsPhysical => false;
         public uint VFT { get; set; } = 0x01908F7C;
@@ -1633,7 +1737,13 @@ namespace CodeX.Games.RDR1.RSC6
         public uint DrawBucketMaskVlow { get; set; } //m_BucketMask[3]
         public float BoundingSphereRadius { get; set; } //m_CullRadius
         public uint PpuOnly { get; set; } //m_PpuOnly, 0 or 1 if PPU is set as default processor
-        public JenkHash NameHash { get; set; }
+        public ulong Unknown_78h { get; set; } //Always 0
+        public Rsc6RawPtrArr<Rsc6DecalBSP> DecalBSP { get; set; } //m_DecalBSP
+        public Rsc6RawPtrArr<Rsc6WaterReflectionPlaneGrid> WaterReflectionPlanes { get; set; } //m_WaterReflectionPlanes
+        public ushort DecalBSPCount { get; set; } //m_DecalBSPCount
+        public ushort WaterReflectionPlanesCount { get; set; } //m_WaterReflectionPlanesCount
+
+        private bool HasRiverWaterShader => ShaderGroup.Item?.Shaders.Items?.Any(s => s.Name == 0xA1100B4E || s.Name == 0x372E2B02) == true; //rdr2_river_water or rdr2_river_water_joint
 
         public virtual void Read(Rsc6DataReader reader)
         {
@@ -1658,6 +1768,17 @@ namespace CodeX.Games.RDR1.RSC6
             DrawBucketMaskVlow = reader.ReadUInt32();
             BoundingSphereRadius = reader.ReadSingle();
             PpuOnly = reader.ReadUInt32();
+            Unknown_78h = reader.ReadUInt64();
+
+            if (HasRiverWaterShader) //Read extra data for river water shader support
+            {
+                DecalBSP = reader.ReadRawPtrArrPtr<Rsc6DecalBSP>();
+                WaterReflectionPlanes = reader.ReadRawPtrArrPtr<Rsc6WaterReflectionPlaneGrid>();
+                DecalBSPCount = reader.ReadUInt16();
+                WaterReflectionPlanesCount = reader.ReadUInt16();
+                DecalBSP = reader.ReadRawPtrArrItem(DecalBSP, DecalBSPCount);
+                WaterReflectionPlanes = reader.ReadRawPtrArrItem(WaterReflectionPlanes, WaterReflectionPlanesCount);
+            }
 
             Name = Path.GetFileNameWithoutExtension(reader.FileEntry.Name);
             Lods =
@@ -1668,14 +1789,14 @@ namespace CodeX.Games.RDR1.RSC6
                 LodVlow.Item
             ];
 
-            if (LodHigh.Item != null) LodHigh.Item.LodDist = LodDistHigh;
-            if (LodMed.Item != null) LodMed.Item.LodDist = LodDistMed;
-            if (LodLow.Item != null) LodLow.Item.LodDist = LodDistLow;
-            if (LodVlow.Item != null) LodVlow.Item.LodDist = LodDistVlow;
+            LodHigh.Item?.LodDist = LodDistHigh;
+            LodMed.Item?.LodDist = LodDistMed;
+            LodLow.Item?.LodDist = LodDistLow;
+            LodVlow.Item?.LodDist = LodDistVlow;
 
             UpdateAllModels();
             SetSkeleton(SkeletonRef.Item);
-            AssignShaders();
+            AssignShaders(ShaderGroup.Item);
             CreateTexturePack(reader.FileEntry);
 
             UpdateBounds();
@@ -1720,6 +1841,15 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(DrawBucketMaskVlow);
             writer.WriteSingle(BoundingSphereRadius);
             writer.WriteUInt32(PpuOnly);
+            writer.WriteUInt64(Unknown_78h);
+
+            if (HasRiverWaterShader)
+            {
+                writer.WriteUInt16(DecalBSPCount);
+                writer.WriteUInt16(WaterReflectionPlanesCount);
+                writer.WriteRawPtrArr(DecalBSP);
+                writer.WriteRawPtrArr(WaterReflectionPlanes);
+            }
         }
 
         public override void Read(MetaNodeReader reader)
@@ -1747,17 +1877,17 @@ namespace CodeX.Games.RDR1.RSC6
             PpuOnly = reader.ReadUInt32("PpuOnly");
 
             Skeleton = SkeletonRef.Item;
-            Lods = new[]
-            {
+            Lods =
+            [
                 LodHigh.Item,
                 LodMed.Item,
                 LodLow.Item,
                 LodVlow.Item
-            };
+            ];
 
             UpdateAllModels();
             SetSkeleton(SkeletonRef.Item);
-            AssignShaders();
+            AssignShaders(ShaderGroup.Item);
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -1784,26 +1914,23 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32("PpuOnly", PpuOnly);
         }
 
-        public void AssignShaders()
+        public void AssignShaders(Rsc6ShaderGroup group)
         {
-            //Assign embedded textures to mesh for rendering
-            if ((ShaderGroup.Item?.Shaders.Items != null) && (AllModels != null))
+            if (AllModels == null) return;
+            var shaders = group?.Shaders.Items;
+            if (shaders == null) return;
+
+            foreach (var model in AllModels.Cast<Rsc6DrawableModel>())
             {
-                var shaders = ShaderGroup.Item?.Shaders.Items;
-                for (int i = 0; i < AllModels.Length; i++)
+                var geoms = model?.Geometries.Items;
+                if (geoms == null) continue;
+
+                for (int i = 0; i < model.Meshes.Length; i++)
                 {
-                    var model = AllModels[i];
-                    if (model.Meshes != null)
-                    {
-                        for (int j = 0; j < model.Meshes.Length; j++)
-                        {
-                            if (model.Meshes[j] is Rsc6DrawableGeometry mesh)
-                            {
-                                var shader = (mesh.ShaderID < shaders.Length) ? shaders[mesh.ShaderID] : null;
-                                mesh.SetShader(shader, model);
-                            }
-                        }
-                    }
+                    var geom = geoms[i];
+                    var sid = geom.ShaderID;
+                    var shader = (sid < shaders.Length) ? shaders[sid] : null;
+                    geom.SetShader(shader, model);
                 }
             }
         }
@@ -1965,6 +2092,123 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
+    public class Rsc6DecalBSP : IRsc6Block, MetaNode //DecalBSP
+    {
+        /*
+         * Decal Binary Space Partitioning
+         * Used to efficiently project and manage decals (splats/overlays) on complex surfaces.
+         */
+
+        public ulong BlockLength => 48;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public Rsc6Arr<DecalBSPNode> Nodes { get; set; } //m_Nodes
+        public Rsc6Arr<byte> Triangles { get; set; } //m_Triangles
+        public DecalBSPBounds Bounds { get; set; } //m_Bounds
+
+        public void Read(Rsc6DataReader reader)
+        {
+            Nodes = reader.ReadArr<DecalBSPNode>();
+            Triangles = reader.ReadArr<byte>();
+            Bounds = reader.ReadStruct<DecalBSPBounds>();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteArr(Nodes);
+            writer.WriteArr(Triangles);
+            writer.WriteStruct(Bounds);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Nodes = new(reader.ReadStructArray<DecalBSPNode>("Nodes"));
+            Triangles = new(reader.ReadByteArray("Triangles"));
+            Bounds = reader.ReadStruct<DecalBSPBounds>("Bounds");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteStructArray("Nodes", Nodes.Items);
+            writer.WriteByteArray("Triangles", Triangles.Items);
+            writer.WriteStruct("Bounds", Bounds);
+        }
+
+        public struct DecalBSPNode //DecalBSP::BSPNode, indices to recursively walk a BSP tree.
+        {
+            public short Left; //m_iLeft
+            public short Right; //m_iRight
+        }
+
+        public struct DecalBSPBounds //DecalBSP::BSPBounds, spatial extents covered by the decal BSP. It is used as a fast rejection test before traversing BSP nodes or evaluating triangle data.
+        {
+            public Vector4 Min; //m_min
+            public Vector4 Max; //m_max
+        }
+    }
+
+    [TC(typeof(EXP))]
+    public class Rsc6WaterReflectionPlaneGrid : IRsc6Block, MetaNode //WaterReflectionPlaneGrid
+    {
+        /*
+         * Water Reflection Plane Grid
+         * Spatial grid of planar reflection surfaces used for water rendering.
+         * Each grid represents a tiled region of water where planar reflections can be
+         * evaluated efficiently without testing every reflection plane every frame.
+         */
+
+        public ulong BlockLength => 28;
+        public ulong FilePosition { get; set; }
+        public bool IsPhysical => false;
+        public Rsc6Arr<Vector4> ReflectionPlanes { get; set; } //m_ReflectionPlanes, each vector is a plane equation (A,B,C,D)
+        public float GridCellWorldSize { get; set; } //m_GridCellWorldSize, size of one grid cell in world units
+        public int GridSizeX { get; set; } //m_GridSizeX, number of grid cells along the X axis
+        public int GridSizeZ { get; set; } //m_GridSizeZ, number of grid cells along the Z axis
+        public float BoundMinX { get; set; } //m_BoundMinX, minimum world space X coordinate covered by the grid
+        public float BoundMinZ { get; set; } //m_BoundMinZ, minimum world space Z coordinate covered by the grid
+
+        public void Read(Rsc6DataReader reader)
+        {
+            ReflectionPlanes = reader.ReadArr<Vector4>();
+            GridCellWorldSize = reader.ReadSingle();
+            GridSizeX = reader.ReadInt32();
+            GridSizeZ = reader.ReadInt32();
+            BoundMinX = reader.ReadSingle();
+            BoundMinZ = reader.ReadSingle();
+        }
+
+        public void Write(Rsc6DataWriter writer)
+        {
+            writer.WriteArr(ReflectionPlanes);
+            writer.WriteSingle(GridCellWorldSize);
+            writer.WriteInt32(GridSizeX);
+            writer.WriteInt32(GridSizeZ);
+            writer.WriteSingle(BoundMinX);
+            writer.WriteSingle(BoundMinZ);
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            ReflectionPlanes = new(reader.ReadVector4Array("ReflectionPlanes"));
+            GridCellWorldSize = reader.ReadSingle("GridCellWorldSize");
+            GridSizeX = reader.ReadInt32("GridSizeX");
+            GridSizeZ = reader.ReadInt32("GridSizeZ");
+            BoundMinX = reader.ReadSingle("BoundMinX");
+            BoundMinZ = reader.ReadSingle("BoundMinZ");
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteVector4Array("ReflectionPlanes", ReflectionPlanes.Items);
+            writer.WriteSingle("GridCellWorldSize", GridCellWorldSize);
+            writer.WriteInt32("GridSizeX", GridSizeX);
+            writer.WriteInt32("GridSizeZ", GridSizeZ);
+            writer.WriteSingle("BoundMinX", BoundMinX);
+            writer.WriteSingle("BoundMinZ", BoundMinZ);
+        }
+    }
+
+    [TC(typeof(EXP))]
     public class Rsc6Skeleton : IRsc6Block, MetaNode //rage::crSkeleton
     {
         /*
@@ -2105,12 +2349,12 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6RawArr<Matrix4x4> InverseJointScaleOrients { get; set; } //m_CumulativeInverseJointScaleOrients, inverse cumulative joint scale orient matrices
         public Rsc6RawArr<Matrix4x4> DefaultTransforms { get; set; } //m_DefaultTransforms, default bone transform
         public Rsc6RawArr<Matrix4x4> CumulativeDefaultTransforms { get; set; } //m_CumulativeDefaultTransforms, default bone transform * parent bone transform
-        public ushort BoneCount { get; set; } // m_NumBones, number of bones in skeleton
+        public ushort BoneCount { get; set; } //m_NumBones, number of bones in skeleton
         public ushort NumTranslationDofs { get; set; } //m_NumTranslationDofs
         public ushort NumRotationDofs { get; set; } //m_NumRotationDofs
         public ushort NumScaleDofs { get; set; } //m_NumScaleDofs
         public uint Flags { get; set; } = 10; //m_Flags, range from 9 to 15?
-        public Rsc6ManagedArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable, rage::crSkeletonData
+        public Rsc6ManagedArr<Rsc6SkeletonBoneTag> BoneIDs { get; set; } //m_BoneIdTable
         public uint RefCount { get; set; } = 1; //m_RefCount
         public uint Signature { get; set; } //m_Signature, skeleton signature (a hash value that identifies the skeleton's structure, the order of the branches of child bones matter)
         public Rsc6Str JointDataFileName { get; set; } //m_JointDataFileName, always NULL?
@@ -2590,7 +2834,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(Unknown_DCh);
         }
 
-        public override void Read(MetaNodeReader reader) //6 5 7 32 30 4
+        public override void Read(MetaNodeReader reader)
         {
             NameStr = new(reader.ReadString("Name"));
             Index = reader.ReadInt32("Index");
@@ -2970,7 +3214,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             var texDict = new Rsc6TextureDictionary()
             {
-                Textures = new(dict.Select(tex => (Rsc6Texture)tex).ToArray())
+                Textures = new([.. dict.Select(tex => (Rsc6Texture)tex)])
             };
 
             writer.WriteNode("TextureDictionary", texDict);
@@ -3047,7 +3291,7 @@ namespace CodeX.Games.RDR1.RSC6
                 case Rsc6ShaderParamType.Texture:
                     var tex = reader.ReadString("@texture");
                     if (tex == null) break;
-                    if (tex.Contains('-')) tex = tex.Replace("-", ":");
+
                     Texture = new Rsc6TextureBase()
                     {
                         Name = tex + ".dds",
@@ -3401,7 +3645,7 @@ namespace CodeX.Games.RDR1.RSC6
         public byte ParameterCount { get; set; } //Count
         public byte RenderBucket { get; set; } //DrawBucket
         public byte PhysMtl { get; set; } //PhysMtl, always 0
-        public byte Flags { get; set; } //Flags, always 0 (can be 0x01 or 0x80 in other games)
+        public byte Flags { get; set; } //Flags, always 0
         public ushort ParameterSize { get; set; } //SpuSize
         public ushort ParameterDataSize { get; set; } //TotalSize
         public JenkHash FileName { get; set; } //MaterialHashCode, valid at resource time if we inherited from material, in RDR1 always 0
@@ -3610,47 +3854,46 @@ namespace CodeX.Games.RDR1.RSC6
 
         private static VertexElementFormat GetEngineElementFormat(Rsc6VertexComponentType t)
         {
-            switch (t)
+            return t switch
             {
-                case Rsc6VertexComponentType.Half2: return VertexElementFormat.Half2;
-                case Rsc6VertexComponentType.Float: return VertexElementFormat.Float;
-                case Rsc6VertexComponentType.Half4: return VertexElementFormat.Half4;
-                case Rsc6VertexComponentType.FloatUnk: return VertexElementFormat.Float;
-                case Rsc6VertexComponentType.Float2: return VertexElementFormat.Float2;
-                case Rsc6VertexComponentType.Float3: return VertexElementFormat.Float3;
-                case Rsc6VertexComponentType.Float4: return VertexElementFormat.Float4;
-                case Rsc6VertexComponentType.UByte4: return VertexElementFormat.UByte4;
-                case Rsc6VertexComponentType.Colour: return VertexElementFormat.Colour;
-                case Rsc6VertexComponentType.Dec3N: return VertexElementFormat.Dec3N;
-                case Rsc6VertexComponentType.UShort2N: return VertexElementFormat.Short2N;
-                default: return VertexElementFormat.None;
-            }
+                Rsc6VertexComponentType.Half2 => VertexElementFormat.Half2,
+                Rsc6VertexComponentType.Float => VertexElementFormat.Float,
+                Rsc6VertexComponentType.Half4 => VertexElementFormat.Half4,
+                Rsc6VertexComponentType.FloatUnk => VertexElementFormat.Float,
+                Rsc6VertexComponentType.Float2 => VertexElementFormat.Float2,
+                Rsc6VertexComponentType.Float3 => VertexElementFormat.Float3,
+                Rsc6VertexComponentType.Float4 => VertexElementFormat.Float4,
+                Rsc6VertexComponentType.UByte4 => VertexElementFormat.UByte4,
+                Rsc6VertexComponentType.Colour => VertexElementFormat.Colour,
+                Rsc6VertexComponentType.Dec3N => VertexElementFormat.Dec3N,
+                Rsc6VertexComponentType.UShort2N => VertexElementFormat.Short2N,
+                _ => VertexElementFormat.None,
+            };
         }
 
         public byte GetEngineSemanticIndex(Rsc6VertexElementSemantic s)
         {
-            switch (s)
+            return s switch
             {
-                default:
-                case Rsc6VertexElementSemantic.Position: return 0;
-                case Rsc6VertexElementSemantic.BlendWeights: return 1;
-                case Rsc6VertexElementSemantic.BlendIndices: return 2;
-                case Rsc6VertexElementSemantic.Normal: return 3;
-                case Rsc6VertexElementSemantic.Colour0: return 4;
-                case Rsc6VertexElementSemantic.Colour1: return 4;
-                case Rsc6VertexElementSemantic.TexCoord0: return 5;
-                case Rsc6VertexElementSemantic.TexCoord1: return 5;
-                case Rsc6VertexElementSemantic.TexCoord2: return 5;
-                case Rsc6VertexElementSemantic.TexCoord3: return 5;
-                case Rsc6VertexElementSemantic.TexCoord4: return 5;
-                case Rsc6VertexElementSemantic.TexCoord5: return 5;
-                case Rsc6VertexElementSemantic.TexCoord6: return 5;
-                case Rsc6VertexElementSemantic.TexCoord7: return 5;
-                case Rsc6VertexElementSemantic.Tangent0: return 6;
-                case Rsc6VertexElementSemantic.Tangent1: return 6;
-                case Rsc6VertexElementSemantic.Binormal0: return 7;
-                case Rsc6VertexElementSemantic.Binormal1: return 7;
-            }
+                Rsc6VertexElementSemantic.BlendWeights => 1,
+                Rsc6VertexElementSemantic.BlendIndices => 2,
+                Rsc6VertexElementSemantic.Normal => 3,
+                Rsc6VertexElementSemantic.Colour0 => 4,
+                Rsc6VertexElementSemantic.Colour1 => 4,
+                Rsc6VertexElementSemantic.TexCoord0 => 5,
+                Rsc6VertexElementSemantic.TexCoord1 => 5,
+                Rsc6VertexElementSemantic.TexCoord2 => 5,
+                Rsc6VertexElementSemantic.TexCoord3 => 5,
+                Rsc6VertexElementSemantic.TexCoord4 => 5,
+                Rsc6VertexElementSemantic.TexCoord5 => 5,
+                Rsc6VertexElementSemantic.TexCoord6 => 5,
+                Rsc6VertexElementSemantic.TexCoord7 => 5,
+                Rsc6VertexElementSemantic.Tangent0 => 6,
+                Rsc6VertexElementSemantic.Tangent1 => 6,
+                Rsc6VertexElementSemantic.Binormal0 => 7,
+                Rsc6VertexElementSemantic.Binormal1 => 7,
+                _ => 0,
+            };
         }
 
         public override string ToString()
@@ -3664,45 +3907,45 @@ namespace CodeX.Games.RDR1.RSC6
     {
         public static int GetSizeInBytes(Rsc6VertexComponentType type)
         {
-            switch (type)
+            return type switch
             {
-                case Rsc6VertexComponentType.Nothing: return 2; //Half
-                case Rsc6VertexComponentType.Half2: return 4; //Half2
-                case Rsc6VertexComponentType.Float: return 6; //Half3
-                case Rsc6VertexComponentType.Half4: return 8; //Half4
-                case Rsc6VertexComponentType.FloatUnk: return 4; //Float
-                case Rsc6VertexComponentType.Float2: return 8; //Float2
-                case Rsc6VertexComponentType.Float3: return 12; //Float3
-                case Rsc6VertexComponentType.Float4: return 16; //Float4
-                case Rsc6VertexComponentType.UByte4: return 4; //UByte4
-                case Rsc6VertexComponentType.Colour: return 4; //Color
-                case Rsc6VertexComponentType.Dec3N: return 4; //PackedNormal
-                case Rsc6VertexComponentType.Unk1: return 2; //Short_UNorm
-                case Rsc6VertexComponentType.Unk2: return 4; //Short2_Unorm
-                case Rsc6VertexComponentType.Unk3: return 2; //Byte2_UNorm
-                case Rsc6VertexComponentType.UShort2N: return 4; //Short2
-                case Rsc6VertexComponentType.Unk5: return 8; //Short4
-                default: return 0;
-            }
+                Rsc6VertexComponentType.Nothing => 2,//Half
+                Rsc6VertexComponentType.Half2 => 4,//Half2
+                Rsc6VertexComponentType.Float => 6,//Half3
+                Rsc6VertexComponentType.Half4 => 8,//Half4
+                Rsc6VertexComponentType.FloatUnk => 4,//Float
+                Rsc6VertexComponentType.Float2 => 8,//Float2
+                Rsc6VertexComponentType.Float3 => 12,//Float3
+                Rsc6VertexComponentType.Float4 => 16,//Float4
+                Rsc6VertexComponentType.UByte4 => 4,//UByte4
+                Rsc6VertexComponentType.Colour => 4,//Color
+                Rsc6VertexComponentType.Dec3N => 4,//PackedNormal
+                Rsc6VertexComponentType.Unk1 => 2,//Short_UNorm
+                Rsc6VertexComponentType.Unk2 => 4,//Short2_Unorm
+                Rsc6VertexComponentType.Unk3 => 2,//Byte2_UNorm
+                Rsc6VertexComponentType.UShort2N => 4,//Short2
+                Rsc6VertexComponentType.Unk5 => 8,//Short4
+                _ => 0,
+            };
         }
 
         public static int GetComponentCount(Rsc6VertexComponentType f)
         {
-            switch (f)
+            return f switch
             {
-                case Rsc6VertexComponentType.Nothing: return 0;
-                case Rsc6VertexComponentType.Float: return 1;
-                case Rsc6VertexComponentType.Float2: return 2;
-                case Rsc6VertexComponentType.Float3: return 3;
-                case Rsc6VertexComponentType.Float4: return 4;
-                case Rsc6VertexComponentType.Colour: return 4;
-                case Rsc6VertexComponentType.UByte4: return 4;
-                case Rsc6VertexComponentType.Half2: return 2;
-                case Rsc6VertexComponentType.Half4: return 4;
-                case Rsc6VertexComponentType.Dec3N: return 3;
-                case Rsc6VertexComponentType.UShort2N: return 2;
-                default: return 0;
-            }
+                Rsc6VertexComponentType.Nothing => 0,
+                Rsc6VertexComponentType.Float => 1,
+                Rsc6VertexComponentType.Float2 => 2,
+                Rsc6VertexComponentType.Float3 => 3,
+                Rsc6VertexComponentType.Float4 => 4,
+                Rsc6VertexComponentType.Colour => 4,
+                Rsc6VertexComponentType.UByte4 => 4,
+                Rsc6VertexComponentType.Half2 => 2,
+                Rsc6VertexComponentType.Half4 => 4,
+                Rsc6VertexComponentType.Dec3N => 3,
+                Rsc6VertexComponentType.UShort2N => 2,
+                _ => 0,
+            };
         }
 
         public static void UpdateFVF(Rsc6VertexElementSemantic channel, ref uint fvf)
@@ -3833,7 +4076,7 @@ namespace CodeX.Games.RDR1.RSC6
     public enum Rsc6VertexDeclarationTypes : ulong
     {
         DEFAULT = 0xAA1111111199A996,
-        TERRAIN_TILE = 0xAAEEEEEEEE99A996,
+        TERRAIN = 0xAAEEEEEEEE99A996,
         GRASS_BATCH = 0x0000000000080000,
         CLOTH = 0x0700000077097977
     }

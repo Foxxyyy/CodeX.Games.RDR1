@@ -4,6 +4,7 @@ using CodeX.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 
 namespace CodeX.Games.RDR1.RSC6
@@ -974,7 +975,9 @@ namespace CodeX.Games.RDR1.RSC6
         public uint MaxBlockSize { get; set; } //m_MaxBlockSize, maximum block size, if animation data is packed
         public ulong RefCount { get; set; } //m_RefCount
 
-        public List<Rsc6AnimBoneId> BoneIds { get; set; }
+        public Rsc6AnimChunk[][] ChunkGroups { get; set; }
+        public Rsc6AnimBoneId[][] BoneIdGroups { get; set; }
+        public Rsc6AnimBoneId[] BoneIds { get; set; }
         public JenkHash Hash { get; set; } //Used by XML
         public string RefactoredName => Name[(Name.LastIndexOf('\\') + 1)..];
 
@@ -994,15 +997,8 @@ namespace CodeX.Games.RDR1.RSC6
             RefCount = reader.ReadUInt32();
 
             Name = NameRef.Value;
-            BoneIds = [];
-
-            var block = Blocks[0];
-            for (int i1 = 0; i1 < block.Chunks.Count; i1++)
-            {
-                var chunk = block.Chunks[i1];
-                if (chunk == null) continue;
-                BoneIds.Add(chunk.BoneId);
-            }
+            BuildBoneIds();
+        }
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -1024,15 +1020,41 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt64("MaxBlockSize", MaxBlockSize);
         }
 
+        public void BuildBoneIds()
+        {
+            var chunkGroups = new List<Rsc6AnimChunk[]>();
+            var boneIdGroups = new List<Rsc6AnimBoneId[]>();
+
+            foreach (var block in Blocks.Items)
+            {
+                if (block?.Chunks.Items == null) continue;
+
+                var chunks = block.Chunks.Items;
+                var ids = chunks.Select(c => c?.BoneId ?? default).ToArray();
+
+                chunkGroups.Add(chunks);
+                boneIdGroups.Add(ids);
+            }
+
+            ChunkGroups = [.. chunkGroups];
+            BoneIdGroups = [.. boneIdGroups];
+            BoneIds = BoneIdGroups.Length > 0 ? BoneIdGroups[0] : [];
+        }
+
         public override Vector4 Evaluate(in AnimationFramePosition frame, int track)
         {
-            var s = frame.Frame0 / FramesPerChunk;
-            int f0 = frame.Frame0 % FramesPerChunk;
-            int f1 = f0 + 1;
-            var seq = Blocks.Items[s % Blocks.Items.Length];
-            var aseq = seq.Chunks[track];
-            var v0 = aseq.EvaluateVector(f0);
-            var v1 = aseq.EvaluateVector(f1);
+            var block0 = frame.Frame0 / FramesPerChunk;
+            var block1 = frame.Frame1 / FramesPerChunk;
+            var local0 = frame.Frame0 % FramesPerChunk;
+            var local1 = frame.Frame1 % FramesPerChunk;
+
+            block0 = Math.Clamp(block0, 0, ChunkGroups.Length - 1);
+            block1 = Math.Clamp(block1, 0, ChunkGroups.Length - 1);
+
+            var c0 = ChunkGroups[block0][track];
+            var c1 = ChunkGroups[block1][track];
+            var v0 = c0.EvaluateVector(local0);
+            var v1 = c1.EvaluateVector(local1);
             var v = (v0 * frame.Alpha0) + (v1 * frame.Alpha1);
             return v;
         }
@@ -1211,7 +1233,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case Rsc6AnimChannelType.SMALLEST_THREE_QUATERNION:
                         channel.EvaluateVector(frame, c, ref v);
-                        c++;
+                        c += 4;
                         break;
                 }
             }
@@ -1571,9 +1593,9 @@ namespace CodeX.Games.RDR1.RSC6
             var q1 = QuantizedFloats[1].ScaleAndValues.Item;
             var q2 = QuantizedFloats[2].ScaleAndValues.Item;
 
-            var qv0 = (q0 == null) ? 0 : q0.QuantizedValues.GetElement((uint)c);
-            var qv1 = (q1 == null) ? 0 : q1.QuantizedValues.GetElement((uint)c);
-            var qv2 = (q2 == null) ? 0 : q2.QuantizedValues.GetElement((uint)c);
+            var qv0 = (q0 == null) ? 0 : q0.QuantizedValues.GetElement((uint)frame);
+            var qv1 = (q1 == null) ? 0 : q1.QuantizedValues.GetElement((uint)frame);
+            var qv2 = (q2 == null) ? 0 : q2.QuantizedValues.GetElement((uint)frame);
 
             var x = qv0 * ((q0 == null) ? 1.0f : q0.Scale) + QuantizedFloats[0].Offset;
             var y = qv1 * ((q1 == null) ? 1.0f : q1.Scale) + QuantizedFloats[1].Offset;
@@ -1657,6 +1679,17 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        public uint LogicalKey
+        {
+            readonly get => ((uint)TrackId << 16) | (uint)ID;
+            set
+            {
+                ID = (Rsc6BoneIdEnum)(value & 0xFFFF);
+                TrackId = (Rsc6TrackID)((value >> 16) & 0xFF);
+                TypeId = 0;
+            }
+        }
+
         public Rsc6AnimBoneId(Rsc6BoneIdEnum boneId, byte typeId, Rsc6TrackID trackId)
         {
             ID = boneId;
@@ -1669,9 +1702,23 @@ namespace CodeX.Games.RDR1.RSC6
             Packed = packed;
         }
 
-        public readonly Rsc6TrackPackFormat GetPack() //Returns information about storage packing used
+        public static Rsc6AnimBoneId FromLogical(uint key)
+        {
+            var id = new Rsc6AnimBoneId
+            {
+                LogicalKey = key
+            };
+            return id;
+        }
+
+        public readonly Rsc6TrackPackFormat GetPack()
         {
             return (Rsc6TrackPackFormat)(TypeId & (byte)Rsc6TrackPackFormat.FORMAT_PACK_MASK);
+        }
+
+        public readonly Rsc6TrackType GetFormatType()
+        {
+            return (Rsc6TrackType)(TypeId & 0x3);
         }
 
         public override readonly string ToString()

@@ -89,6 +89,9 @@ namespace CodeX.Games.RDR1.RSC6
             var texarr = new Rsc6Texture[cnt];
             var hasharr = new JenkHash[cnt];
 
+            //RDR1 sorts textures by hash!
+            list.Sort((a, b) => a.Item1.Hash.CompareTo(b.Item1.Hash));
+
             for (int i = 0; i < cnt; i++)
             {
                 var item = list[i];
@@ -217,9 +220,9 @@ namespace CodeX.Games.RDR1.RSC6
                 0x33545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT3), //861165636
                 0x35545844 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_DXT5), //894720068
                 0x444E5243 => ConvertToEngineFormat(Rsc6TextureFormat.CRND),        //1145983555
-                0x1A => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_R16),        //26
                 0x32 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8),         //50
                 0x20 => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8),   //32
+                0x1A => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_R16),        //26
                 _ => ConvertToEngineFormat(Rsc6TextureFormat.D3DFMT_A8R8G8B8)
             };
         }
@@ -246,8 +249,8 @@ namespace CodeX.Games.RDR1.RSC6
                 Rsc6TextureFormat.D3DFMT_DXT3 => TextureFormat.BC2,
                 Rsc6TextureFormat.D3DFMT_DXT5 => TextureFormat.BC3,
                 Rsc6TextureFormat.D3DFMT_A8R8G8B8 => TextureFormat.A8R8G8B8,
-                Rsc6TextureFormat.D3DFMT_R16 => TextureFormat.R16U,
                 Rsc6TextureFormat.D3DFMT_A8 => TextureFormat.A8,
+                Rsc6TextureFormat.D3DFMT_R16 => TextureFormat.R16U,
                 Rsc6TextureFormat.CRND => TextureFormat.Unknown,
                 _ => TextureFormat.BC1,
             };
@@ -304,6 +307,21 @@ namespace CodeX.Games.RDR1.RSC6
             NameRef = reader.ReadStr();
             D3DBaseTexture = reader.ReadPtr<Rsc6BlockMap>();
             Name = NameRef.Value;
+
+            var separators = new string[2] { ":", "/" };
+            foreach (string separator in separators)
+            {
+                int lastIndex = Name.LastIndexOf(separator);
+                if (lastIndex != -1)
+                {
+                    Name = Name[(lastIndex + 1)..];
+                }
+            }
+
+            if (Name.EndsWith(".dds"))
+            {
+                Name = Name.Replace(".dds", "");
+            }
         }
 
         public virtual void Write(Rsc6DataWriter writer)
@@ -346,31 +364,10 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 TextureSize = dds.Length - 128;
             }
-
-            if (!Name.EndsWith(".dds"))
-            {
-                Name += ".dds";
-            }
-            NameRef = new Rsc6Str(Name);
         }
 
         public override void Write(MetaNodeWriter writer)
         {
-            string[] separators = [":", "/"];
-            foreach (var separator in separators)
-            {
-                int lastIndex = Name.LastIndexOf(separator);
-                if (lastIndex != -1)
-                {
-                    Name = Name[(lastIndex + 1)..];
-                }
-            }
-
-            if (Name.EndsWith(".dds"))
-            {
-                Name = Name.Replace(".dds", "");
-            }
-
             writer.WriteEnum("ResourceType", ResourceType);
             base.Write(writer);
         }

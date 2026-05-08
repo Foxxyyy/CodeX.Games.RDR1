@@ -20,7 +20,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Vector4 RootCGOffset { get; set; } //m_RootCGOffset
         public Vector4 OriginalRootCGOffset { get; set; } //m_OriginalRootCGOffset
         public Vector4 UnbrokenCGOffset { get; set; } //m_UnbrokenCGOffset
-        public Vector4[] DampingConstant { get; set; } //m_DampingConstant, won't do anything unless the game utilizes 'UnbrokenElasticity'
+        public Vector4[] DampingConstant { get; set; } //m_DampingConstant
         public Rsc6Str NameRef { get; set; } //m_TuneName
         public Rsc6Ptr<Rsc6FragmentDrawable> Drawable { get; set; } //m_CommonDrawable, contains data common to all the parts of the fragment type, the shader groups, etc.
         public Rsc6RawPtrArr<Rsc6FragmentDrawable> ExtraDrawables { get; set; } //m_ExtraDrawables
@@ -207,6 +207,19 @@ namespace CodeX.Games.RDR1.RSC6
                 foreach (var d in ExtraDrawables.Items)
                 {
                     d?.ApplyTextures(Textures.Item);
+                }
+            }
+
+            if (Drawable.Item != null && Childrens.Items != null)
+            {
+                var shadergroup = Drawable.Item.ShaderGroup.Item;
+                foreach (var child in Childrens.Items)
+                {
+                    var cd1 = child.UndamagedEntity.Item;
+                    if (cd1 != null && cd1.ShaderGroup.Item == null)
+                    {
+                        cd1.AssignShaders(shadergroup);
+                    }
                 }
             }
         }
@@ -657,8 +670,6 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 240;
-        public uint Unknown_78h { get; set; } //Padding
-        public uint Unknown_7Ch { get; set; } //Padding
         public Matrix4x4 BoundMatrix { get; set; } = Matrix4x4.Identity; //m_BoundMatrix
         public Rsc6Ptr<Rsc6Bounds> Bound { get; set; } //m_Bound
         public Rsc6Arr<uint> ExtraBounds { get; set; } //m_ExtraBounds
@@ -676,8 +687,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(Rsc6DataReader reader)
         {
             base.Read(reader);
-            Unknown_78h = reader.ReadUInt32();
-            Unknown_7Ch = reader.ReadUInt32();
             BoundMatrix = reader.ReadMatrix4x4();
             Bound = reader.ReadPtr(Rsc6Bounds.Create);
             ExtraBounds = reader.ReadArr<uint>();
@@ -697,8 +706,6 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
-            writer.WriteUInt32(Unknown_78h);
-            writer.WriteUInt32(Unknown_7Ch);
             writer.WriteMatrix4x4(BoundMatrix);
             writer.WritePtr(Bound);
             writer.WriteArr(ExtraBounds);
@@ -2081,7 +2088,7 @@ namespace CodeX.Games.RDR1.RSC6
         {
             BlendShapes = new(reader.ReadNodeArray("BlendShapes", (_) => new Rsc6BlendShape(this)));
             var targets = reader.ReadNodeArray<Rsc6TargetEntry>("Targets");
-            var newTargets = Rsc6DataMap.Build(targets.ToList(), -1, false, false);
+            var newTargets = Rsc6DataMap.Build(targets.ToList()); //TODO: Make sure bucket size is correct
             var flatten = Rsc6DataMap.Flatten(newTargets.ToArray(), e => e).Where(e => e?.Data.Item != null);
 
             Targets = new([.. newTargets])
@@ -3266,8 +3273,8 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6MeshBitComponentBase VariableMeshBits2 { get; set; } //m_VariableMeshBits2 (VMB2)
         public Rsc6MeshBitComponentBase VariableMeshBits3 { get; set; } //m_VariableMeshBits3 (VMB3)
 
-        public string[] UsedComponents => GetUsedComponents().Keys.ToArray();
-        public byte[] UsedIndices => GetUsedComponents().Values.ToArray();
+        public string[] UsedComponents => [.. GetUsedComponents().Keys];
+        public byte[] UsedIndices => [.. GetUsedComponents().Values];
         public bool IsJohnJack { get; set; } //Whether or not this is a John's or Jack's fragment
 
         public Rsc6VariableMeshArray()
@@ -3318,14 +3325,6 @@ namespace CodeX.Games.RDR1.RSC6
                 return reader.ReadBlock<Rsc6MeshBitComponentMisc>();
         }
 
-        private static void WriteBlock(Rsc6DataWriter writer, Rsc6MeshBitComponentBase component)
-        {
-            if (component is Rsc6MeshBitComponentJohn johnComponent)
-                writer.WriteBlock(johnComponent);
-            else if (component is Rsc6MeshBitComponentMisc miscComponent)
-                writer.WriteBlock(miscComponent);
-        }
-
         private static Rsc6MeshBitComponentBase ReadNode(MetaNodeReader reader, string node, bool isJohn)
         {
             if (isJohn)
@@ -3359,7 +3358,7 @@ namespace CodeX.Games.RDR1.RSC6
 
             if (components.Count == 1 && components.Values.First() == 0)
             {
-                return new Dictionary<string, byte>();
+                return [];
             }
             return components.OrderBy(x => x.Value).ToDictionary(x => x.Key, x => x.Value); //Order by indices
         }
@@ -3373,7 +3372,7 @@ namespace CodeX.Games.RDR1.RSC6
         public virtual byte[] GetComponentValues()
         {
             var fields = GetFields();
-            return fields.Where(field => field.FieldType == typeof(byte)).Select(field => (byte)field.GetValue(this)).ToArray();
+            return [.. fields.Where(field => field.FieldType == typeof(byte)).Select(field => (byte)field.GetValue(this))];
         }
 
         public override void Read(Rsc6DataReader reader)

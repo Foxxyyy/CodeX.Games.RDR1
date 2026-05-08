@@ -189,7 +189,7 @@ namespace CodeX.Games.RDR1.RSC6
                     VertexData = VertexBuffer.Item.VertexData.Items,
                     VertexCount = VertexBuffer.Item.VertexCount,
                     VertexStride = (int)VertexBuffer.Item.VertexStride,
-                    VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout ?? new VertexLayout("P")
+                    VertexLayout = VertexBuffer.Item.Layout.Item?.VertexLayout ?? new VertexLayout("P") //TODO: how to handle null VertexBuffer.Layout?
                 };
                 mesh.Write(writer);
             }

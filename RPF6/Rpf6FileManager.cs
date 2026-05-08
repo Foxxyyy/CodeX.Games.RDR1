@@ -204,7 +204,7 @@ namespace CodeX.Games.RDR1.RPF6
 
             if (File.Exists(strfile))
             {
-                strtime = File.GetLastWriteTime(strfile).ToBinary();
+                strtime = File.GetLastWriteTimeUtc(strfile).ToBinary();
             }
 
             Core.Engine.Console.Write("Rpf6FileManager", "Building RDR1 startup cache");
@@ -235,7 +235,7 @@ namespace CodeX.Games.RDR1.RPF6
             var strtime = 0L;
             if (File.Exists(strfile))
             {
-                strtime = File.GetLastWriteTime(strfile).ToBinary();
+                strtime = File.GetLastWriteTimeUtc(strfile).ToBinary();
             }
 
             Core.Engine.Console.Write("Rpf6FileManager", "Loading RDR1 startup cache...");
@@ -266,6 +266,16 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 return archive;
             }
+
+            for (int i = 0; i < 999; i++)
+            {
+                var patch = $"patch{i}.rpf";
+                if (relpath.EndsWith(patch))
+                {
+                    return null;
+                }
+            }
+
             var rpf = new Rpf6File(path, relpath);
             rpf.ReadStructure();
             return rpf;
@@ -532,7 +542,7 @@ namespace CodeX.Games.RDR1.RPF6
                     case ".wgd": return Rsc6DataReader.Analyze<Rsc6GringoDictionary>(rfe, data);
                     case ".wat": return Rsc6DataReader.Analyze<Rsc6ActionTree>(rfe, data);
                     case ".wpfl": return Rsc6DataReader.Analyze<Rsc6ParticleEffects>(rfe, data);
-                    case ".wnm": return Rsc6DataReader.Analyze<Rsc6Navmesh>(rfe, data);
+                    case ".wnm": return Rsc6DataReader.Analyze(rfe, data, Rsc6Navmesh.Create);
                     case ".wsf": return Rsc6DataReader.Analyze<Rsc6ScaleFormFile>(rfe, data);
                     case ".wst":
                     case ".sst":
@@ -751,17 +761,23 @@ namespace CodeX.Games.RDR1.RPF6
             {
                 foreach (var drawable in ((WvdFile)pack).VisualDictionary.Drawables.Items)
                 {
-                    foreach (var model in drawable.AllModels)
+                    foreach (var model in drawable?.AllModels)
                     {
-                        foreach (var mesh in model.Meshes)
+                        foreach (var mesh in model?.Meshes)
                         {
+                            if (mesh?.Textures == null) continue;
                             foreach (var texture in mesh.Textures)
                             {
                                 if (texture == null) continue;
                                 if (texture.Height != 0 || string.IsNullOrEmpty(texture.Name)) continue;
                                 if (textures.Find(item => item.Name == texture.Name) != null) continue;
 
-                                string desiredWtd = texture.Name.Remove(texture.Name.LastIndexOf('.')).ToLower();
+                                string desiredWtd = texture.Name.ToLower();
+                                if (desiredWtd.Contains('.'))
+                                {
+                                    desiredWtd = desiredWtd[..desiredWtd.LastIndexOf('.')];
+                                }
+
                                 var wtdFiles = dfm.StreamEntries[Rpf6FileExt.wtd_wtx];
 
                                 foreach (var wtd in wtdFiles)
@@ -825,7 +841,7 @@ namespace CodeX.Games.RDR1.RPF6
                             foreach (var tex in r.Textures.Values)
                             {
                                 if (tex == null) continue;
-                                if (textures.Find(item => item.Name.Contains(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
+                                if (textures.Find(item => item.Name.Equals(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
                                 {
                                     textures.Add((Rsc6Texture)tex);
                                 }
@@ -990,14 +1006,23 @@ namespace CodeX.Games.RDR1.RPF6
                     if (entry is Rpf6FileEntry fe)
                     {
                         var n = fe.NameLower;
-                        if (animations && n.EndsWith(".wcdt"))
+                        if (animations && n.EndsWith(".was"))
                         {
                             Core.Engine.Console.Write("ClipDictionary", fe.Path);
                             var data = EnsureFileData(fe, null);
                             if (data != null)
                             {
-                                var wcdt = new WcdtFile(fe);
-                                wcdt.Load(data);
+                                var was = new WasFile(fe);
+                                was.Load(data);
+
+                                foreach (var kvp in was.AnimSet.Dict)
+                                {
+                                    var clip = kvp.Value?.ClipName.ToString();
+                                    if (clip != null && clip.StartsWith("Animal"))
+                                    {
+                                        Debug.WriteLine($"{fe.Name} : {clip}");
+                                    }
+                                }
                             }
                         }
                         if (scripts && n.EndsWith(".wsc"))
@@ -1052,7 +1077,7 @@ namespace CodeX.Games.RDR1.RPF6
                                 wsg.Load(data);
                             }
                         }
-                        if (strtable && n.EndsWith(".strtbl") && archive.Name == "strings_d11generic.rpf" /*&& fe.Parent.Name == "strings"*/)
+                        if (strtable && n.EndsWith(".strtbl") && archive.Name == "strings_d11generic.rpf")
                         {
                             Core.Engine.Console.Write("StringTable", fe.Path);
                             var data = EnsureFileData(fe, null);
@@ -1253,12 +1278,12 @@ namespace CodeX.Games.RDR1.RPF6
         }
     }
 
-    public class Rpf6DataFileMgr
+    public class Rpf6DataFileMgr(Rpf6FileManager fman)
     {
-        public Rpf6FileManager FileManager;
+        public Rpf6FileManager FileManager = fman;
         public List<Rpf6FileEntry> AllEntries;
         public Dictionary<Rpf6FileExt, Dictionary<JenkHash, Rpf6FileEntry>> StreamEntries;
-        public List<Rsc6TextureDictionary> ResidentTxds = new();
+        public List<Rsc6TextureDictionary> ResidentTxds = [];
         public List<Rsc6Texture> SwAll; //For storing textures from swAll.wtd //TODO: get rid of this and load dependencies properly
         public List<Rsc6Texture> FragTextures; //For storing textures from fragmentTextureList.wtd //TODO: get rid of this and load dependencies properly
         public Dictionary<string, string[]> SmicMapping; //For the texture mapping from smicToFragMap.txt
@@ -1280,18 +1305,21 @@ namespace CodeX.Games.RDR1.RPF6
             SmicMapping = [];
 
             LoadFiles();
+
             if (StreamEntries.Count > 0)
             {
                 LoadResidentTextures();
                 LoadSmicMap();
+                Rsc6NavmeshLookup.Init(FileManager);
             }
         }
 
         public void WriteStartupCache(BinaryWriter bw)
         {
             Core.Engine.Console.Write("Rpf6DataFileMgr", "Building RDR1 startup cache - Materials");
-            var mats = Rsc6BoundsMaterialTypes.GetMaterials(FileManager); //TODO: is this really necessary?
+            var mats = Rsc6BoundsMaterialTypes.GetMaterials(FileManager);
             var materials = new List<Rpf6MaterialStoreItem>();
+
             for (int i = 0; i < mats.Length; i++)
             {
                 var mat = mats[i];
@@ -1311,12 +1339,29 @@ namespace CodeX.Games.RDR1.RPF6
                 bw.WriteStringNullTerminated(item.Name);
                 bw.Write((int)item.Color);
             }
+
+            Core.Engine.Console.Write("Rpf6DataFileMgr", "Building RDR1 startup cache - Navmeshes");
+            var navmeshes = Rsc6NavmeshLookup.GetAllNavmeshes(FileManager);
+            bw.Write(navmeshes.Count);
+
+            foreach (var kvp in navmeshes)
+            {
+                var box = kvp.Value.BoundingBox;
+                bw.Write((uint)kvp.Key);
+                bw.Write(box.Minimum.X);
+                bw.Write(box.Minimum.Y);
+                bw.Write(box.Minimum.Z);
+                bw.Write(box.Maximum.X);
+                bw.Write(box.Maximum.Y);
+                bw.Write(box.Maximum.Z);
+            }
         }
 
         public void ReadStartupCache(BinaryReader br)
         {
             var matItems = new List<Rpf6MaterialStoreItem>();
             var matCount = br.ReadInt32();
+
             for (int i = 0; i < matCount; i++)
             {
                 var item = new Rpf6MaterialStoreItem
@@ -1326,6 +1371,21 @@ namespace CodeX.Games.RDR1.RPF6
                 };
                 matItems.Add(item);
             }
+
+            var navmeshCount = br.ReadInt32();
+            for (int i = 0; i < navmeshCount; i++)
+            {
+                var hash = br.ReadUInt32();
+                var minX = br.ReadSingle();
+                var minY = br.ReadSingle();
+                var minZ = br.ReadSingle();
+                var maxX = br.ReadSingle();
+                var maxY = br.ReadSingle();
+                var maxZ = br.ReadSingle();
+                var bb = new BoundingBox(new Vector3(minX, minY, minZ), new Vector3(maxX, maxY, maxZ));
+                Rsc6NavmeshLookup.NavmeshBounds[hash] = bb;
+            }
+
             if (matItems.Count > 0)
             {
                 var mats = new Rsc6BoundsMaterialData[matItems.Count];
@@ -1345,13 +1405,13 @@ namespace CodeX.Games.RDR1.RPF6
 
         private void LoadFiles()
         {
-            foreach (var archive in this.FileManager.AllArchives)
+            foreach (var archive in FileManager.AllArchives)
             {
                 if (archive.Path.StartsWith("backup")) continue;
                 foreach (var file in archive.AllEntries)
                 {
                     if (file is not Rpf6FileEntry fe) continue;
-                    this.AllEntries.Add((Rpf6FileEntry)file);
+                    AllEntries.Add((Rpf6FileEntry)file);
 
                     if (fe.FlagInfos.IsResource)
                     {
@@ -1366,19 +1426,19 @@ namespace CodeX.Games.RDR1.RPF6
                                 hash = new JenkHash(fe.Name + "_lod3");
                         }
 
-                        if (!this.StreamEntries.TryGetValue(fe.ResourceType, out var entries))
+                        if (!StreamEntries.TryGetValue(fe.ResourceType, out var entries))
                         {
                             entries = [];
-                            this.StreamEntries[fe.ResourceType] = entries;
+                            StreamEntries[fe.ResourceType] = entries;
                         }
                         entries[hash] = fe;
                     }
                     else if (file.Name.EndsWith(".txt") || file.Name.EndsWith(".vehsim") || (file.Name.EndsWith(".bin") && file.Parent.Name == "fragments"))
                     {
-                        if (!this.StreamEntries.TryGetValue(Rpf6FileExt.binary, out var entries))
+                        if (!StreamEntries.TryGetValue(Rpf6FileExt.binary, out var entries))
                         {
                             entries = [];
-                            this.StreamEntries[Rpf6FileExt.binary] = entries;
+                            StreamEntries[Rpf6FileExt.binary] = entries;
                         }
                         entries[fe.ShortNameHash] = fe;
                     }
@@ -1405,7 +1465,7 @@ namespace CodeX.Games.RDR1.RPF6
                     foreach (var tex in r.Textures.Values)
                     {
                         if (tex == null) continue;
-                        if (SwAll.Find(item => item.Name.Contains(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
+                        if (SwAll.Find(item => item.Name.Equals(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
                         {
                             SwAll.Add((Rsc6Texture)tex);
                         }
@@ -1428,7 +1488,7 @@ namespace CodeX.Games.RDR1.RPF6
                     foreach (var tex in r.Textures.Values)
                     {
                         if (tex == null) continue;
-                        if (FragTextures.Find(item => item.Name.Contains(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
+                        if (FragTextures.Find(item => item.Name.Equals(tex.Name, StringComparison.InvariantCultureIgnoreCase)) == null)
                         {
                             FragTextures.Add((Rsc6Texture)tex);
                         }
@@ -1440,24 +1500,27 @@ namespace CodeX.Games.RDR1.RPF6
         private void LoadSmicMap()
         {
             Core.Engine.Console.Write("Rpf6DataFileMgr", "Loading smic map...");
-            this.StreamEntries[Rpf6FileExt.binary].TryGetValue(0x57D7F6EF, out Rpf6FileEntry file); //smicToFragMap.txt
+            StreamEntries[Rpf6FileExt.binary].TryGetValue(0x57D7F6EF, out Rpf6FileEntry file); //smicToFragMap.txt
+
             if (file != null)
             {
                 byte[] data = null;
-                data = this.FileManager.EnsureFileData(file, data);
+                data = FileManager.EnsureFileData(file, data);
 
                 if (data != null)
                 {
-                    string text = this.FileManager.ConvertToText(file, data, out string name);
-                    string[] result = text.Split(new[] { '\r', '\n' });
+                    var text = FileManager.ConvertToText(file, data, out string name);
+                    var result = text.Split(['\r', '\n']);
 
                     foreach (string s in result)
                     {
                         if (string.IsNullOrEmpty(s) || s.Contains(':')) continue;
-                        bool dollar = s.StartsWith('$');
-                        string child = s[(dollar ? 1 : 0)..s.IndexOf(' ')].ToLowerInvariant();
+                        var dollar = s.StartsWith('$');
+                        var child = s[(dollar ? 1 : 0)..s.IndexOf(' ')].ToLowerInvariant();
+
                         JenkIndex.Ensure(child);
-                        int smicIndex = s.IndexOf("smic_");
+
+                        var smicIndex = s.IndexOf("smic_");
                         var smicContent = s[smicIndex..].Split(" ");
                         SmicMapping[child] = smicContent;
                     }
@@ -1467,7 +1530,7 @@ namespace CodeX.Games.RDR1.RPF6
 
         public Rpf6FileEntry TryGetStreamEntry(JenkHash hash, Rpf6FileExt ext)
         {
-            if (this.StreamEntries.TryGetValue(ext, out var entries))
+            if (StreamEntries.TryGetValue(ext, out var entries))
             {
                 if (entries.TryGetValue(hash, out var entry))
                 {
