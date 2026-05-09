@@ -999,7 +999,6 @@ namespace CodeX.Games.RDR1.RSC6
             Name = NameRef.Value;
             BuildBoneIds();
         }
-        }
 
         public void Write(Rsc6DataWriter writer)
         {

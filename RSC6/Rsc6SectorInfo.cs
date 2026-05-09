@@ -3,6 +3,7 @@ using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
@@ -2234,7 +2235,7 @@ namespace CodeX.Games.RDR1.RSC6
     }
 
     [TC(typeof(EXP))]
-    public class Rsc6PlacedLightsGroup : Rsc6BlockBase, MetaNode
+    public class Rsc6PlacedLightsGroup : Rsc6BlockBase, MetaNode //rdrPlacedLightsGroup
     {
         public override ulong BlockLength => 64;
         public Vector4 BoundsMin { get; set; } //m_AABBMin
@@ -2247,7 +2248,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Unknown_38h { get; set; } //Always 0
         public uint Unknown_3Ch { get; set; } //Always 0
 
-        public override void Read(Rsc6DataReader reader) //rdrPlacedLightsGroup
+        public override void Read(Rsc6DataReader reader)
         {
             BoundsMin = reader.ReadVector4();
             BoundsMax = reader.ReadVector4();
@@ -2353,6 +2354,8 @@ namespace CodeX.Games.RDR1.RSC6
             DrawRoomOnly = reader.ReadBoolean();
             DrawPropsOnly = reader.ReadBoolean();
             Transparency = reader.ReadByte();
+
+            Debug.WriteLine($"Light: {DebugName}, Range: {Range}, Intensity: {Intensity}, CutsceneHash: {CutsceneHash}, Type: {Type}");
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -2450,9 +2453,19 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteByte("Transparency", Transparency);
         }
 
+        public bool ShouldCreateLight()
+        {
+            if (!Active) return false;
+            if (Range <= 0.1f) return false;
+            if (Intensity <= 0.0f) return false;
+            if (CutsceneHash != 0) return false;
+            if ((Flags & 0x300) != 0) return false; //Cutscene specific
+            return true;
+        }
+
         public override string ToString()
         {
-            return DebugName.Value;
+            return DebugName.ToString();
         }
     }
 

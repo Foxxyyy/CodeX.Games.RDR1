@@ -6,6 +6,8 @@ using CodeX.Games.RDR1.RPF6;
 using CodeX.Games.RDR1.RSC6;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 using EXP = System.ComponentModel.ExpandableObjectConverter;
 using TC = System.ComponentModel.TypeConverterAttribute;
@@ -33,7 +35,7 @@ namespace CodeX.Games.RDR1
         public static readonly Setting StartPositionSetting = Settings.Register("RDR1Map.Area", SettingType.String, "Blackwater", "Change position", false, false, GetAreas());
         public static readonly Setting EnabledSetting = Settings.Register("RDR1Map.Enabled", SettingType.Bool, true, true);
         public static readonly Setting EnableInstancedGrass = Settings.Register("RDR1Map.EnableInstancedGrass", SettingType.Bool, true);
-        public static readonly Setting TreesDistanceSetting = Settings.Register("RDR1Map.TreesDistance", SettingType.Float, 200.0f, false);
+        public static readonly Setting TreesDistanceSetting = Settings.Register("RDR1Map.TreesDistance", SettingType.Float, 500.0f, false);
         public static readonly Setting GrassDistanceSetting = Settings.Register("RDR1Map.GrassDistance", SettingType.Float, 50.0f, false);
         public Statistic EntityCountStat = Statistics.Register("RDR1Map.EntityCount", StatisticType.Counter);
 
@@ -152,22 +154,16 @@ namespace CodeX.Games.RDR1
             AddGrassTiles(ref spos, ents);
             AddNavmeshes(ref spos);
 
-            /*
-            var scale = new Vector3(10.0f);
             foreach (var ent in ents) //Update lights
             {
-                if (ent is WsiLightEntity light && light.Lights != null && light.ParentName != string.Empty)
+                if (ent.Lights == null) continue;
+                foreach (var light in ent.Lights)
                 {
-                    var parent = ents.FirstOrDefault(e => e.Position == light.ParentPosition);
-                    if (parent != null && parent.Position != Vector3.Zero)
-                    {
-                        light.SetPiece(parent.Piece);
-                        light.BoundingBox = new BoundingBox(parent.BoundingBox.Minimum - scale, parent.BoundingBox.Maximum + scale);
-                        light.BoundingSphere = new BoundingSphere(light.BoundingBox.Center, light.BoundingBox.Size.Length() * 0.5f);
-                    }
+                    if (light == null) continue;
+                    //Debug.WriteLine(light.Name);
+                    light.Params.Disabled = (TimeOfDayHour >= 6) && (TimeOfDayHour <= 17);
                 }
             }
-            */
 
             EntityCountStat.SetCounter(ents.Count);
         }
@@ -275,10 +271,10 @@ namespace CodeX.Games.RDR1
                 ents.Add(wsient);
             }
 
-            //if (sector.LightsEntity != null)
-            //{
-            //    ents.Add(sector.LightsEntity);
-            //}
+            if (sector.LightsEntity != null)
+            {
+                ents.Add(sector.LightsEntity);
+            }
         }
 
         private void AddScopedEntity(Entity ent, HashSet<Entity> ents, Rsc6TextureDictionary roottxd, IEnumerable<string> smic)
@@ -472,7 +468,7 @@ namespace CodeX.Games.RDR1
                             if (string.IsNullOrEmpty(tname)) continue;
                             texdictnames.Add(tname);
                         }
-                        ent.TexDictNames = (texdictnames.Count > 0) ? texdictnames.ToArray() : null;
+                        ent.TexDictNames = (texdictnames.Count > 0) ? [.. texdictnames] : null;
                         ent.TexSetNames = (texsetnames.Count > 0) ? texsetnames.ToArray() : null;
                         ent.UpdateBounds();
 
@@ -881,7 +877,7 @@ namespace CodeX.Games.RDR1
 
                 if (opts.TryGetValue(state, out var list) == false)
                 {
-                    list = new List<string>() { "" }; //Start with an empty entry, just so that's an option
+                    list = [""]; //Start with an empty entry, just so that's an option
                     opts[state] = list;
                 }
 
@@ -897,7 +893,7 @@ namespace CodeX.Games.RDR1
                 return;
             }
 
-            StateOptions = new Dictionary<string, string[]>();
+            StateOptions = [];
             foreach (var kvp in opts)
             {
                 StateOptions[kvp.Key] = kvp.Value.ToArray();
@@ -906,10 +902,11 @@ namespace CodeX.Games.RDR1
 
         public override BaseField[] GetFields()
         {
-            if ((Fields == null) && (StateOptions != null))
+            if (Fields == null && StateOptions != null)
             {
                 var fields = new BaseField[StateOptions.Count];
                 var i = 0;
+
                 foreach (var kvp in StateOptions)
                 {
                     fields[i] = new BaseField(kvp.Key, kvp.Value);
@@ -919,6 +916,7 @@ namespace CodeX.Games.RDR1
             }
             return Fields;
         }
+
         public override void GetFieldValue(BaseField field, out BaseValue value)
         {
             value = default;
@@ -926,17 +924,15 @@ namespace CodeX.Games.RDR1
             States.TryGetValue(field.Name, out var str);
             value = new(str);
         }
+
         public override void SetFieldValue(BaseField field, in BaseValue value)
         {
             var str = value.String;
             Map.StreamInvoke(() =>
             {
-                if (States == null)
-                {
-                    States = new Dictionary<string, string>();
-                }
+                States ??= [];
                 States[field.Name] = str;
-                Map.EnableMapStateGroup(this, Enabled);//need to refresh this group
+                Map.EnableMapStateGroup(this, Enabled); //Need to refresh this group
             });
         }
     }
@@ -1062,44 +1058,52 @@ namespace CodeX.Games.RDR1
 
             SectorInfo = Wsi?.SectorInfo;
             if (SectorInfo == null) return;
+
             var childGroup = SectorInfo.ChildGroup.Item;
             var childSectors = SectorInfo.ChildPtrs.Items;
-
             var sectors = new List<RDR1MapSector>();
             var roots = new List<RDR1MapSector>();
+
             if (childGroup != null)
             {
                 var childLists = new Dictionary<Rsc6SectorInfo, List<RDR1MapSector>>();
                 var scopedSectors = childGroup.Sectors.Items;
                 var scopedParents = childGroup.SectorsParents.Items;
                 var imax = Math.Min(scopedSectors?.Length ?? 0, scopedParents?.Length ?? 0);
+
                 for (int i = 0; i < imax; i++)
                 {
                     var sector = scopedSectors[i];
                     var parent = scopedParents[i]?.Parent.Item;
                     if (sector == null) continue;
+
                     var mapSector = new RDR1MapSector(this, wsi, sector, parent, true);
                     sectors.Add(mapSector);
+
                     if (parent == SectorInfo) roots.Add(mapSector);
                     childLists.TryGetValue(parent, out var pchildren);
+
                     if (pchildren == null)
                     {
-                        pchildren = new List<RDR1MapSector>();
+                        pchildren = [];
                         childLists[parent] = pchildren;
                     }
                     pchildren.Add(mapSector);
                 }
+
                 foreach (var sector in sectors)
                 {
                     var s = sector?.Sector;
                     if (s == null) continue;
                     childLists.TryGetValue(s, out var childList);
+
                     if (childList != null)
                     {
                         sector.ChildSectors = childList.ToArray();
                     }
                 }
             }
+
             if (childSectors != null)
             {
                 foreach (var childSector in childSectors)
@@ -1110,10 +1114,10 @@ namespace CodeX.Games.RDR1
                     roots.Add(mapSector);
                 }
             }
-            if (sectors.Count == 0) return;
 
-            Sectors = sectors.ToArray();
-            RootSectors = roots.ToArray();
+            if (sectors.Count == 0) return;
+            Sectors = [.. sectors];
+            RootSectors = [.. roots];
         }
     }
 
@@ -1145,7 +1149,7 @@ namespace CodeX.Games.RDR1
             IsScopedSector = scoped;
 
             var width = BoundingBox.Width;
-            var dist = new Vector3(BoundingBox.Size.Length());//(width > 700.0f) ? width : 700.0f);
+            var dist = new Vector3(BoundingBox.Size.Length() + 150.0f);
             StreamingBox = new BoundingBox(BoundingBox.Center - dist, BoundingBox.Center + dist);
 
             if (scoped)
@@ -1153,6 +1157,7 @@ namespace CodeX.Games.RDR1
                 var name = currentSector.Name.Value?.ToLowerInvariant();
                 var dfm = mapNode.Map.FileManager.DataFileMgr;
                 var wvdentry = dfm.TryGetStreamEntry(NameHash, Rpf6FileExt.wvd);
+                
                 if (wvdentry != null)
                 {
                     ScopedEntity = new WsiEntity()
@@ -1161,8 +1166,7 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
-                else
-                { }
+
                 var wvdmedentry = dfm.TryGetStreamEntry(name + "_med", Rpf6FileExt.wvd);
                 if (wvdmedentry != null)
                 {
@@ -1172,8 +1176,7 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
-                else
-                { }
+
                 var wvdvlowentry = dfm.TryGetStreamEntry(name + "_vlow", Rpf6FileExt.wvd);
                 if (wvdvlowentry != null)
                 {
@@ -1183,10 +1186,7 @@ namespace CodeX.Games.RDR1
                         LodDistMax = 9999
                     };
                 }
-                else
-                { }
             }
-
             GetEntities();
         }
 
@@ -1194,18 +1194,17 @@ namespace CodeX.Games.RDR1
         {
             if (Wsi == null) return;
             if (Wsi.SectorInfo == null) return;
-            var name = Sector.Name.Value?.ToLowerInvariant() ?? "";
-            if (name == Wsi.SectorInfo.Scope.Value ||
-                name.Contains("_ffa01x") ||
-                name.Contains("_base01x")) return; //Deathmatch props
 
-            if (Wsi.FileEntry?.Archive?.Name == "swterrain.rpf")//IsTerrainSector())
+            var name = Sector.Name.Value?.ToLowerInvariant() ?? "";
+            if (name == Wsi.SectorInfo.Scope.Value || name.Contains("_ffa01x") || name.Contains("_base01x")) return; //Deathmatch props
+
+            if (Wsi.FileEntry?.Archive?.Name == "swterrain.rpf")
             {
                 name += "_non-terrain";
             }
 
-            AddEntitiesFromSector(name);//Add the sector's entities
-            AddLightsFromSector();//Add the sector's lights
+            AddEntitiesFromSector(name); //Add the sector's entities
+            AddLightsFromSector(); //Add the sector's lights
         }
 
         public override void PreSaveUpdate()
@@ -1216,43 +1215,77 @@ namespace CodeX.Games.RDR1
 
         private void AddLightsFromSector()
         {
-            var lights = Sector.PlacedLightsGroup.Item;
-            if (lights != null)
+            var group = Sector.PlacedLightsGroup.Item;
+            var items = group?.Lights.Items;
+            if (items == null || items.Length == 0) return;
+
+            var lightList = new List<Light>();
+            foreach (var src in items)
             {
-                ////// TODO!!! these lights are all messed up
-                //var lightList = new List<Light>();
-                //foreach (var light in lights.Lights.Items)
-                //{
-                //    ////var e = new WsiLightEntity(light, Entities.Count, lights.Name.ToString());
-                //    ////Add(e);
-                //    var pos = light.Position.XYZ();
-                //    var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
-                //    var ty = dir.GetPerpVec();
-                //    var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
-                //    var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
-                //    var intensity = light.Intensity;
-                //    var range = light.Range;
-                //    var innerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-                //    var outerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-                //    var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
-                //    l.Params.CastShadows = false;//TODO
-                //    lightList.Add(l);
-                //}
-                //if (lightList.Count > 0)
-                //{
-                //    LightsEntity = new Entity();
-                //    LightsEntity.Name = lights.Name.Value;
-                //    var p = new Piece() { Lights = lightList.ToArray(), Name = LightsEntity.Name };
-                //    foreach (var light in lightList)
-                //    {
-                //        light.Piece = p;
-                //        light.Entity = LightsEntity;
-                //    }
-                //    p.UpdateBounds();
-                //    LightsEntity.SetPiece(p);
-                //    LightsEntity.UpdateBounds();
-                //}
+                if (!src.ShouldCreateLight()) continue;
+
+                var pos = src.Position.XYZ();
+                var dir = new Vector3((float)src.Direction.Z, (float)src.Direction.X, (float)src.Direction.Y);
+
+                if (dir.LengthSquared() < 0.0001f) dir = -Vector3.UnitZ;
+                dir = Vector3.Normalize(dir);
+
+                var ty = dir.GetPerpVec();
+                var tx = Vector3.Normalize(Vector3.Cross(ty, dir));
+                var col = new Vector3((float)src.Color.X, (float)src.Color.Y, (float)src.Color.Z);
+                var range = (float)src.Range;
+
+                if (range <= 0.01f) range = 10.0f;
+                var intensity = src.Intensity;
+                if (intensity <= 0.0f) intensity = 1.0f;
+
+                var inner = FloatUtil.DegToRad((float)src.InnerConeOuterCone.X);
+                var outer = FloatUtil.DegToRad((float)src.InnerConeOuterCone.Y);
+
+                //If already radians, don't convert twice
+                if ((float)src.InnerConeOuterCone.Y < MathF.PI * 2.0f)
+                {
+                    inner = (float)src.InnerConeOuterCone.X;
+                    outer = (float)src.InnerConeOuterCone.Y;
+                }
+
+                if (outer <= inner)
+                    outer = inner + 0.1f;
+
+                var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, inner, outer);
+                l.Name = src.ToString();
+                l.Params.CastShadows = false;
+                lightList.Add(l);
             }
+
+            if (lightList.Count == 0) return;
+            LightsEntity = new Entity
+            {
+                Name = group.Name.Value,
+                Level = this,
+                Position = Vector3.Zero,
+                Orientation = Quaternion.Identity,
+                Scale = Vector3.One,
+                LodDistMax = 9999,
+                StreamAutoCleanup = false,
+                RenderInShadowView = false
+            };
+
+            var piece = new Piece
+            {
+                Name = LightsEntity.Name,
+                Lights = [.. lightList]
+            };
+
+            foreach (var light in lightList)
+            {
+                light.Piece = piece;
+                light.Entity = LightsEntity;
+            }
+
+            piece.UpdateBounds();
+            LightsEntity.SetPiece(piece);
+            LightsEntity.UpdateBounds();
         }
 
         private void AddEntitiesFromSector(string parentName)
@@ -1283,49 +1316,27 @@ namespace CodeX.Games.RDR1
 
         private void UpdateEntitiesArray()
         {
-            var entities = new List<WsiEntity>();
+            var props = new List<Rsc6PropInstanceInfo>();
             foreach (var ent in Entities)
             {
-                if (ent is WsiLightEntity) continue;//TODO: handle lights and DrawableInstances
                 if (ent is not WsiEntity wsiEnt) continue;
-                entities.Add(wsiEnt);
-            }
+                if (wsiEnt.PropInstance == null) continue; //Skip lights/drawable instances/scoped ents
 
-            //Dictionary to hold the new entities for each parent
-            var parentEntitiesDict = new Dictionary<string, List<Rsc6PropInstanceInfo>>();
-            foreach (var ent in entities)
-            {
-                if (ent.ParentName == null) continue;
-                if (!parentEntitiesDict.TryGetValue(ent.ParentName, out var parentEntities))
+                props.Add(new Rsc6PropInstanceInfo
                 {
-                    parentEntities = new List<Rsc6PropInstanceInfo>();
-                    parentEntitiesDict[ent.ParentName] = parentEntities;
-                }
-
-                parentEntities.Add(new Rsc6PropInstanceInfo()
-                {
-                    EntityName = new(ent.Name),
-                    RotationX = ent.PropInstance.RotationX,//TODO: use current entity quaternion
-                    RotationY = ent.PropInstance.RotationY,
-                    RotationZ = ent.PropInstance.RotationZ,
-                    Flags = ent.Flags,
-                    AO = ent.AO,
-                    ModMode = ent.ModMode,
-                    NetworkingFlags = ent.NetworkingFlags,
-                    RotationType = ent.RotationType,
-                    EntityPosition = new Vector4(ent.Position, 0.0f)
+                    EntityName = new(wsiEnt.Name),
+                    RotationX = wsiEnt.PropInstance.RotationX, //TODO: rebuild from Orientation later
+                    RotationY = wsiEnt.PropInstance.RotationY,
+                    RotationZ = wsiEnt.PropInstance.RotationZ,
+                    Flags = wsiEnt.Flags,
+                    AO = wsiEnt.AO,
+                    ModMode = wsiEnt.ModMode,
+                    NetworkingFlags = wsiEnt.NetworkingFlags,
+                    RotationType = wsiEnt.RotationType,
+                    EntityPosition = new Vector4(wsiEnt.Position, 0.0f)
                 });
             }
-
-            //Update each parent's entities
-            foreach (var kvp in parentEntitiesDict)
-            {
-                var newEntities = kvp.Value.ToArray();
-                if (ParentSector != null)
-                {
-                    ParentSector.Props = new(newEntities);
-                }
-            }
+            Sector.Props = new([.. props]);
         }
 
         public override string ToString()
@@ -1367,7 +1378,7 @@ namespace CodeX.Games.RDR1
             var name = entity.EntityName.Value?.ToLowerInvariant();
             if (name.Contains('/'))
             {
-                name = name[(name.LastIndexOf("/") + 1)..];
+                name = name[(name.LastIndexOf('/') + 1)..];
             }
 
             var yaw = (float)entity.RotationZ; //green
@@ -1440,7 +1451,6 @@ namespace CodeX.Games.RDR1
         public override void SetPiece(Piece p)
         {
             base.SetPiece(p);
-
             if (DrawableInstance != null)
             {
                 var min = DrawableInstance.BoundingBoxMin.XYZ();
@@ -1451,40 +1461,9 @@ namespace CodeX.Games.RDR1
         }
     }
 
-    [TC(typeof(EXP))]
-    public class WsiLightEntity : WsiEntity
-    {
-        //TODO: delete this and add lights directly to the sector scoped entity
-
-        public Vector3 ParentPosition;
-
-        public WsiLightEntity(Rsc6PlacedLight light, int index, string parent)
-        {
-            Index = index;
-            Position = light.Position.XYZ();
-            ParentPosition = light.ParentPosition.XYZ();
-            ParentName = parent;
-            ModelName = JenkHash.GenHash(light.DebugName.Value.ToLowerInvariant());
-            LodDistMax = 500.0f;
-            ResetPos = true;
-
-            var pos = light.Position.XYZ();
-            var dir = new Vector3((float)light.Direction.Z, (float)light.Direction.X, (float)light.Direction.Y);
-            var ty = dir.GetPerpVec();
-            var tx = Vector3.Normalize(Vector3.Cross(dir, ty));
-            var col = new Vector3((float)light.Color.X / 5.0f, (float)light.Color.Y / 5.0f, (float)light.Color.Z / 5.0f);
-            var intensity = light.Intensity;
-            var range = light.Range;
-            var innerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-            var outerAngle = FloatUtil.DegToRad((float)light.InnerConeOuterCone.X);
-            var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, innerAngle, outerAngle);
-            Lights = new Light[] { l };
-        }
-    }
-
     public class RDR1Grid
     {
-        public Vector2 WorldOffset = new Vector2(-6144, -6144);//grid (0,0) corner in world space.
+        public Vector2 WorldOffset = new(-6144, -6144); //Grid (0,0) corner in world space.
         public int CellSize;
         public string Path;
         public string LevelName;
@@ -1493,8 +1472,8 @@ namespace CodeX.Games.RDR1
         public string ValidInstMasterObjectFile;
         public int ValidInstCount;
         public int ValidInstVersion;
-        public Dictionary<Vector2I, Rpf6FileEntry> CellEntries = new();//NOTE:(Y,X)!
-        public List<(Vector2I, Rpf6FileEntry)> VisibleCells = new();//NOTE:(Y,X)!
+        public Dictionary<Vector2I, Rpf6FileEntry> CellEntries = []; //NOTE:(Y,X)!
+        public List<(Vector2I, Rpf6FileEntry)> VisibleCells = []; //NOTE:(Y,X)!
 
         public RDR1Grid(Rpf6FileManager fileMan, int cellSize, string path, string levelName, string entryFormat)
         {
@@ -1510,14 +1489,15 @@ namespace CodeX.Games.RDR1
 
             var hexnum = System.Globalization.NumberStyles.HexNumber;
             var invcul = System.Globalization.CultureInfo.InvariantCulture;
+
             foreach (var line in validinstlines)
             {
                 if (string.IsNullOrEmpty(line)) continue;
                 var colind = line.IndexOf(':');
                 if (colind > 0)
                 {
-                    var fname = line.Substring(0, colind);
-                    var fval = line.Substring(colind).Trim();
+                    var fname = line[..colind];
+                    var fval = line[colind..].Trim();
                     switch (fname)
                     {
                         case "Dir": ValidInstDir = fval; break;
@@ -1529,20 +1509,17 @@ namespace CodeX.Games.RDR1
                 }
                 else
                 {
-                    var xstr = line.Substring(0, 4).ToLowerInvariant();
-                    var ystr = line.Substring(4).Trim().ToLowerInvariant();
+                    var xstr = line[..4].ToLowerInvariant();
+                    var ystr = line[4..].Trim().ToLowerInvariant();
                     int.TryParse(xstr, hexnum, invcul, out var x);
                     int.TryParse(ystr, hexnum, invcul, out var y);
                     var coord = new Vector2I(x, y);
                     var entryName = entryFormat.Replace("XXXX", xstr).Replace("YYYY", ystr);
                     var entryPath = $"{path}\\{entryName}";
-                    var entry = fileMan.GetEntry(entryPath) as Rpf6FileEntry;
-                    if (entry == null) continue;
+                    if (fileMan.GetEntry(entryPath) is not Rpf6FileEntry entry) continue;
                     CellEntries[coord] = entry;
                 }
             }
-            if ((ValidInstCount != 0) && (ValidInstCount != CellEntries.Count))
-            { }
 
             //in validinstance file:
             //Dir: $\treeRes
@@ -1644,10 +1621,13 @@ namespace CodeX.Games.RDR1
 
             var wtbbnds = wtb.TileBounds;
             if (wtbbnds == null) return;
+
             var wtbrd = wtbbnds.ResourceDict.Item;
             if (wtbrd == null) return;
+
             var hashes = wtbrd.Codes.Items;
             if (hashes == null) return;
+
             var entries = wtbrd.Entries.Items;
             if (entries == null) return;
 
@@ -1659,32 +1639,37 @@ namespace CodeX.Games.RDR1
                 var bounds = entry.Bounds.Item;
                 if (bounds == null) continue;
 
-                //create a piece for this bounds
-                var piece = new Piece();
-                piece.Name = bounds.Name ?? (Name + "_0x" + hash.Hex);
-                piece.FilePack = wtb;
-                piece.Collider = bounds;
+                //Create a piece for this bounds
+                var piece = new Piece
+                {
+                    Name = bounds.Name ?? (Name + "_0x" + hash.Hex),
+                    FilePack = wtb,
+                    Collider = bounds
+                };
                 piece.UpdateBounds();
                 BoundPieces[hash] = piece;
 
                 var instdict = entry.InstanceDict.Item;
                 if (instdict == null) continue;
+
                 var ihashes = instdict.Codes.Items;
                 if (ihashes == null) continue;
+
                 var ientries = instdict.Entries.Items;
                 if (ientries == null) continue;
+
                 for (int j = 0; j < ientries.Length; j++)
                 {
                     var ihash = ihashes[j];
                     var ientry = ientries[j];
+                    
                     if (ientry == null) continue;
                     var iinst = ientry.Instance.Item;
+                    
                     if (iinst == null) continue;
                     var mat = iinst.Matrix;
 
                     var pos = mat.Translation;
-                    if (pos != Vector3.Zero)
-                    { }
                     var r1 = mat.Row3();
                     var r2 = mat.Row1();
                     var r3 = mat.Row2();
@@ -1694,13 +1679,15 @@ namespace CodeX.Games.RDR1
                     mat.Row4(new Vector4(0, 0, 0, 1));
                     mat.Decompose(out var sca, out var ori, out var pos2);
 
-                    //create an entity for this instance
-                    var ent = new Entity();
-                    ent.Name = piece.Name + "_0x" + ihash.Hex;
-                    ent.FilePack = wtb;
+                    //Create an entity for this instance
+                    var ent = new Entity
+                    {
+                        Name = piece.Name + "_0x" + ihash.Hex,
+                        FilePack = wtb
+                    };
+
                     ent.SetTransform(pos, ori, sca, false);
                     ent.SetPiece(piece);
-
                     Add(ent);
                 }
             }
@@ -1738,11 +1725,12 @@ namespace CodeX.Games.RDR1
             if (treenames == null) return;
             var names = new string[treenames.Length];
             var hashes = new JenkHash[treenames.Length];
+
             for (int i = 0; i < treenames.Length; i++)
             {
                 var name = treenames[i].Value;
                 var dotind = name.LastIndexOf('.');
-                if (dotind > 0) name = name.Substring(0, dotind);
+                if (dotind > 0) name = name[..dotind];
                 names[i] = name;
                 hashes[i] = new JenkHash(name.ToLowerInvariant() + "x");
             }
@@ -1750,15 +1738,21 @@ namespace CodeX.Games.RDR1
             var currentcell = (Rsc6TreeForestGridCell)null;
             var currentbatches = new Dictionary<int, RDR1TreeGridBatch>();
             var batchlist = new List<RDR1TreeGridBatch>();
+
             RDR1TreeGridBatch getBatch(int id)
             {
                 if (currentbatches.TryGetValue(id, out var batch)) return batch;
                 if ((id < 0) || (id > names.Length)) return null;
-                batch = new RDR1TreeGridBatch();
-                batch.Tile = this;
-                batch.Cell = currentcell;
-                batch.Name = names[id];
-                batch.ModelHash = hashes[id];
+
+                batch = new RDR1TreeGridBatch
+                {
+                    FileManager = map.FileManager,
+                    Tile = this,
+                    Cell = currentcell,
+                    Name = names[id],
+                    ModelHash = hashes[id]
+                };
+
                 batchlist.Add(batch);
                 currentbatches[id] = batch;
                 return batch;
@@ -1779,12 +1773,18 @@ namespace CodeX.Games.RDR1
                     {
                         if (position == null) continue;
                         var batch = getBatch(position.TreeIndex);
-                        if (batch == null) continue;
-                        var inst = new EntityBatchInstance1();
-                        inst.Matrix = Matrix3x4.CreateTranslation(position.Position);
-                        batch.Instances.Add(inst);
+                        
+                        if (batch != null)
+                        {
+                            var inst = new EntityBatchInstance1
+                            {
+                                Matrix = Matrix3x4.CreateTranslation(position.Position)
+                            };
+                            batch.Instances.Add(inst);
+                        }
                     }
                 }
+
                 var matrices = cell.CombinedInstanceListMatrix.Items;
                 if (matrices != null)
                 {
@@ -1792,17 +1792,20 @@ namespace CodeX.Games.RDR1
                     {
                         if (matrix == null) continue;
                         var batch = getBatch(matrix.TreeTypeID);
-                        if (batch == null) continue;
-                        var inst = new EntityBatchInstance1();
-                        var mat = matrix.Transform;
-                        var pos = mat.Translation;
-                        var c1 = mat.Row3();
-                        var c2 = mat.Row1();
-                        var c3 = mat.Row2();
-                        inst.Matrix.Row1 = new Vector4(c1.Z, c1.X, c1.Y, pos.X);
-                        inst.Matrix.Row2 = new Vector4(c2.Z, c2.X, c2.Y, pos.Y);
-                        inst.Matrix.Row3 = new Vector4(c3.Z, c3.X, c3.Y, pos.Z);
-                        batch.Instances.Add(inst);
+
+                        if (batch != null)
+                        {
+                            var inst = new EntityBatchInstance1();
+                            var mat = matrix.Transform;
+                            var pos = mat.Translation;
+                            var c1 = mat.Row3();
+                            var c2 = mat.Row1();
+                            var c3 = mat.Row2();
+                            inst.Matrix.Row1 = new Vector4(c1.Z, c1.X, c1.Y, pos.X);
+                            inst.Matrix.Row2 = new Vector4(c2.Z, c2.X, c2.Y, pos.Y);
+                            inst.Matrix.Row3 = new Vector4(c3.Z, c3.X, c3.Y, pos.Z);
+                            batch.Instances.Add(inst);
+                        }
                     }
                 }
             }
@@ -1814,7 +1817,7 @@ namespace CodeX.Games.RDR1
                 Add(gridbatch);
             }
 
-            Batches = batchlist.ToArray();
+            Batches = [.. batchlist];
         }
 
         public override void PreSaveUpdate()
@@ -1826,36 +1829,42 @@ namespace CodeX.Games.RDR1
 
     public class RDR1TreeGridBatch : Entity
     {
+        public Rpf6FileManager FileManager { get; set; }
         public RDR1TreeGridTile Tile { get; set; }
         public Rsc6TreeForestGridCell Cell { get; set; }
         public JenkHash ModelHash { get; set; }
         public BoundingBox PointsBox { get; set; }
         public BoundingBox PieceBox { get; set; }
-        public List<EntityBatchInstance1> Instances = new();
+
+        public List<EntityBatchInstance1> Instances = [];
+        public static Dictionary<JenkHash, Piece> TreeImposterPieceCache = [];
 
         public bool BuildFromInstances()
         {
             var insts = Instances.ToArray();
             if (insts.Length == 0)
             {
-                Enabled = false;//empty batch - don't bother with it
+                Enabled = false; //Empty batch - don't bother with it
                 return false;
             }
 
             var min = new Vector3(float.MaxValue);
             var max = new Vector3(float.MinValue);
+
             for (int i = 0; i < insts.Length; i++)
             {
                 var trans = insts[i].Matrix.Translation;
                 min = Vector3.Min(min, trans);
                 max = Vector3.Max(max, trans);
             }
+
             var bmin = new Vector4(min, 0);
             var bsiz = new Vector4(Vector3.Max(max - min, Vector3.One), 0);
             var sparams = new Vector4(1, 1, 0, 0);
             var entbatch = new EntityBatch(this, insts.Length, 1, bmin, bsiz, sparams);
             BufferUtil.WriteArray(entbatch.Data, 0, insts);
-            var gridscale = 0.2;//inverse of min cell size
+
+            var gridscale = 0.2; //Inverse of min cell size
             var maxgs = (int)Math.Min(Math.Max(Math.Max(bsiz.X, bsiz.Y) * gridscale, 2), 32);
             entbatch.InitGrid(maxgs);
             SetBatch(entbatch);
@@ -1868,10 +1877,10 @@ namespace CodeX.Games.RDR1
 
         public override void UpdateBounds()
         {
-            //base.UpdateBounds();
             var pieceRad = new Vector3(PieceBox.Size.Length());
             var min = PointsBox.Minimum - pieceRad;
             var max = PointsBox.Maximum + pieceRad;
+
             BoundingBox = new BoundingBox(min, max);
             BoundingSphere.Center = BoundingBox.Center;
             BoundingSphere.Radius = BoundingBox.Size.Length() * 0.5f;
@@ -1879,27 +1888,115 @@ namespace CodeX.Games.RDR1
 
         public override void SetPiece(Piece p)
         {
-            var changed = (p != Piece);
+            var changed = p != Piece;
             if (p != null) PieceBox = p.BoundingBox;
-            base.SetPiece(p);
-            if ((p == null) || (changed == false)) return;
 
-            var d = p as Rsc6Drawable;
-            if (d == null) return;
-            var hdist = 9999f;//d.LodDistHigh;
-            var mdist = d.LodDistMed;
+            base.SetPiece(p);
+            if (p == null || !changed || Batch == null) return;
+
+            var hdist = 150.0f;
+            var mdist = 9999.0f;
+
             Batch.InitLods(hdist, mdist);
             Batch.Lods[0].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[0], p, 0);
-            //Batch.Lods[1].RenderEntity = new RDR1BatchLodEntity(this, Batch.Lods[1], p, 1);
 
-            ////lod1 of RDR1 trees is missing the trunk for some reason.
-            ////TODO: use a proper billboarding/impostor system for these
+            var imposterPiece = CreateTreeImposterPiece(ModelHash, p);
+            if (imposterPiece != null)
+            {
+                var imposterEntity = new RDR1BatchLodEntity(this, Batch.Lods[1], imposterPiece, 0)
+                {
+                    DisableMouseSelect = true,
+                    RenderInShadowView = false
+                };
+                Batch.Lods[1].RenderEntity = imposterEntity;
+            }
+            UpdateBounds();
         }
 
         public override void ApplyTransforms()
         {
             //base.ApplyTransforms();
             //TODO: handle moving instances and updating bounds
+        }
+
+        public Piece CreateTreeImposterPiece(JenkHash hash, Piece sourcePiece)
+        {
+            if (sourcePiece == null) return null;
+            if (TreeImposterPieceCache.TryGetValue(hash, out var cached)) return cached;
+
+            var tex = FindFallbackTexture(FileManager, hash);
+            if (tex == null) return null;
+
+            var box = sourcePiece.BoundingBox;
+            var size = box.Size;
+            var width = MathF.Max(size.X, size.Y);
+            var height = size.Z;
+
+            if (width <= 0.1f) width = 4.0f;
+            if (height <= 0.1f) height = 8.0f;
+
+            var aspect = width / MathF.Max(height, 0.1f);
+            var isBush = height < 3.0f;
+            float zOffset;
+
+            if (isBush)
+            {
+                width *= 0.85f;
+                height *= 0.85f;
+                zOffset = -0.35f;
+            }
+            else if (aspect > 1.25f) //Wide trees player_social & player_treaurehunter
+            {
+                width *= 1.05f;
+                height *= 1.00f;
+                zOffset = -3.5f;
+            }
+            else
+            {
+                width *= 1.00f;
+                height *= 0.95f;
+                zOffset = -2.0f;
+            }
+
+            var halfW = width * 0.5f;
+            var verts = new[]
+            {
+                new ShapeVertex(new Vector4(-halfW, zOffset, 0.0f, 1), new Vector2(0, 1)),
+                new ShapeVertex(new Vector4( halfW, zOffset, 0.0f, 1), new Vector2(1, 1)),
+                new ShapeVertex(new Vector4(-halfW, zOffset + height, 0.0f, 1), new Vector2(0, 0)),
+                new ShapeVertex(new Vector4( halfW, zOffset + height, 0.0f, 1), new Vector2(1, 0)),
+            };
+
+            var inds = new ushort[]
+            {
+                0, 1, 3,
+                3, 2, 0
+            };
+
+            var shape = Shape.Create(hash.ToString() + "_imposter", verts, inds);
+            shape.SetCoreShader<Core.Shaders.BillboardShader>(Core.Shaders.ShaderBucket.Alpha1);
+            shape.ShaderInputs = shape.Shader.CreateShaderInputs();
+            shape.ShaderInputs.SetFloat2(0x70C0AAAF, Vector2.One);  //BillboardSize
+            shape.ShaderInputs.SetFloat2(0x5599B92F, Vector2.Zero); //BillboardCenter
+            shape.ShaderInputs.SetFloat2(0x2385B692, Vector2.Zero); //BillboardUVMin
+            shape.ShaderInputs.SetFloat2(0xDE58B6F1, Vector2.One);  //BillboardUVMax
+            shape.ShaderInputs.SetFloat(0x0D229EE9, 1.0f);          //BillboardCount
+            shape.ShaderInputs.SetFloat(0x9C75A877, 0.0f);          //BillboardSlice
+            shape.ShaderInputs.SetUInt32(0xA5C7148A, 1);            //BillboardMode
+            shape.Textures = new Texture[1];
+            shape.Textures[0] = tex;
+
+            var piece = new Piece(shape);
+            TreeImposterPieceCache[hash] = piece;
+            return piece;
+        }
+
+        private static Rsc6Texture FindFallbackTexture(Rpf6FileManager fman, JenkHash hash)
+        {
+            var txd = fman.DataFileMgr.ResidentTxds.FirstOrDefault(txd => txd.NameHash == 0xDEA6A3A0); //treeFallBackTextureDictionary.wtd
+            var name = hash.ToString()[..^1];
+            if (txd?.DictStr == null) return null;
+            return txd.DictStr.TryGetValue(name, out var tex) ? tex : null;
         }
     }
 
@@ -1936,11 +2033,13 @@ namespace CodeX.Games.RDR1
                 var ghash = gitem.NameHash;
                 var mname = "p_" + gname + "x";
 
-                var batch = new RDR1GrassGridBatch();
-                batch.Tile = this;
-                batch.GrassField = gitem;
-                batch.Name = mname;
-                batch.ModelHash = new JenkHash(mname);
+                var batch = new RDR1GrassGridBatch
+                {
+                    Tile = this,
+                    GrassField = gitem,
+                    Name = mname,
+                    ModelHash = new JenkHash(mname)
+                };
 
                 var ok = batch.BuildFromGrassField();
                 if (ok == false) continue;
@@ -1949,7 +2048,7 @@ namespace CodeX.Games.RDR1
                 Add(batch);
             }
 
-            Batches = batchlist.ToArray();
+            Batches = [.. batchlist];
         }
     }
 
@@ -1960,16 +2059,18 @@ namespace CodeX.Games.RDR1
         public JenkHash ModelHash { get; set; }
         public BoundingBox PointsBox { get; set; }
         public BoundingBox PieceBox { get; set; }
-        //public List<EntityBatchInstance2> Instances = new();
 
         public bool BuildFromGrassField()
         {
             var vbuf = GrassField?.VertexBuffer.Item;
             if (vbuf == null) return false;
+
             var vfmt = vbuf.Layout.Item;
             if (vfmt == null) return false;
+
             var vdata = vbuf.VertexData.Items;
             if (vdata == null) return false;
+
             var cnt = (int)vbuf.VertexCount;
             if (cnt == 0) return false;
             if (vdata.Length != cnt * 4) return false;
@@ -1977,10 +2078,6 @@ namespace CodeX.Games.RDR1
             var min = GrassField.AABBMin.XYZ();
             var max = GrassField.AABBMax.XYZ();
             var rng = GrassField.AABBScale.XYZ();
-            if (rng != (max - min))
-            { }
-            if (rng == Vector3.Zero)
-            { }
             var bmin = new Vector4(min, 0);
             var bsiz = new Vector4(rng, 1);
             var sparams = new Vector4(1, 1, 0, 0);
@@ -1997,12 +2094,15 @@ namespace CodeX.Games.RDR1
                 inst.PositionZ = (ushort)(cv.G * 256);
                 inst.NormalX = (byte)((n.X * 0.5f + 0.5f) * 0xFF);
                 inst.NormalY = (byte)((n.Y * 0.5f + 0.5f) * 0xFF);
-                inst.ColourR = 0x7F;
-                inst.ColourG = 0x7F;
-                inst.ColourB = 0x7F;
+                inst.Scale = 0x80;
+                inst.ParamY = (byte)(i & 15);
+                inst.ColourR = 0xFF;
+                inst.ColourG = 0xFF;
+                inst.ColourB = 0xFF;
             }
+
             BufferUtil.WriteArray(batch.Data, 0, insts);
-            var gridscale = 0.5;//inverse of min cell size
+            var gridscale = 0.5; //Inverse of min cell size
             var maxgs = (int)Math.Min(Math.Max(Math.Max(bsiz.X, bsiz.Y) * gridscale, 2), 32);
             batch.InitGrid(maxgs);
             SetBatch(batch);
@@ -2029,10 +2129,9 @@ namespace CodeX.Games.RDR1
             var changed = (p != Piece);
             if (p != null) PieceBox = p.BoundingBox;
             base.SetPiece(p);
-            if ((p == null) || (changed == false)) return;
+            if (p == null || !changed) return;
 
-            var d = p as Rsc6Drawable;
-            if (d == null) return;
+            if (p is not Rsc6Drawable d) return;
             var hdist = d.LodDistHigh;
             var mdist = d.LodDistMed;
             Batch.InitLods(hdist, mdist);
@@ -2059,15 +2158,16 @@ namespace CodeX.Games.RDR1
             Level = batch.Level;
             Piece = p;
             PieceLodOverride = pieceLod;
-            CurrentDistance = lod.LodDist;//this isn't great...
+            CurrentDistance = lod.LodDist;
             BoundingBox = batch.BoundingBox;
             BoundingSphere = batch.BoundingSphere;
-            Position = batch.Position;// BoundingBox.Center;
+            Position = batch.Position;
             Orientation = Quaternion.Identity;
             Scale = Vector3.One;
             ParentIndex = -1;
             LodLevel = 0;
             LodDistMax = 9999;
+
             SetBatchLod(lod);
             UpdateWorldTransform();
         }

@@ -1289,11 +1289,6 @@ namespace CodeX.Games.RDR1.RPF6
         public Dictionary<string, string[]> SmicMapping; //For the texture mapping from smicToFragMap.txt
         public bool UseStartupCache = false;
 
-        public Rpf6DataFileMgr(Rpf6FileManager fman)
-        {
-            FileManager = fman;
-        }
-
         public void Init()
         {
             if (StreamEntries != null) return;
@@ -1485,6 +1480,7 @@ namespace CodeX.Games.RDR1.RPF6
                     {
                         ResidentTxds.Add(txd);
                     }
+
                     foreach (var tex in r.Textures.Values)
                     {
                         if (tex == null) continue;
@@ -1492,6 +1488,21 @@ namespace CodeX.Games.RDR1.RPF6
                         {
                             FragTextures.Add((Rsc6Texture)tex);
                         }
+                    }
+                }
+            }
+
+            //Load textures from treeFallBackTextureDictionary.wtd
+            StreamEntries[Rpf6FileExt.wtd_wtx].TryGetValue(0x573FB948, out Rpf6FileEntry treeList);
+            if (treeList != null)
+            {
+                var r = FileManager.LoadTexturePack(treeList);
+                if (r != null)
+                {
+                    var txd = (r as WtdFile)?.TextureDictionary;
+                    if (txd != null)
+                    {
+                        ResidentTxds.Add(txd);
                     }
                 }
             }

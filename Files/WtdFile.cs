@@ -10,17 +10,19 @@ namespace CodeX.Games.RDR1.Files
 {
     public class WtdFile : TexturePack
     {
+        public JenkHash NameHash;
         public Rsc6TextureDictionary TextureDictionary;
         public Dictionary<uint, Rsc6Texture> Dict { get; set; }
 
         public WtdFile(Rpf6FileEntry file) : base(file)
         {
+            NameHash = file.NameHash;
         }
 
         public WtdFile()
         {
             TextureDictionary = new Rsc6TextureDictionary();
-            Textures = new Dictionary<string, Texture>();
+            Textures = [];
         }
 
         public WtdFile(Rsc6TextureDictionary td) : base(null)
@@ -48,7 +50,8 @@ namespace CodeX.Games.RDR1.Files
             var r = new Rsc6DataReader(e, data);
 
             TextureDictionary = r.ReadBlock<Rsc6TextureDictionary>();
-            Textures = new Dictionary<string, Texture>();
+            TextureDictionary.NameHash = NameHash;
+            Textures = [];
 
             if (TextureDictionary?.Textures.Items != null)
             {

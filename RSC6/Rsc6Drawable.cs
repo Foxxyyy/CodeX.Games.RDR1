@@ -69,7 +69,6 @@ namespace CodeX.Games.RDR1.RSC6
                 {
                     var d = Drawables.Items[i];
                     var h = (i < imax) ? Hashes.Items[i] : 0;
-                    d.NameHash = h;
                     d.Name = h.ToString();
                     d.TexturePack = texpack;
                     d.ApplyTextures(TextureDictionary.Item);
@@ -623,7 +622,6 @@ namespace CodeX.Games.RDR1.RSC6
 
                 switch (hash)
                 {
-                    case 0x32A4918E: //rdr2_alpha
                     case 0x173D5F9D: //rdr2_grass
                     case 0x171C9E47: //rdr2_glass_glow
                     case 0x47A5EF34: //rdr2_graffiti
@@ -1171,7 +1169,7 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetUInt32(0x65DD2E63, 1); //MeshWindMode, grass wind mode
             ShaderInputs.SetFloat(0x8B342EF3, 1); //MeshWindAmount
             ShaderInputs.SetUInt32(0xD1822635, 1); //MeshFoliageMode
-            ShaderInputs.SetFloat(0xB52CC88F, BoundingBox.Size.Z); //MeshWindHeight
+            ShaderInputs.SetFloat(0xB52CC88F, MathF.Max(BoundingBox.Size.Z, 1.0f)); //MeshWindHeight
             ShaderInputs.SetUInt32(0x2905BED7, 1); //ColourTintMode
             ShaderState = ShaderState.Alpha;
 
@@ -1217,7 +1215,7 @@ namespace CodeX.Games.RDR1.RSC6
                     switch (parm.Hash)
                     {
                         case 0xF6712B81: //bumpiness
-                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.X * 0.5f); //BumpScale
+                            ShaderInputs.SetFloat(0xDF918855, parm.Vector.X * 0.25f); //BumpScale
                             break;
                     }
                 }
@@ -1283,10 +1281,10 @@ namespace CodeX.Games.RDR1.RSC6
             ShaderInputs.SetFloat4(0x9A7F494F, new Vector4(0.1f, 0.02f, 0.01f, 0)); //RefractAbsorption
             ShaderInputs.SetFloat(0xCC9749CA, 5.0f); //RefractEdgeBlend
             ShaderInputs.SetUInt32(0xC7AFBF36, 1); //WaterFlowUVSource - texcoord1
-            ShaderInputs.SetUInt32(0xD7CA292B, 1);//NormalsSource - always up (0,0,1)
-            ShaderInputs.SetFloat(0x16557DF5, 0.01f * rippleSign);//WaterRippleHeight (base value)
-            ShaderInputs.SetFloat4(0xF6B32D0C, new Vector4(0, 1, 0, 0));//WaterFlowTextureMaskX
-            ShaderInputs.SetFloat4(0xE06E0082, new Vector4(0, 0, 0, -1));//WaterFlowTextureMaskY
+            ShaderInputs.SetUInt32(0xD7CA292B, 1); //NormalsSource - always up (0,0,1)
+            ShaderInputs.SetFloat(0x16557DF5, 0.01f * rippleSign); //WaterRippleHeight (base value)
+            ShaderInputs.SetFloat4(0xF6B32D0C, new Vector4(0, 1, 0, 0)); //WaterFlowTextureMaskX
+            ShaderInputs.SetFloat4(0xE06E0082, new Vector4(0, 0, 0, -1)); //WaterFlowTextureMaskY
 
             model.RenderInShadowView = false;
 
@@ -1925,7 +1923,7 @@ namespace CodeX.Games.RDR1.RSC6
                 var geoms = model?.Geometries.Items;
                 if (geoms == null) continue;
 
-                for (int i = 0; i < model.Meshes.Length; i++)
+                for (int i = 0; i < model.GeometriesCount; i++)
                 {
                     var geom = geoms[i];
                     var sid = geom.ShaderID;
@@ -3257,9 +3255,9 @@ namespace CodeX.Games.RDR1.RSC6
             {
                 object block = writer.BlockList[0];
                 if (block is Rsc6FragDrawable wfd)
-                    texture = wfd.TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                    texture = wfd.TextureDictionary.Item?.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name) ?? null;
                 else if (block is Rsc6Fragment wft)
-                    texture = wft.Textures.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
+                    texture = wft.Textures.Item?.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name) ?? null;
                 else
                     texture = ((Rsc6VisualDictionary)block).TextureDictionary.Item.Textures.Items.FirstOrDefault(e => e.Name == Texture.Name);
             }

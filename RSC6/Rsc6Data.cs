@@ -1695,6 +1695,11 @@ namespace CodeX.Games.RDR1.RSC6
             }
         }
 
+        public readonly bool IsNull()
+        {
+            return Value == null;
+        }
+
         public override readonly string ToString()
         {
             return Value ?? "NULL";

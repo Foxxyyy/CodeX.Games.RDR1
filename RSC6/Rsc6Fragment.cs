@@ -513,7 +513,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBool("HasFragLOD", HasFragLOD);
             writer.WriteBool("HasAnimNormalMap", HasAnimNormalMap);
             writer.WriteByteArray("Unknown_173h", Unknown_173h);
-            if (ParentTextureLOD.Value != null) writer.WriteString("ParentTextureLOD", ParentTextureLOD.ToString());
+            if (!ParentTextureLOD.IsNull()) writer.WriteString("ParentTextureLOD", ParentTextureLOD.ToString());
             writer.WriteInt32("GlassGlowShaderIndex", GlassGlowShaderIndex);
             writer.WriteNode("TargetManager", TargetManager.Item);
             writer.WriteNode("VariableMeshArray", VariableMeshArray);
@@ -761,7 +761,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteBool("LoadSkeleton", LoadSkeleton);
             if (Locators.Item != null) writer.WriteNode("Locators", Locators.Item);
             writer.WriteUInt32("NodePool", NodePool);
-            if (SkeletonTypeName.Value != null) writer.WriteString("SkeletonTypeName", SkeletonTypeName.Value);
+            if (!SkeletonTypeName.IsNull()) writer.WriteString("SkeletonTypeName", SkeletonTypeName.ToString());
             if (Animations.Items != null) writer.WriteNodeArray("Animations", Animations.Items);
         }
 
@@ -1149,7 +1149,7 @@ namespace CodeX.Games.RDR1.RSC6
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteEnum("@type", Type);
-            if (Name.Value != null) writer.WriteString("Name", Name.ToString());
+            if (!Name.IsNull()) writer.WriteString("Name", Name.ToString());
             writer.WriteEnum("TypeFlags", TypeFlags);
             writer.WriteInt32("IncludeFlags", IncludeFlags);
             writer.WriteUInt16("PropertyFlags", PropertyFlags);
@@ -1551,21 +1551,21 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
+            var locator = reader.ReadString("LocatorName");
             FragmentName = new(reader.ReadString("FragmentName"));
             NonMangledName = new(reader.ReadString("NonMangledName"));
-            LocatorName = new(reader.ReadString("LocatorName"));
-            DesignTagHash = reader.ReadUInt32("DesignTagHash");
+            LocatorName = new(locator);
             Default = reader.ReadBool("Default");
             HardLink = reader.ReadBool("HardLink");
             Detachable = reader.ReadBool("Detachable");
+            DesignTagHash = string.IsNullOrEmpty(locator) ? 0 :JenkHash.GenHash(locator);
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            if (FragmentName.Value != null) writer.WriteString("FragmentName", FragmentName.Value);
-            if (NonMangledName.Value != null) writer.WriteString("NonMangledName", NonMangledName.Value);
-            if (LocatorName.Value != null) writer.WriteString("LocatorName", LocatorName.Value);
-            writer.WriteUInt32("DesignTagHash", DesignTagHash);
+            if (!FragmentName.IsNull()) writer.WriteString("FragmentName", FragmentName.ToString());
+            if (!NonMangledName.IsNull()) writer.WriteString("NonMangledName", NonMangledName.ToString());
+            if (!LocatorName.IsNull()) writer.WriteString("LocatorName", LocatorName.ToString());
             writer.WriteBool("Default", Default);
             writer.WriteBool("HardLink", HardLink);
             writer.WriteBool("Detachable", Detachable);

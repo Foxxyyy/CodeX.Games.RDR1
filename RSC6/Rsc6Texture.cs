@@ -14,6 +14,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Arr<JenkHash> Hashes { get; set; } //m_Codes
         public Rsc6PtrArr<Rsc6Texture> Textures { get; set; } //m_Entries
 
+        public JenkHash NameHash;
         public Dictionary<JenkHash, Rsc6Texture> Dict = [];
         public Dictionary<string, Rsc6Texture> DictStr = [];
 
