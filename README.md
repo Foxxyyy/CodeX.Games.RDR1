@@ -26,6 +26,7 @@ More info here : [@dexyfex](https://www.patreon.com/dexyfex) - [CodeWalker disco
 * dexyfex                                   
 * revelations                              
 * Disquse                                           
-* LennyH (BadassBaboon)                                     
+* LennyH (BadassBaboon)            
+* KristianD3                                                  
 * CabooseSayzWTF                                      
 * shvab                                      
