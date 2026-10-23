@@ -160,7 +160,6 @@ namespace CodeX.Games.RDR1
                 foreach (var light in ent.Lights)
                 {
                     if (light == null) continue;
-                    //Debug.WriteLine(light.Name);
                     light.Params.Disabled = (TimeOfDayHour >= 6) && (TimeOfDayHour <= 17);
                 }
             }
@@ -269,11 +268,6 @@ namespace CodeX.Games.RDR1
 
                 wsient.SetPiece(piece);
                 ents.Add(wsient);
-            }
-
-            if (sector.LightsEntity != null)
-            {
-                ents.Add(sector.LightsEntity);
             }
         }
 
@@ -1157,7 +1151,7 @@ namespace CodeX.Games.RDR1
                 var name = currentSector.Name.Value?.ToLowerInvariant();
                 var dfm = mapNode.Map.FileManager.DataFileMgr;
                 var wvdentry = dfm.TryGetStreamEntry(NameHash, Rpf6FileExt.wvd);
-                
+
                 if (wvdentry != null)
                 {
                     ScopedEntity = new WsiEntity()
@@ -1204,88 +1198,12 @@ namespace CodeX.Games.RDR1
             }
 
             AddEntitiesFromSector(name); //Add the sector's entities
-            AddLightsFromSector(); //Add the sector's lights
         }
 
         public override void PreSaveUpdate()
         {
             base.PreSaveUpdate();
             UpdateEntitiesArray();
-        }
-
-        private void AddLightsFromSector()
-        {
-            var group = Sector.PlacedLightsGroup.Item;
-            var items = group?.Lights.Items;
-            if (items == null || items.Length == 0) return;
-
-            var lightList = new List<Light>();
-            foreach (var src in items)
-            {
-                if (!src.ShouldCreateLight()) continue;
-
-                var pos = src.Position.XYZ();
-                var dir = new Vector3((float)src.Direction.Z, (float)src.Direction.X, (float)src.Direction.Y);
-
-                if (dir.LengthSquared() < 0.0001f) dir = -Vector3.UnitZ;
-                dir = Vector3.Normalize(dir);
-
-                var ty = dir.GetPerpVec();
-                var tx = Vector3.Normalize(Vector3.Cross(ty, dir));
-                var col = new Vector3((float)src.Color.X, (float)src.Color.Y, (float)src.Color.Z);
-                var range = (float)src.Range;
-
-                if (range <= 0.01f) range = 10.0f;
-                var intensity = src.Intensity;
-                if (intensity <= 0.0f) intensity = 1.0f;
-
-                var inner = FloatUtil.DegToRad((float)src.InnerConeOuterCone.X);
-                var outer = FloatUtil.DegToRad((float)src.InnerConeOuterCone.Y);
-
-                //If already radians, don't convert twice
-                if ((float)src.InnerConeOuterCone.Y < MathF.PI * 2.0f)
-                {
-                    inner = (float)src.InnerConeOuterCone.X;
-                    outer = (float)src.InnerConeOuterCone.Y;
-                }
-
-                if (outer <= inner)
-                    outer = inner + 0.1f;
-
-                var l = Light.CreateSpot(pos, dir, tx, ty, col, intensity, range, 5.0f, inner, outer);
-                l.Name = src.ToString();
-                l.Params.CastShadows = false;
-                lightList.Add(l);
-            }
-
-            if (lightList.Count == 0) return;
-            LightsEntity = new Entity
-            {
-                Name = group.Name.Value,
-                Level = this,
-                Position = Vector3.Zero,
-                Orientation = Quaternion.Identity,
-                Scale = Vector3.One,
-                LodDistMax = 9999,
-                StreamAutoCleanup = false,
-                RenderInShadowView = false
-            };
-
-            var piece = new Piece
-            {
-                Name = LightsEntity.Name,
-                Lights = [.. lightList]
-            };
-
-            foreach (var light in lightList)
-            {
-                light.Piece = piece;
-                light.Entity = LightsEntity;
-            }
-
-            piece.UpdateBounds();
-            LightsEntity.SetPiece(piece);
-            LightsEntity.UpdateBounds();
         }
 
         private void AddEntitiesFromSector(string parentName)
@@ -1662,10 +1580,10 @@ namespace CodeX.Games.RDR1
                 {
                     var ihash = ihashes[j];
                     var ientry = ientries[j];
-                    
+
                     if (ientry == null) continue;
                     var iinst = ientry.Instance.Item;
-                    
+
                     if (iinst == null) continue;
                     var mat = iinst.Matrix;
 
@@ -1773,7 +1691,7 @@ namespace CodeX.Games.RDR1
                     {
                         if (position == null) continue;
                         var batch = getBatch(position.TreeIndex);
-                        
+
                         if (batch != null)
                         {
                             var inst = new EntityBatchInstance1
@@ -1945,7 +1863,7 @@ namespace CodeX.Games.RDR1
                 height *= 0.85f;
                 zOffset = -0.35f;
             }
-            else if (aspect > 1.25f) //Wide trees player_social & player_treaurehunter
+            else if (aspect > 1.25f) //Wide trees
             {
                 width *= 1.05f;
                 height *= 1.00f;

@@ -1,4 +1,5 @@
-﻿using CodeX.Core.Numerics;
+﻿using CodeX.Core.Engine;
+using CodeX.Core.Numerics;
 using CodeX.Core.Utilities;
 using CodeX.Games.RDR1.RPF6;
 using System;
@@ -2305,7 +2306,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Half4 FlickerSpeed { get; set; } //m_FlickerSpeed
         public Half4 Attenuation { get; set; } //m_Attenuation
         public Half2 InnerConeOuterCone { get; set; } //m_InnerConeOuterCone
-        public uint Type { get; set; } //m_Type
+        public Rsc6PlacedLightType Type { get; set; } //m_Type
         public uint Flags { get; set; } //m_Flags
         public float Range { get; set; } //m_Range
         public float Intensity { get; set; } //m_Intensity
@@ -2324,6 +2325,8 @@ namespace CodeX.Games.RDR1.RSC6
         public bool DrawPropsOnly { get; set; } //drawPropsOnly
         public byte Transparency { get; set; } //transparency
 
+        public bool IsAttachedToProp => (Flags & 0x04) != 0;
+
         public override void Read(Rsc6DataReader reader) //rdrPlacedLight
         {
             Position = reader.ReadVector4();
@@ -2336,7 +2339,7 @@ namespace CodeX.Games.RDR1.RSC6
             FlickerSpeed = reader.ReadHalf4();
             Attenuation = reader.ReadHalf4();
             InnerConeOuterCone = reader.ReadHalf2();
-            Type = reader.ReadUInt32();
+            Type = (Rsc6PlacedLightType)reader.ReadUInt32();
             Flags = reader.ReadUInt32();
             Range = reader.ReadSingle();
             Intensity = reader.ReadSingle();
@@ -2354,8 +2357,6 @@ namespace CodeX.Games.RDR1.RSC6
             DrawRoomOnly = reader.ReadBoolean();
             DrawPropsOnly = reader.ReadBoolean();
             Transparency = reader.ReadByte();
-
-            Debug.WriteLine($"Light: {DebugName}, Range: {Range}, Intensity: {Intensity}, CutsceneHash: {CutsceneHash}, Type: {Type}");
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -2370,7 +2371,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteHalf4(FlickerSpeed);
             writer.WriteHalf4(Attenuation);
             writer.WriteHalf2(InnerConeOuterCone);
-            writer.WriteUInt32(Type);
+            writer.WriteUInt32((uint)Type);
             writer.WriteUInt32(Flags);
             writer.WriteSingle(Range);
             writer.WriteSingle(Intensity);
@@ -2405,7 +2406,7 @@ namespace CodeX.Games.RDR1.RSC6
             FlickerSpeed = reader.ReadVector4("FlickerSpeed");
             Attenuation = reader.ReadVector4("Attenuation");
             InnerConeOuterCone = reader.ReadVector2("InnerConeOuterCone");
-            Type = reader.ReadUInt32("Type");
+            Type = reader.ReadEnum<Rsc6PlacedLightType>("Type");
             Flags = reader.ReadUInt32("Flags");
             Range = reader.ReadSingle("Range");
             Intensity = reader.ReadSingle("Intensity");
@@ -2435,7 +2436,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("FlickerSpeed", Rpf6Crypto.Half4ToVector4(FlickerSpeed));
             writer.WriteVector4("Attenuation", Rpf6Crypto.Half4ToVector4(Attenuation));
             writer.WriteVector2("InnerConeOuterCone", Rpf6Crypto.Half2ToVector2(InnerConeOuterCone));
-            writer.WriteUInt32("Type", Type);
+            writer.WriteEnum("Type", Type);
             writer.WriteUInt32("Flags", Flags);
             writer.WriteSingle("Range", Range);
             writer.WriteSingle("Intensity", Intensity);
@@ -2460,7 +2461,20 @@ namespace CodeX.Games.RDR1.RSC6
             if (Intensity <= 0.0f) return false;
             if (CutsceneHash != 0) return false;
             if ((Flags & 0x300) != 0) return false; //Cutscene specific
+            if (Type == Rsc6PlacedLightType.Spot) return false;
             return true;
+        }
+
+        public Light CreateLight(Vector3 pos)
+        {
+            var col = new Vector3((float)Color.X, (float)Color.Y, (float)Color.Z);
+            var range = MathF.Max((float)Range, 0.01f);
+            var intensity = MathF.Max(Intensity, 0.0f);
+
+            if (Type == Rsc6PlacedLightType.Point)
+                return Light.CreatePoint(pos, col, intensity, range, 1.0f);
+            else
+                return null;
         }
 
         public override string ToString()
@@ -3610,6 +3624,12 @@ namespace CodeX.Games.RDR1.RSC6
         {
             State = (State & 0xCFFFFFFF) | state;
         }
+    }
+
+    public enum Rsc6PlacedLightType : uint
+    {
+        Point = 0, //Local point/omi/fill light
+        Spot = 1 //Spot/key/camera-directional style light
     }
 
     public enum Rsc6AttributeClassType : uint

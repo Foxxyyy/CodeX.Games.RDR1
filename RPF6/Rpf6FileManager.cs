@@ -267,14 +267,14 @@ namespace CodeX.Games.RDR1.RPF6
                 return archive;
             }
 
-            for (int i = 0; i < 999; i++)
+            /*for (int i = 0; i < 999; i++)
             {
                 var patch = $"patch{i}.rpf";
                 if (relpath.EndsWith(patch))
                 {
                     return null;
                 }
-            }
+            }*/
 
             var rpf = new Rpf6File(path, relpath);
             rpf.ReadStructure();

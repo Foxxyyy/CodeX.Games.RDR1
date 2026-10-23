@@ -590,6 +590,7 @@ namespace CodeX.Games.RDR1.RPF6
         }
 
         public static readonly float FNaN = BufferUtil.GetUintFloat(0x7F800001);
+        public static readonly float QNaN = BufferUtil.GetUintFloat(0x7FC00001);
         public static readonly Vector3 DebugVector = new(BufferUtil.GetUintFloat(0xCDCDCDCD));
     }
 }

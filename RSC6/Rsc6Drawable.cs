@@ -607,6 +607,8 @@ namespace CodeX.Games.RDR1.RSC6
                     #endregion default shaders
                 }
 
+                //@dexyfex
+                //TODO: use Alpha2 for glasses, translucency seems to work but it's emissive during nights..
                 switch (bucket)
                 {
                     default: throw new Exception("Unknown RenderBucket");
@@ -665,7 +667,7 @@ namespace CodeX.Games.RDR1.RSC6
                         break;
                     case 0x4bc61b93: //rdr2_glass_notint
                     case 0x0018e2b6: //rdr2_glass_notint_shared
-                        ShaderInputs.SetFloat(0x4D52C5FF, 0.10f); //AlphaScale
+                        ShaderInputs.SetFloat(0x4D52C5FF, 0.15f); //AlphaScale
                         ShaderInputs.SetUInt32(0x2905BED7, 0); //ColourTintMode
                         break;
                 }
@@ -707,7 +709,7 @@ namespace CodeX.Games.RDR1.RSC6
                                 Textures[1] = tex;
                                 break;
                             case 0x608799C6: //specsampler
-                                Textures[2] = tex;
+                                //Textures[2] = tex;
                                 ShaderInputs.SetUInt32(0x249983FD, (uint)ParamsMapConfig.RDR1SpecAmbOcc); //ParamsMapConfig
                                 break;
                             case 0xDB88014D: //amboccsampler

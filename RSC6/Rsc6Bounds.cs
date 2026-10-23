@@ -617,7 +617,12 @@ namespace CodeX.Games.RDR1.RSC6
             CapsuleLength = Rpf6Crypto.ToXYZ(reader.ReadVector4("CapsuleLength"));
             EndPointsWorldSpace0 = Rpf6Crypto.ToXYZ(reader.ReadVector4("EndPointsWorldSpace0"));
             EndPointsWorldSpace1 = Rpf6Crypto.ToXYZ(reader.ReadVector4("EndPointsWorldSpace1"));
+            Axis = new Vector4(1.0f, 1.0f, 1.0f, Rpf6Crypto.FNaN);
             Material = reader.ReadStruct<Rsc6BoundMaterial>("Material");
+
+            EndPointsWorldSpace0 = new Vector4(EndPointsWorldSpace0.XYZ(), Rpf6Crypto.QNaN);
+            EndPointsWorldSpace1 = new Vector4(EndPointsWorldSpace1.XYZ(), Rpf6Crypto.QNaN);
+
             InitCapsulePart();
         }
 
@@ -679,7 +684,16 @@ namespace CodeX.Games.RDR1.RSC6
         {
             base.Write(writer);
             writer.WriteVector4(BoxSize);
-            writer.WriteVector4Array(PlainVertices);
+
+            var wft = writer.BlockList[0] is Rsc6Fragment;
+            if (wft && PlainVertices != null)
+            {
+                foreach (var v in PlainVertices)
+                    writer.WriteVector4(BitConverter.SingleToUInt32Bits(v.W) == Rpf6Crypto.FNaN ? new Vector4(v.XYZ(), Rpf6Crypto.QNaN) : v);
+            }
+            else
+                writer.WriteVector4Array(PlainVertices);
+
             writer.WriteUInt32Array(Unknown_170h);
             Material.Write(writer);
             writer.WriteUInt32(Unknown_154h);
@@ -690,16 +704,38 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Read(MetaNodeReader reader)
         {
             base.Read(reader);
+
+            //Older CodeX versions exported the box triangles as spheres/boxes/capsules (misread polygon types), restore them
+            if ((Vertices?.Length == 8) && ((Polygons == null) || (Polygons.Length != 12) || Polygons.Any(p => p?.Type != Rsc6BoundPolygonType.Triangle)))
+            {
+                var mat = (Polygons != null && Polygons.Length > 0 && Polygons[0] != null) ? Polygons[0].MaterialIndex : 0;
+                SetPolygonsString(DefaultBoxPolygons.Replace("Tri 0 ", $"Tri {mat} "));
+                PolygonsCount = (uint)Polygons.Length;
+            }
+
             BoxSize = Rpf6Crypto.ToXYZ(reader.ReadVector4("BoxSize"));
             Unknown_170h = reader.ReadUInt32Array("Unknown_170h");
             Material = reader.ReadStruct<Rsc6BoundMaterial>("Material");
 
+            //The plain vertices are the exact box corners (vertices are quantized)
+            var half = BoxSize.XYZ() * 0.5f;
             var vertices = new List<Vector4>();
+
             for (int i = 0; i < Vertices.Length; i++)
             {
-                vertices.Add(new Vector4(Vertices[i], Rpf6Crypto.FNaN));
+                var d = Vertices[i];
+                var v = d + CenterGeom;
+
+                if (half != Vector3.Zero)
+                {
+                    var corner = new Vector3(MathF.CopySign(half.X, d.X), MathF.CopySign(half.Y, d.Y), MathF.CopySign(half.Z, d.Z));
+                    if (Vector3.Distance(corner, d) < 0.01f)
+                        v = CenterGeom + corner;
+                }
+                vertices.Add(new Vector4(v, Rpf6Crypto.FNaN));
             }
-            PlainVertices = vertices.ToArray();
+
+            PlainVertices = [.. vertices];
             base.InitPolyhedronPart();
         }
 
@@ -709,6 +745,42 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteVector4("BoxSize", BoxSize);
             writer.WriteUInt32Array("Unknown_170h", Unknown_170h);
             writer.WriteStruct("Material", Material);
+        }
+
+        //Triangulation used by all phBoundBox resources, for the 8 box vertices in their standard order
+        public const string DefaultBoxPolygons = "Tri 0 4 0 3\nTri 0 3 7 4\nTri 0 2 1 5\nTri 0 5 6 2\nTri 0 1 0 4\nTri 0 4 5 1\nTri 0 7 3 2\nTri 0 2 6 7\nTri 0 3 0 1\nTri 0 1 2 3\nTri 0 5 4 7\nTri 0 7 6 5";
+
+        //Edge data of the standard box triangles in the game files (it isn't the usual neighbour polygon indices)
+        private static readonly (int, int, int, short, short, short)[] DefaultBoxEdges =
+        [
+            (4, 0, 3, 2, 4, 1), (3, 7, 4, 3, 5, 0), (2, 1, 5, 5, 3, 3), (5, 6, 2, 6, 4, 2),
+            (1, 0, 4, 4, 0, 5), (4, 5, 1, 5, 1, 4), (7, 3, 2, 1, 5, 7), (2, 6, 7, 2, 6, 6),
+            (3, 0, 1, 0, 2, 9), (1, 2, 3, 1, 3, 8), (5, 4, 7, 3, 1, 11), (7, 6, 5, 4, 2, 10),
+        ];
+
+        public void ApplyDefaultBoxEdges()
+        {
+            if ((Polygons == null) || (Polygons.Length != DefaultBoxEdges.Length))
+                return;
+
+            for (int i = 0; i < Polygons.Length; i++)
+            {
+                var p = Polygons[i];
+                var d = DefaultBoxEdges[i];
+
+                if ((p == null) || (p.Type != Rsc6BoundPolygonType.Triangle))
+                    return;
+                if ((p.Triangle.TriIndex1 != d.Item1) || (p.Triangle.TriIndex2 != d.Item2) || (p.Triangle.TriIndex3 != d.Item3))
+                    return;
+            }
+
+            for (int i = 0; i < Polygons.Length; i++)
+            {
+                var d = DefaultBoxEdges[i];
+                Polygons[i].Triangle.EdgeIndex1 = d.Item4;
+                Polygons[i].Triangle.EdgeIndex2 = d.Item5;
+                Polygons[i].Triangle.EdgeIndex3 = d.Item6;
+            }
         }
     }
 
@@ -1085,16 +1157,18 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            var wft = writer.BlockList[0] is Rsc6Fragment;
             UpdateStuffBeforeSaving();
+
             base.Write(writer);
             writer.WriteUInt32(VerticesPad);
             writer.WriteRawArr(VertexColours);
             writer.WriteUInt32(VerticesWorldSpace);
             writer.WriteRawArr(PolygonsData);
             writer.WriteVector3(Quantum);
-            writer.WriteSingle(QuantumW);
+            writer.WriteSingle((wft && BitConverter.SingleToUInt32Bits(QuantumW) == Rpf6Crypto.FNaN) ? Rpf6Crypto.QNaN : QuantumW);
             writer.WriteVector3(CenterGeom);
-            writer.WriteSingle(CenterGeomW);
+            writer.WriteSingle((wft && BitConverter.SingleToUInt32Bits(CenterGeomW) == Rpf6Crypto.FNaN) ? Rpf6Crypto.QNaN : CenterGeomW);
             writer.WriteRawArr(VerticesData);
             writer.WriteUInt32(SmallPolygonsWorldSpace);
             writer.WriteBoolean(UseActiveComponents);
@@ -1147,6 +1221,10 @@ namespace CodeX.Games.RDR1.RSC6
         {
             CalculateQuantum();
             UpdateEdgeIndices();
+
+            if (this is Rsc6BoundBox box)
+                box.ApplyDefaultBoxEdges();
+
             UpdateTriangleAreas();
             UpdateVerticesData();
             UpdatePolygonsData();
@@ -1183,7 +1261,8 @@ namespace CodeX.Games.RDR1.RSC6
                 var type = (Rsc6BoundPolygonType)(b0 & 0x7);
                 var area = BufferUtil.ReadSingle(polygonData, offset);
 
-                if (!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f)
+                //phBoundBox polygons are always triangles
+                if ((!Rpf6Crypto.IsDefinedInEnumRange<Rsc6BoundPolygonType>((byte)type) && area > 0.0f && area < 50000.0f) || Type == Rsc6BoundsType.Box)
                 {
                     type = Rsc6BoundPolygonType.Triangle;
                     PartShape = EditablePartShape.Mesh;

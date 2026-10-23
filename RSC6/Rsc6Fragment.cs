@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Text;
 using static CodeX.Games.RDR1.RPF6.Rpf6Crypto;
 
 namespace CodeX.Games.RDR1.RSC6
@@ -99,6 +100,7 @@ namespace CodeX.Games.RDR1.RSC6
         public bool ForceOutSide { get; set; } //m_ForceOutSide
 
         public static float SkinnedHeightPos = 1.0f;
+        private byte MaxNumSelfCollisionsXml = 0xFF;
         public const int NUM_DAMP_TYPES = (int)(Rsc6MotionDampingType.ANGULAR_V2 + 1);
 
         public override void Read(Rsc6DataReader reader)
@@ -314,7 +316,11 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Textures = new(reader.ReadNode<Rsc6TextureDictionary>("Textures"));
+            var texDict = reader.ReadNode<Rsc6TextureDictionary>("Textures");
+            if ((texDict?.Textures.Items == null) || texDict.Textures.Items.Length == 0)
+                texDict = null; //An empty embedded texture dictionary must stay null
+
+            Textures = new(texDict);
             Drawable = new(reader.ReadNode<Rsc6FragmentDrawable>("Drawable"));
             Childrens = new(reader.ReadNodeArray<Rsc6FragPhysChild>("Childrens"));
             Bounds = new(reader.ReadNode("Bounds", Rsc6Bounds.Create));
@@ -342,7 +348,7 @@ namespace CodeX.Games.RDR1.RSC6
 
                 foreach (var child in arr)
                 {
-                    if (child == null) continue;
+                    if (child?.UndamagedEntity.Item == null) continue;
                     child.UndamagedEntity.Item.SkeletonRef = new(skel);
                 }
             }
@@ -351,13 +357,15 @@ namespace CodeX.Games.RDR1.RSC6
                 if (arr == null) return;
                 var bounds = Bounds.Item as Rsc6BoundComposite;
 
-                if (bounds.Childrens.Items != null) //For clouds I guess
+                if (bounds?.Childrens.Items != null) //For clouds I guess
                 {
                     for (int i = 0; i < arr.Length; i++)
                     {
                         var child = arr[i];
+                        if (child?.UndamagedEntity.Item == null) continue;
+                        if (i >= bounds.Childrens.Items.Length) break;
+                        
                         var bound = bounds.Childrens[i];
-                        if (child == null) continue;
                         child.UndamagedEntity.Item.Bound = new(bound);
                     }
                 }
@@ -441,7 +449,7 @@ namespace CodeX.Games.RDR1.RSC6
             ParentTextureLOD = new(reader.ReadString("ParentTextureLOD"));
             GlassGlowShaderIndex = reader.ReadInt32("GlassGlowShaderIndex");
             TargetManager = new(reader.ReadNode<Rsc6TargetManager>("TargetManager"));
-            VariableMeshArray = reader.ReadNode<Rsc6VariableMeshArray>("VariableMeshArray");
+            VariableMeshArray = reader.ReadNode<Rsc6VariableMeshArray>("VariableMeshArray") ?? new Rsc6VariableMeshArray();
             AlwaysAddToShadow = reader.ReadByte("AlwaysAddToShadow");
             InnerSorting = reader.ReadByte("InnerSorting");
 
@@ -449,11 +457,25 @@ namespace CodeX.Games.RDR1.RSC6
             applySkel(SkeletonA.Item);
             applySkel(SkeletonB.Item);
 
-            VariableMeshCount = (byte)(VariableMeshArray.UsedIndices?.Length ?? 0); //Unsure
+            var computedVariableMeshCount = VariableMeshArray?.GetSlotCount() ?? 0;
+            VariableMeshCount = reader.ReadByte("VariableMeshCount", computedVariableMeshCount);
+
+            if (VariableMeshCount < computedVariableMeshCount)
+                VariableMeshCount = computedVariableMeshCount;
+
+            RootChild = reader.ReadUInt32("RootChild", RootChild);
+            Unknown_14Ch = reader.ReadUInt32("Unknown_14Ch", Unknown_14Ch);
+            Unknown_152h = reader.ReadUInt16("Unknown_152h", Unknown_152h);
+            Unknown_15Ch = reader.ReadUInt32("Unknown_15Ch", Unknown_15Ch);
+            Unknown_164h = reader.ReadUInt32("Unknown_164h", Unknown_164h);
+            Unknown_16Ch = reader.ReadUInt32("Unknown_16Ch", Unknown_16Ch);
+            PlacedLightsGroup = reader.ReadUInt32("PlacedLightsGroup", PlacedLightsGroup);
+            Unknown_1FCh = reader.ReadUInt16("Unknown_1FCh", Unknown_1FCh);
+            MaxNumSelfCollisionsXml = reader.ReadByte("MaxNumSelfCollisions", 0xFF);
             GroupCount = (byte)(Groups.Items?.Length ?? 0);
             ChildCount = (byte)(Childrens.Items?.Length ?? 0);
             NumSelfCollisions = (byte)(SelfCollisionIndicesA.Items?.Length ?? 0);
-            MaxNumSelfCollisions = NumSelfCollisions;
+            MaxNumSelfCollisions = (MaxNumSelfCollisionsXml != 0xFF) ? Math.Max(MaxNumSelfCollisionsXml, NumSelfCollisions) : NumSelfCollisions;
         }
 
         public void Write(MetaNodeWriter writer)
@@ -504,6 +526,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteSingle("MinMoveForce", MinMoveForce);
             writer.WriteSingle("UnbrokenElasticity", UnbrokenElasticity);
             writer.WriteSingle("BuoyancyFactor", BuoyancyFactor);
+            writer.WriteByte("GlassAttachmentBone", GlassAttachmentBone);
             writer.WriteByte("NumGlassPaneModelInfos", NumGlassPaneModelInfos);
             writer.WriteUInt32("GlassPaneModelInfos", GlassPaneModelInfos);
             writer.WriteSingle("GravityFactor", GravityFactor);
@@ -517,6 +540,16 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteInt32("GlassGlowShaderIndex", GlassGlowShaderIndex);
             writer.WriteNode("TargetManager", TargetManager.Item);
             writer.WriteNode("VariableMeshArray", VariableMeshArray);
+            writer.WriteByte("VariableMeshCount", VariableMeshCount);
+            writer.WriteUInt32("RootChild", RootChild);
+            writer.WriteByte("MaxNumSelfCollisions", MaxNumSelfCollisions);
+            if (Unknown_14Ch != 0) writer.WriteUInt32("Unknown_14Ch", Unknown_14Ch);
+            if (Unknown_152h != 0) writer.WriteUInt16("Unknown_152h", Unknown_152h);
+            if (Unknown_15Ch != 0) writer.WriteUInt32("Unknown_15Ch", Unknown_15Ch);
+            if (Unknown_164h != 0) writer.WriteUInt32("Unknown_164h", Unknown_164h);
+            if (Unknown_16Ch != 0) writer.WriteUInt32("Unknown_16Ch", Unknown_16Ch);
+            if (PlacedLightsGroup != 0) writer.WriteUInt32("PlacedLightsGroup", PlacedLightsGroup);
+            if (Unknown_1FCh != 0xCDCD) writer.WriteUInt16("Unknown_1FCh", Unknown_1FCh);
             writer.WriteByte("AlwaysAddToShadow", AlwaysAddToShadow);
             writer.WriteByte("InnerSorting", InnerSorting);
             writer.WriteNode("Textures", Textures.Item);
@@ -1607,7 +1640,7 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 24;
-        public override uint VFT { get; set; } = 0x00D55540;
+        public override uint VFT { get; set; } = 0x00F15540;
         public Rsc6PtrArr<Rsc6EventInstance> Instances { get; set; } //m_Instances
         public int NewInstanceType { get; set; } //m_NewInstanceType, always 0
         public uint Bank { get; set; } //m_Bank, always NULL (bkBank = bank of widgets)
@@ -1951,6 +1984,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
+            var wft = writer.BlockList[0] is Rsc6Fragment;
             writer.WriteUInt32(D3DCommon);
             writer.WriteUInt32(D3DReferenceCount);
             writer.WriteUInt32(D3DFence);
@@ -1962,7 +1996,7 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32(D3DBaseFlush);
             writer.WriteUInt32(D3DBaseAddress);
             writer.WriteUInt32(D3DSize);
-            writer.WriteVector4(Offset);
+            writer.WriteVector4((wft && BitConverter.SingleToUInt32Bits(Offset.W) == FNaN) ? new Vector4(Offset.XYZ(), QNaN) : Offset);
         }
 
         public void Read(MetaNodeReader reader)
@@ -2066,7 +2100,7 @@ namespace CodeX.Games.RDR1.RSC6
          */
 
         public override ulong BlockLength => 36;
-        public override uint VFT { get; set; } = 0x010E4920;
+        public override uint VFT { get; set; } = 0x01024920;
         public Rsc6PtrArr<Rsc6BlendShape> BlendShapes { get; set; } //m_BlendShapes
         public Rsc6AtMapArr<Rsc6TargetEntry> Targets { get; set; } //m_Targets
 
@@ -2075,6 +2109,14 @@ namespace CodeX.Games.RDR1.RSC6
             base.Read(reader);
             BlendShapes = reader.ReadPtrArr<Rsc6BlendShape>();
             Targets = reader.ReadAtMapArr<Rsc6TargetEntry>();
+
+            if (BlendShapes.Items != null)
+            {
+                foreach (var bs in BlendShapes.Items)
+                {
+                    bs?.TargetManager = this;
+                }
+            }
         }
 
         public override void Write(Rsc6DataWriter writer)
@@ -2086,26 +2128,117 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            BlendShapes = new(reader.ReadNodeArray("BlendShapes", (_) => new Rsc6BlendShape(this)));
-            var targets = reader.ReadNodeArray<Rsc6TargetEntry>("Targets");
-            var newTargets = Rsc6DataMap.Build(targets.ToList()); //TODO: Make sure bucket size is correct
-            var flatten = Rsc6DataMap.Flatten(newTargets.ToArray(), e => e).Where(e => e?.Data.Item != null);
+            RefCount = reader.ReadUInt32("RefCount", 2);
+            var blendShapes = reader.ReadNodeArray("BlendShapes", (_) => new Rsc6BlendShape(this)) ?? [];
+            var capacity = reader.ReadUInt16("BlendShapesCapacity", (ushort)Math.Max(16, blendShapes.Length));
+            BlendShapes = new(blendShapes, Math.Max(capacity, (ushort)blendShapes.Length), (ushort)blendShapes.Length);
 
-            Targets = new([.. newTargets])
+            var slots = reader.ReadNodeArray<Rsc6TargetEntry>("Targets");
+            var map = new Rsc6AtMapArr<Rsc6TargetEntry>(slots ?? [])
             {
-                Capacity = (ushort)flatten.Count()
+                Capacity = (ushort)GetEntries(slots).Count(),
+                AllowRecompute = reader.ReadBool("AllowRecompute")
             };
+
+            Targets = map;
+            ResolveMorphables();
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            var targets = Rsc6DataMap.Flatten(Targets.Items, e => e).Where(e => e?.Data.Item != null);
+            //The morphables referenced by the targets are the same objects as the ones owned by the blend shapes.
+            var bss = BlendShapes.Items;
+            if (bss != null)
+            {
+                for (int i = 0; i < bss.Length; i++)
+                {
+                    var morphs = bss[i]?.Morphs.Items;
+                    if (morphs == null) continue;
+
+                    for (int j = 0; j < morphs.Length; j++)
+                    {
+                        morphs[j]?.XmlRef = $"{i}:{j}";
+                    }
+                }
+            }
+
+            writer.WriteUInt32("RefCount", RefCount);
+            writer.WriteUInt16("BlendShapesCapacity", BlendShapes.Capacity);
             writer.WriteNodeArray("BlendShapes", BlendShapes.Items);
-            writer.WriteNodeArray("Targets", targets.ToArray());
+            writer.WriteNodeArray("Targets", Targets.Items);
+            if (Targets.AllowRecompute) writer.WriteBool("AllowRecompute", true);
+        }
+
+        public static IEnumerable<Rsc6TargetEntry> GetEntries(Rsc6TargetEntry[] slots)
+        {
+            if (slots == null) yield break;
+            foreach (var slot in slots)
+            {
+                for (var e = slot; e != null; e = e.Next.Item)
+                {
+                    yield return e;
+                }
+            }
+        }
+
+        public IEnumerable<Rsc6Target> GetAllTargets()
+        {
+            foreach (var e in GetEntries(Targets.Items))
+            {
+                if (e.Data.Item != null)
+                    yield return e.Data.Item;
+            }
+        }
+
+        private void ResolveMorphables()
+        {
+            //Make each target point to the morphables owned by the blend shapes.
+            var bss = BlendShapes.Items;
+            var all = new List<Rsc6Morphable>();
+
+            if (bss != null)
+            {
+                foreach (var bs in bss)
+                {
+                    if (bs?.Morphs.Items == null) continue;
+                    all.AddRange(bs.Morphs.Items.Where(m => m != null));
+                }
+            }
+
+            foreach (var t in GetAllTargets())
+            {
+                var morphs = t.Morphables.Items;
+                if (morphs == null) continue;
+
+                for (int i = 0; i < morphs.Length; i++)
+                {
+                    var m = morphs[i];
+                    if (m == null) continue;
+                    Rsc6Morphable found = null;
+
+                    if (!string.IsNullOrEmpty(m.XmlRef))
+                    {
+                        var parts = m.XmlRef.Split(':');
+                        if ((parts.Length == 2) && int.TryParse(parts[0], out var bi) && int.TryParse(parts[1], out var mi))
+                        {
+                            var bmorphs = ((bss != null) && (bi >= 0) && (bi < bss.Length)) ? bss[bi]?.Morphs.Items : null;
+                            if ((bmorphs != null) && (mi >= 0) && (mi < bmorphs.Length)) found = bmorphs[mi];
+                        }
+
+                        if (found == null)
+                            throw new Exception($"TargetManager: invalid morphable reference '{m.XmlRef}' in target '{t.Name}'");
+                    }
+                    else
+                        found = all.FirstOrDefault(o => o.IsSameData(m));
+
+                    if (found != null)
+                        morphs[i] = found;
+                }
+            }
         }
     }
 
-    public class Rsc6TargetEntry : Rsc6BlockBase, IRsc6DataMapEntry<Rsc6TargetEntry>, MetaNode //rage::atMapEntry<rage::datPadded<unsigned short>, rage::datOwner<rage::grbTarget>>
+    public class Rsc6TargetEntry : Rsc6BlockBase, MetaNode //rage::atMapEntry<rage::datPadded<unsigned short>, rage::datOwner<rage::grbTarget>>
     {
         public override ulong BlockLength => 12;
         public ushort Key { get; set; } //key, the ID of the target to blend
@@ -2113,8 +2246,7 @@ namespace CodeX.Games.RDR1.RSC6
         public Rsc6Ptr<Rsc6Target> Data { get; set; } //data
         public Rsc6Ptr<Rsc6TargetEntry> Next { get; set; } //next
 
-        public Rsc6TargetEntry MapNext { get => Next.Item; set => Next = new(value); }
-        public uint MapKey { get => Key; }
+        public Rsc6TargetEntry EntryNext { get => Next.Item; set => Next = new(value); }
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2136,12 +2268,14 @@ namespace CodeX.Games.RDR1.RSC6
         {
             Key = reader.ReadUInt16("Key");
             Data = new(reader.ReadNode<Rsc6Target>("Data"));
+            Next = new(reader.ReadNode<Rsc6TargetEntry>("Next"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
             writer.WriteUInt16("Key", Key);
             writer.WriteNode("Data", Data.Item);
+            writer.WriteNode("Next", Next.Item);
         }
     }
 
@@ -2153,15 +2287,7 @@ namespace CodeX.Games.RDR1.RSC6
         public int TargetIndex { get; set; } //m_TargetIndex
         public Rsc6PtrArr<Rsc6Morphable> Morphables { get; set; } //m_Morphables
 
-        public string FixedName
-        {
-            get
-            {
-                if (Name.All(c => c == '�')) return string.Empty; //If name is all padding characters, return empty string
-                if (!Name.Contains('\0')) return Name.ToString();
-                return Name[..Name.IndexOf('\0')];
-            }
-        }
+        public string FixedName => Rsc6Morphable.CleanString(Name);
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2174,34 +2300,28 @@ namespace CodeX.Games.RDR1.RSC6
         public override void Write(Rsc6DataWriter writer)
         {
             base.Write(writer);
-            var nameLength = Name?.Length + 1 ?? 0;
-            var padding = Enumerable.Repeat((byte)0xCD, 64 - nameLength).ToArray();
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                writer.WriteStringNullTerminated(Name);
-            }
-
-            writer.WriteBytes(padding);
+            Rsc6Morphable.WriteFixedString(writer, Name, 64);
             writer.WriteInt32(TargetIndex);
             writer.WritePtrArr(Morphables);
         }
 
         public void Read(MetaNodeReader reader)
         {
-            Name = reader.ReadString("Name");
+            Name = reader.ReadString("TargetName");
             TargetIndex = reader.ReadInt32("TargetIndex");
             Morphables = new(reader.ReadNodeArray<Rsc6Morphable>("Morphables"));
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            if (!string.IsNullOrEmpty(FixedName))
-            {
-                writer.WriteString("Name", FixedName);
-            }
+            writer.WriteString("TargetName", FixedName);
             writer.WriteInt32("TargetIndex", TargetIndex);
-            writer.WriteNodeArray("Morphables", Morphables.Items);
+
+            var morphs = Morphables.Items;
+            if ((morphs != null) && morphs.All(m => !string.IsNullOrEmpty(m?.XmlRef)))
+                writer.WriteNodeArray("Morphables", morphs.Select(m => new Rsc6MorphableRef(m.XmlRef)).ToArray());
+            else
+                writer.WriteNodeArray("Morphables", morphs);
         }
 
         public override string ToString()
@@ -2224,15 +2344,7 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Manager { get; set; } //m_Manager, pointer to the parent target manager (Rsc6Ptr<Rsc6TargetManager>)
 
         public Rsc6TargetManager TargetManager;
-
-        public string FixedName
-        {
-            get
-            {
-                if (!Name.Contains('\0')) return base.ToString();
-                return Name[..Name.IndexOf('\0')];
-            }
-        }
+        public string FixedName => Rsc6Morphable.CleanString(Name);
 
         public Rsc6BlendShape()
         {
@@ -2263,15 +2375,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var nameLength = Name.Length + 1;
-            var padding = new byte[128 - nameLength];
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                writer.WriteStringNullTerminated(Name);
-            }
-
-            writer.WriteBytes(padding);
+            Rsc6Morphable.WriteFixedString(writer, Name, 128);
             writer.WriteInt32(LodGroup);
             writer.WriteInt32(ModelIndex);
             writer.WritePtrArr(Morphs);
@@ -2284,11 +2388,11 @@ namespace CodeX.Games.RDR1.RSC6
             LodGroup = reader.ReadInt32("LodGroup");
             ModelIndex = reader.ReadInt32("ModelIndex");
 
-            var morphs = reader.ReadNodeArray<Rsc6Morphable>("Morphs");
+            var morphs = reader.ReadNodeArray<Rsc6Morphable>("Morphs") ?? [];
             for (int i = 0; i < morphs.Length; i++)
             {
                 var m = morphs[i];
-                m.BlendShape = this;
+                m?.BlendShape = this;
             }
             Morphs = new(morphs);
         }
@@ -2331,16 +2435,8 @@ namespace CodeX.Games.RDR1.RSC6
         public uint Pad1 { get; set; } = 0xCDCDCDCD; //pad1
 
         public Rsc6BlendShape BlendShape;
-
-        public string FixedName
-        {
-            get
-            {
-                if (Name.All(c => c == '�')) return string.Empty; //If name is all padding characters, return empty string
-                if (!Name.Contains('\0')) return Name.ToString();
-                return Name[..Name.IndexOf('\0')];
-            }
-        }
+        public string XmlRef; //"blendShapeIndex:morphIndex", used by targets in XML to reference the morphables owned by the blend shapes
+        public string FixedName => CleanString(Name);
 
         public override void Read(Rsc6DataReader reader)
         {
@@ -2363,15 +2459,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            var nameLength = Name?.Length + 1 ?? 0;
-            var padding = Enumerable.Repeat((byte)0xCD, 64 - nameLength).ToArray();
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                writer.WriteStringNullTerminated(Name);
-            }
-
-            writer.WriteBytes(padding);
+            WriteFixedString(writer, Name, 64, true);
             writer.WriteInt32(MaterialIndex);
             writer.WritePtrArr(Targets);
             writer.WritePtrEmbed(BlendShape, BlendShape, 0);
@@ -2390,7 +2478,12 @@ namespace CodeX.Games.RDR1.RSC6
 
         public void Read(MetaNodeReader reader)
         {
-            Name = reader.ReadString("Name");
+            XmlRef = reader.ReadString("@ref", null);
+            if (!string.IsNullOrEmpty(XmlRef)) return; //Reference to a morphable of a blend shape, resolved by the target manager
+
+            Name = reader.ReadString("Name", string.Empty);
+            Pad0 = reader.ReadUInt32("Pad0", 0xCDCDCDCD); //Is this not always 0xCDCDCDCD?
+            Pad1 = reader.ReadUInt32("Pad1", 0xCDCDCDCD); //Is this not always 0xCDCDCDCD?
             MaterialIndex = reader.ReadInt32("MaterialIndex");
             Targets = new(reader.ReadNodeArray<Rsc6TargetData>("Targets"));
             Offsets = new(reader.ReadNodeArray<Rsc6VertexBuffer>("Offsets"));
@@ -2401,16 +2494,38 @@ namespace CodeX.Games.RDR1.RSC6
             IsResource = reader.ReadBool("IsResource");
             BlendCount = reader.ReadInt32("BlendCount");
             BlendSize = reader.ReadUInt32("BlendSize");
+
+            //The morph offset buffers aren't in the XML, they are the buffers the blended vertex offsets are written to
+            //at runtime (all zeros in the game files), but they need the right size or the game reads/writes past them.
+            var offsets = Offsets.Items;
+            if (offsets != null)
+            {
+                foreach (var vb in offsets)
+                {
+                    if (vb == null) continue;
+                    if (vb.Layout.Item == null && Fvf.Item != null)
+                    {
+                        vb.Layout = new(Fvf.Item);
+                    }
+                    
+                    var stride = (uint)(vb.Layout.Item?.FVFSize ?? 16);
+                    vb.VertexCount = (ushort)VertexCount;
+                    vb.VertexStride = stride;
+
+                    if (vb.VertexData.Items == null || vb.VertexData.Items.Length != VertexCount * stride)
+                    {
+                        vb.VertexData = new(new byte[VertexCount * stride]);
+                    }
+                }
+            }
         }
 
         public void Write(MetaNodeWriter writer)
         {
-            if (!string.IsNullOrEmpty(FixedName))
-            {
-                writer.WriteString("Name", FixedName);
-            }
-
-            if (MaterialIndex != 0) writer.WriteInt32("MaterialIndex", MaterialIndex);
+            if (!string.IsNullOrEmpty(FixedName)) writer.WriteString("Name", FixedName);
+            if (Pad0 != 0xCDCDCDCD) writer.WriteUInt32("Pad0", Pad0);
+            if (Pad1 != 0xCDCDCDCD) writer.WriteUInt32("Pad1", Pad1);
+            writer.WriteInt32("MaterialIndex", MaterialIndex);
             writer.WriteNodeArray("Targets", Targets.Items);
             writer.WriteNodeArray("Offsets", Offsets.Items);
             writer.WriteNode("Fvf", Fvf.Item);
@@ -2422,9 +2537,95 @@ namespace CodeX.Games.RDR1.RSC6
             writer.WriteUInt32("BlendSize", BlendSize);
         }
 
+        public bool IsSameData(Rsc6Morphable o)
+        {
+            //Used to match the duplicated morphables of old XML exports with the ones owned by the blend shapes
+            if (o == null) return false;
+            if ((o.MaterialIndex != MaterialIndex) || (o.VertexCount != VertexCount)) return false;
+            if (FixedName != o.FixedName) return false;
+
+            var t1 = Targets.Items; var t2 = o.Targets.Items;
+            if ((t1?.Length ?? 0) != (t2?.Length ?? 0)) return false;
+            if (t1 == null) return true;
+
+            for (int i = 0; i < t1.Length; i++)
+            {
+                var a = t1[i]; var b = t2[i];
+                if ((a == null) != (b == null)) return false;
+                if (a == null) continue;
+                if (a.TotalMeshVerts != b.TotalMeshVerts) return false;
+                if ((a.Positions.Items?.Length ?? 0) != (b.Positions.Items?.Length ?? 0)) return false;
+                if ((a.VertexMap.Items?.Length ?? 0) != (b.VertexMap.Items?.Length ?? 0)) return false;
+                if ((a.VertexMap.Items != null) && !a.VertexMap.Items.AsSpan().SequenceEqual(b.VertexMap.Items)) return false;
+            }
+            return true;
+        }
+
+        public static string CleanString(string s)
+        {
+            //Returns the string up to the first null terminator (fixed-size strings are padded with 0xCD after the terminator)
+            if (string.IsNullOrEmpty(s)) return "";
+            
+            var i = s.IndexOf('\0');
+            if (i >= 0) s = s[..i];
+            
+            var end = 0;      
+            while ((end < s.Length) && (s[end] >= 0x20) && (s[end] < 0x7F)) //Drop any trailing garbage from uninitialized names
+            {
+                end++;
+            }
+            return s[..end];
+        }
+
+        public static void WriteFixedString(Rsc6DataWriter writer, string s, int size, bool emptyIsUninitialized = false)
+        {
+            //Writes a fixed-size, null-terminated string block, padded with 0xCD like the original resources.
+            var str = CleanString(s);
+            var bytes = Encoding.ASCII.GetBytes(str);
+            var buf = new byte[size];
+
+            Array.Fill(buf, (byte)0xCD);
+
+            if (emptyIsUninitialized && (bytes.Length == 0))
+            {
+                writer.WriteBytes(buf); //Unnamed morphables are left uninitialized (all 0xCD) in the game files
+                return;
+            }
+
+            var len = Math.Min(bytes.Length, size - 1);
+            Array.Copy(bytes, buf, len);
+
+            buf[len] = 0;
+            writer.WriteBytes(buf);
+        }
+
         public override string ToString()
         {
             return FixedName;
+        }
+    }
+
+    public class Rsc6MorphableRef : MetaNode //XML only: a reference to a morphable owned by a blend shape ("blendShapeIndex:morphIndex")
+    {
+        public string Ref;
+
+        public Rsc6MorphableRef()
+        {
+        }
+
+        public Rsc6MorphableRef(string r)
+        {
+            Ref = r;
+        }
+
+        public void Read(MetaNodeReader reader)
+        {
+            Ref = reader.ReadString("@ref", null);
+        }
+
+        public void Write(MetaNodeWriter writer)
+        {
+            writer.WriteString("@ref", Ref);
         }
     }
 
@@ -3288,7 +3489,7 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Read(Rsc6DataReader reader)
         {
-            IsJohnJack = reader.FileEntry.Name.StartsWith("default_");
+            IsJohnJack = IsPlayerFragmentName(reader.FileEntry?.Name);
             VariableMeshBits1 = ReadBlock(reader, IsJohnJack);
             VariableMeshBits2 = ReadBlock(reader, IsJohnJack);
             VariableMeshBits3 = ReadBlock(reader, IsJohnJack);
@@ -3296,9 +3497,10 @@ namespace CodeX.Games.RDR1.RSC6
 
         public override void Write(Rsc6DataWriter writer)
         {
-            VariableMeshBits1?.Write(writer);
-            VariableMeshBits2?.Write(writer);
-            VariableMeshBits3?.Write(writer);
+            //Embedded in the fragment type, the 3 blocks must always be written to keep the fragment layout
+            (VariableMeshBits1 ?? CreateDefault()).Write(writer);
+            (VariableMeshBits2 ?? VariableMeshBits1 ?? CreateDefault()).Write(writer);
+            (VariableMeshBits3 ?? VariableMeshBits2 ?? VariableMeshBits1 ?? CreateDefault()).Write(writer);
         }
 
         public void Read(MetaNodeReader reader)
@@ -3317,12 +3519,25 @@ namespace CodeX.Games.RDR1.RSC6
             WriteNode(writer, VariableMeshBits2, "MeshBits2", IsJohnJack);
         }
 
+        private Rsc6MeshBitComponentBase CreateDefault()
+        {
+            return IsJohnJack ? new Rsc6MeshBitComponentJohn() : new Rsc6MeshBitComponentMisc();
+        }
+
         private static Rsc6MeshBitComponentBase ReadBlock(Rsc6DataReader reader, bool isJohn)
         {
             if (isJohn)
                 return reader.ReadBlock<Rsc6MeshBitComponentJohn>();
             else
                 return reader.ReadBlock<Rsc6MeshBitComponentMisc>();
+        }
+
+        private static void WriteBlock(Rsc6DataWriter writer, Rsc6MeshBitComponentBase component)
+        {
+            if (component is Rsc6MeshBitComponentJohn johnComponent)
+                writer.WriteBlock(johnComponent);
+            else if (component is Rsc6MeshBitComponentMisc miscComponent)
+                writer.WriteBlock(miscComponent);
         }
 
         private static Rsc6MeshBitComponentBase ReadNode(MetaNodeReader reader, string node, bool isJohn)
@@ -3344,6 +3559,7 @@ namespace CodeX.Games.RDR1.RSC6
         private Dictionary<string, byte> GetUsedComponents()
         {
             var components = new Dictionary<string, byte>();
+            if (VariableMeshBits1 == null) return components;
             var type = VariableMeshBits1.GetType();
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -3361,6 +3577,30 @@ namespace CodeX.Games.RDR1.RSC6
                 return [];
             }
             return components.OrderBy(x => x.Value).ToDictionary(x => x.Key, x => x.Value); //Order by indices
+        }
+
+        //m_VariableMeshCount: number of component slots of the table that are used. The unused slots at the end are 0
+        //(e.g. player_elegantsuit: 27 slots, then 4 zero bytes), used slots are a model index or 255 (no model).
+        public byte GetSlotCount()
+        {
+            if (VariableMeshBits1 == null) return 0;
+            var fields = VariableMeshBits1.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance).Where(f => f.FieldType == typeof(byte)).OrderBy(f => f.MetadataToken).ToArray();
+            var count = fields.Length;
+
+            while ((count > 0) && ((byte)fields[count - 1].GetValue(VariableMeshBits1) == 0))
+            {
+                count--;
+            }
+            return (byte)count;
+        }
+
+        //The player outfits (default_*.wft and player_*.wft) use the John/Jack component table (bandoliers, gunbelt shells,
+        //holster, bandana, gloves...), the other peds the misc one. The slot positions are what matters to the game.
+        public static bool IsPlayerFragmentName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            name = System.IO.Path.GetFileName(name).ToLowerInvariant();
+            return name.StartsWith("default_") || name.StartsWith("player_");
         }
     }
 
