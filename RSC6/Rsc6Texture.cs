@@ -26,7 +26,7 @@ namespace CodeX.Games.RDR1.RSC6
             Hashes = reader.ReadArr<JenkHash>();
             Textures = reader.ReadPtrArr<Rsc6Texture>();
 
-            if (Textures.Items != null)
+            if (Textures.Items != null && Hashes.Items != null)
             {
                 var imax = Math.Min(Hashes.Items.Length, Textures.Items.Length);
                 for (int i = 0; i < Textures.Items.Length; i++)

@@ -248,6 +248,9 @@ namespace CodeX.Games.RDR1.RSC6
         public ushort ShaderID { get; set; } //Read-written by parent model
         public BoundingBox4 AABB { get; set; } //Read-written by parent model
 
+        public bool IsLod4Terrain { get; set; }
+        public ushort[] OriginalStripIndices { get; set; }
+
         public Rsc6DrawableGeometry()
         {
         }
@@ -291,9 +294,12 @@ namespace CodeX.Games.RDR1.RSC6
             }
 
             //Swap RDR axis
-            byte[] numArray = VertexData;
+            byte[] numArray = (byte[])VertexData.Clone();
             var elems = VertexLayout.Elements;
             var elemcount = elems.Length;
+
+            //LOD4 models have a different vertex format than the other models
+            IsLod4Terrain = VertexStride == 12 && VertexLayout.Elements.Length == 3 && PrimitiveType == 4;
 
             for (int index = 0; index < numArray.Length; index += VertexStride)
             {
@@ -318,24 +324,36 @@ namespace CodeX.Games.RDR1.RSC6
                             BufferUtil.WriteColour(numArray, index + elemoffset, ref newColor);
                             break;
                         case VertexElementFormat.Dec3N:
+                        {
+                            if (IsLod4Terrain) break;
                             var packed = BufferUtil.ReadUint(numArray, index + elemoffset);
                             var pv = Rpf6Crypto.Dec3NToVector4(packed); //Convert Dec3N to Vector4
                             var np = Rpf6Crypto.Vector4ToDec3N(new Vector4(pv.Z, pv.X, pv.Y, pv.W)); //Convert Vector4 back to Dec3N
                             BufferUtil.WriteUint(numArray, index + elemoffset, np);
                             break;
+                        }
                         default:
                             break;
                     }
                 }
             }
 
-            //Triangles or strips
-            if (PrimitiveType == 3)
-                Indices = IndexBuffer.Item?.Indices.Items;
+            var rawIndices = IndexBuffer.Item?.Indices.Items;
+            if (PrimitiveType == 4)
+            {
+                OriginalStripIndices = rawIndices?.ToArray();
+                Indices = [.. ConvertStripToTriangles(rawIndices)];
+            }
             else
-                Indices = [.. ConvertStripToTriangles(IndexBuffer.Item?.Indices.Items)];
+            {
+                Indices = rawIndices;
+            }
 
             VertexData = numArray;
+            if (IsLod4Terrain)
+            {
+                ConvertLod4ToFloat3();
+            }
         }
 
         public void Write(Rsc6DataWriter writer)
@@ -381,42 +399,56 @@ namespace CodeX.Games.RDR1.RSC6
             BoundingBox = new BoundingBox(min, max);
             AABB = new BoundingBox4(BoundingBox);
             ShaderID = reader.ReadUInt16("ShaderID");
+            PrimitiveType = (byte)reader.ReadUInt32("PrimitiveType", 3);
             BoneIds = new(reader.ReadUInt16Array("BoneIDs"));
-            BoneIdsCount = (ushort)(BoneIds.Items?.Length ?? 0);
             Unknown_3Ch = reader.ReadUInt32("Unknown_3Ch");
+
+            IsLod4Terrain = PrimitiveType == 4;
+            BoneIdsCount = (ushort)(BoneIds.Items?.Length ?? 0);
+
+            if (PrimitiveType == 4)
+            {
+                OriginalStripIndices = reader.ReadUInt16Array("OriginalStripIndices");
+            }
 
             var vbuf = new Rsc6VertexBuffer();
             base.Read(reader);
-
             var elems = VertexLayout.Elements;
-            var elemcount = elems.Length;
 
-            for (int index = 0; index < VertexData.Length; index += VertexStride)
+            if (IsLod4Terrain)
             {
-                for (int i = 0; i < elemcount; i++)
+                ConvertFloat3ToLod4();
+            }
+            else
+            {
+                var elemcount = elems.Length;
+                for (int index = 0; index < VertexData.Length; index += VertexStride)
                 {
-                    var elem = elems[i];
-                    int elemoffset = elem.Offset;
-
-                    switch (elem.Format)
+                    for (int i = 0; i < elemcount; i++)
                     {
-                        case VertexElementFormat.Float3:
-                            var newVert = BufferUtil.ReadVector3(VertexData, index + elemoffset);
-                            Rpf6Crypto.WriteVector3AtIndex(newVert, VertexData, index + elemoffset, false); //Convert Vector3 to Dec3N with RDR axis
-                            break;
-                        case VertexElementFormat.Dec3N:
-                            var packed = BufferUtil.ReadUint(VertexData, index + elemoffset);
-                            var pv = Rpf6Crypto.Dec3NToVector4(packed); //Convert Dec3N to Vector4
-                            var np = Rpf6Crypto.Vector4ToDec3N(new Vector4(pv.Y, pv.Z, pv.X, pv.W)); //Convert Vector4 back to Dec3N with RDR axis
-                            BufferUtil.WriteUint(VertexData, index + elemoffset, np);
-                            break;
-                        case VertexElementFormat.Colour:
-                            var color = BufferUtil.ReadColour(VertexData, index + elemoffset);
-                            color = new Colour(color.B, color.G, color.R, color.A);
-                            BufferUtil.WriteColour(VertexData, index + elemoffset, ref color);
-                            break;
-                        default:
-                            break;
+                        var elem = elems[i];
+                        int elemoffset = elem.Offset;
+
+                        switch (elem.Format)
+                        {
+                            case VertexElementFormat.Float3:
+                                var newVert = BufferUtil.ReadVector3(VertexData, index + elemoffset);
+                                Rpf6Crypto.WriteVector3AtIndex(newVert, VertexData, index + elemoffset, false); //Convert Vector3 to Dec3N with RDR axis
+                                break;
+                            case VertexElementFormat.Dec3N:
+                                var packed = BufferUtil.ReadUint(VertexData, index + elemoffset);
+                                var pv = Rpf6Crypto.Dec3NToVector4(packed); //Convert Dec3N to Vector4
+                                var np = Rpf6Crypto.Vector4ToDec3N(new Vector4(pv.Y, pv.Z, pv.X, pv.W)); //Convert Vector4 back to Dec3N with RDR axis
+                                BufferUtil.WriteUint(VertexData, index + elemoffset, np);
+                                break;
+                            case VertexElementFormat.Colour:
+                                var color = BufferUtil.ReadColour(VertexData, index + elemoffset);
+                                color = new Colour(color.B, color.G, color.R, color.A);
+                                BufferUtil.WriteColour(VertexData, index + elemoffset, ref color);
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             }
@@ -436,11 +468,10 @@ namespace CodeX.Games.RDR1.RSC6
                 _ => Rsc6VertexDeclarationTypes.DEFAULT,
             };
 
-            //16473 (PNCTX) can be both default and terrain, so check by format here
-            if (elems.Any(e => e.Format == VertexElementFormat.Short2N))
-            {
+            if (IsLod4Terrain)
+                type = Rsc6VertexDeclarationTypes.TERRAIN_LOW_LOD;
+            else if (elems.Any(e => e.Format == VertexElementFormat.Short2N)) //16473 (PNCTX) can be both default and terrain, so check by format here
                 type = Rsc6VertexDeclarationTypes.TERRAIN;
-            }
 
             var layout = new Rsc6VertexDeclaration()
             {
@@ -450,10 +481,11 @@ namespace CodeX.Games.RDR1.RSC6
                 Types = type
             };
 
+            var indices = (IsLod4Terrain && OriginalStripIndices != null) ? OriginalStripIndices : Indices;
             var ibuf = new Rsc6IndexBuffer
             {
-                IndicesCount = (uint)(Indices?.Length ?? 0),
-                Indices = new(Indices)
+                IndicesCount = (uint)(indices?.Length ?? 0),
+                Indices = new(indices)
             };
 
             vbuf.VertexCount = (ushort)VertexCount;
@@ -463,9 +495,8 @@ namespace CodeX.Games.RDR1.RSC6
 
             VertexBuffer = new(vbuf);
             IndexBuffer = new(ibuf);
-
             IndicesCount = (IndexBuffer.Item != null) ? IndexBuffer.Item.IndicesCount : 0;
-            TrianglesCount = IndicesCount / 3;
+            TrianglesCount = IsLod4Terrain ? (uint)Math.Max(0, indices.Length - 2) : IndicesCount / 3;
         }
 
         public override void Write(MetaNodeWriter writer)
@@ -473,8 +504,10 @@ namespace CodeX.Games.RDR1.RSC6
             if (AABB.Min.XYZ() != default) writer.WriteVector3("BoundingBoxMin", AABB.Min.XYZ());
             if (AABB.Max.XYZ() != default) writer.WriteVector3("BoundingBoxMax", AABB.Max.XYZ());
             writer.WriteUInt16("ShaderID", ShaderID);
+            writer.WriteUInt32("PrimitiveType", PrimitiveType);
             writer.WriteUInt32("Unknown_3Ch", Unknown_3Ch);
             if (BoneIds.Items != null) writer.WriteUInt16Array("BoneIDs", BoneIds.Items);
+            if (PrimitiveType == 4 && OriginalStripIndices != null) writer.WriteUInt16Array("OriginalStripIndices", OriginalStripIndices);
             base.Write(writer);
         }
 
@@ -499,6 +532,144 @@ namespace CodeX.Games.RDR1.RSC6
                 }
             }
             return triangleIndices;
+        }
+
+        private static uint PackLod4Position(Vector3 value)
+        {
+            var x = Rpf6Crypto.ToSnorm8(value.X);
+            var y = Rpf6Crypto.ToSnorm8(value.Y);
+            var z = Rpf6Crypto.ToSnorm8(value.Z);
+            return ((uint)x << 3) | ((uint)y << 14) | ((uint)z << 24);
+        }
+
+        private static uint PackLod4Normal(Vector3 value)
+        {
+            var x = Rpf6Crypto.ToSnorm8(value.X);
+            var y = Rpf6Crypto.ToSnorm8(value.Y);
+            var z = Rpf6Crypto.ToSnorm8(value.Z);
+            return ((uint)x << 2) | ((uint)y << 12) | ((uint)z << 22);
+        }
+
+        private void ConvertFloat3ToLod4()
+        {
+            if (VertexData == null || VertexStride != 28)
+                return;
+
+            var source = VertexData;
+            var result = new byte[VertexCount * 12];
+
+            for (int i = 0; i < VertexCount; i++)
+            {
+                var src = i * 28;
+                var dst = i * 12;
+                var p = BufferUtil.ReadVector3(source, src);
+                var n = BufferUtil.ReadVector3(source, src + 12);
+
+                //CodeX ZXY -> RDR XYZ
+                p = new Vector3(p.Y, p.Z, p.X);
+                n = new Vector3(n.Y, n.Z, n.X);
+
+                BufferUtil.WriteUint(result, dst, PackLod4Position(p));
+                BufferUtil.WriteUint(result, dst + 4, PackLod4Normal(n));
+
+                //Vertex colors
+                result[dst + 8] = source[src + 26];
+                result[dst + 9] = source[src + 25];
+                result[dst + 10] = source[src + 24];
+                result[dst + 11] = source[src + 27];
+            }
+
+            VertexData = result;
+            VertexStride = 12;
+            VertexLayout = new VertexLayout(
+            [
+                new VertexElement(VertexElementFormat.Dec3N, "POSITION", 0, 0, 0),
+                new VertexElement(VertexElementFormat.Dec3N, "NORMAL", 0, 4, 0),
+                new VertexElement(VertexElementFormat.Colour, "COLOR", 0, 8, 0)
+            ]);
+        }
+
+        private void ConvertLod4ToFloat3()
+        {
+            if (VertexData == null || VertexStride != 12)
+                return;
+
+            var source = VertexData;
+            var result = new byte[VertexCount * 28];
+
+            for (int i = 0; i < VertexCount; i++)
+            {
+                var src = i * 12;
+                var dst = i * 28;
+                var packedPos = BufferUtil.ReadUint(source, src);
+                var packedNormal = BufferUtil.ReadUint(source, src + 4);
+                var ppx = Rpf6Crypto.Snorm8((byte)(packedPos >> 3));
+                var ppy = Rpf6Crypto.Snorm8((byte)(packedPos >> 14));
+                var ppz = Rpf6Crypto.Snorm8((byte)(packedPos >> 24));
+                var pnx = Rpf6Crypto.Snorm8((byte)(packedNormal >> 2));
+                var pny = Rpf6Crypto.Snorm8((byte)(packedNormal >> 12));
+                var pnz = Rpf6Crypto.Snorm8((byte)(packedNormal >> 22));
+                var p = new Vector3(ppx, ppy, ppz);
+                var n = new Vector3(pnx, pny, pnz);
+
+                //RDR XYZ -> CodeX ZXY
+                BufferUtil.WriteSingle(result, dst + 0, p.Z);
+                BufferUtil.WriteSingle(result, dst + 4, p.X);
+                BufferUtil.WriteSingle(result, dst + 8, p.Y);
+
+                var normal = Vector3.Normalize(new Vector3(n.Z, n.X, n.Y));
+                BufferUtil.WriteSingle(result, dst + 12, normal.X);
+                BufferUtil.WriteSingle(result, dst + 16, normal.Y);
+                BufferUtil.WriteSingle(result, dst + 20, normal.Z);
+                Buffer.BlockCopy(source, src + 8, result, dst + 24, 4); //Vertex color
+            }
+
+            VertexData = result;
+            VertexStride = 28;
+            VertexLayout = new VertexLayout(
+            [
+                new VertexElement(VertexElementFormat.Float3, "POSITION", 0, 0, 0),
+                new VertexElement(VertexElementFormat.Float3, "NORMAL", 0, 12, 0),
+                new VertexElement(VertexElementFormat.Colour, "COLOR", 0, 24, 0)
+            ]);
+        }
+
+        private void ApplyLod4Snow(float snowHeight = 180.0f, float transitionHeight = 30.0f, float intensity = 1.0f)
+        {
+            if (!IsLod4Terrain || VertexStride != 28 || VertexData == null)
+                return;
+
+            var translation = MeshTransform.Translation;
+            var scale = MeshTransform.Scale;
+
+            transitionHeight = MathF.Max(transitionHeight, 0.001f);
+            intensity = Math.Clamp(intensity, 0.0f, 1.0f);
+
+            for (int i = 0; i < VertexCount; i++)
+            {
+                var offset = i * 28;
+                var position = BufferUtil.ReadVector3(VertexData, offset);
+                var color = BufferUtil.ReadColour(VertexData, offset + 24);
+                var normal = BufferUtil.ReadVector3(VertexData, offset + 12);
+                var worldX = translation.X + position.X * scale.X;
+                var worldZ = translation.Z + position.Z * scale.Z;
+                var coverage = Math.Clamp((worldZ - snowHeight) / transitionHeight, 0.0f, 1.0f);
+                var slope = Math.Clamp((normal.Z - 0.35f) / 0.45f, 0.0f, 1.0f);
+
+                //Exclude Mexico
+                if (worldX > 2000.0f)
+                    coverage = 0.0f;
+
+                var t = coverage * coverage * (3.0f - 2.0f * coverage);
+                t *= slope * intensity;
+
+                var r = (byte)MathF.Round(color.R + (143 - color.R) * t);
+                var g = (byte)MathF.Round(color.G + (142 - color.G) * t);
+                var b = (byte)MathF.Round(color.B + (132 - color.B) * t);
+
+                color = new Colour(r, g, b, color.A);
+                BufferUtil.WriteColour(VertexData, offset + 24, ref color);
+            }
         }
 
         public int GetBufferIndex()
@@ -905,6 +1076,7 @@ namespace CodeX.Games.RDR1.RSC6
             SetDefaultShader();
             ShaderInputs = Shader.CreateShaderInputs();
             ShaderInputs.SetUInt32(0x14AB52EB, 1); //MeshTransformMode
+            MeshTransformMode = 1;
 
             if (s == null) return;
             var parms = s.ParametersList.Item?.Parameters;
@@ -919,8 +1091,13 @@ namespace CodeX.Games.RDR1.RSC6
                     {
                         case 0x79D622FE: //tilecenterpos, xyz=center, w=scale
                             var tc = parm.Vector;
-                            var m = Matrix3x4.CreateTransform(new Vector3(tc.Z, tc.X, tc.Y), new Vector3(tc.W, tc.W, tc.W));
+                            var position = new Vector3(tc.Z, tc.X, tc.Y);
+                            var scale = new Vector3(tc.W);
+                            var m = Matrix3x4.CreateTransform(position, scale);
+
                             ShaderInputs.SetFloat3x4(0x467A3F64, m); //MeshTransform
+                            MeshTransform = Matrix3x4.CreateTransform(position, scale);
+                            ApplyLod4Snow();
                             break;
                     }
                 }
@@ -4077,6 +4254,7 @@ namespace CodeX.Games.RDR1.RSC6
     {
         DEFAULT = 0xAA1111111199A996,
         TERRAIN = 0xAAEEEEEEEE99A996,
+        TERRAIN_LOW_LOD = 0xAAEEEEEEEE99A00A,
         GRASS_BATCH = 0x0000000000080000,
         CLOTH = 0x0700000077097977
     }

@@ -319,6 +319,20 @@ namespace CodeX.Games.RDR1.RPF6
             return new Vector4((float)value.X, (float)value.Y, (float)value.Z, (float)value.W);
         }
 
+        [MI(MO.AggressiveInlining)]
+        public static float Snorm8(byte value)
+        {
+            return MathF.Max((sbyte)value / 127.0f, -1.0f);
+        }
+
+        [MI(MO.AggressiveInlining)]
+        public static byte ToSnorm8(float value)
+        {
+            value = Math.Clamp(value, -1.0f, 1.0f);
+            var v = (int)MathF.Round(value * 127.0f);
+            return (byte)(sbyte)v;
+        }
+
         ///<summary>
         ///Converts a <see cref="System.Numerics.Vector4" />[] from ZXYW to XYZW format.
         ///</summary>
